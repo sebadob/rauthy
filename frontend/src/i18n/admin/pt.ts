@@ -464,6 +464,10 @@ export let I18nAdminPt: I18nAdmin = {
             autoLinkDesc2: `ATENÇÃO: Esta opção pode ser muito perigosa e levar ao roubo de contas se o fornecedor
                 não validar completamente os endereços de e-mail dos utilizadores, permitindo assim associar a um
                 utilizador um endereço que não lhe pertence! NUNCA pode ser usada nesse caso!`,
+            hideLogin: 'Ocultar botão de login',
+            hideLoginDesc: `O botão de login deste fornecedor está oculto nas páginas de login e de registro. O login
+                continua possível através do parâmetro de consulta "idp_hint", com o qual é possível adicionar um
+                botão de login dedicado para este fornecedor.`,
             clientName: 'Nome do Client',
             custRootCa: 'Root CA PEM personalizada',
             descAuthMethod: `O método de autenticação a usar no endpoint <code>/token</code>.<br>
@@ -487,7 +491,26 @@ export let I18nAdminPt: I18nAdmin = {
                 p5: '<code>$.roles</code> corresponderia a <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> pode corresponder a um valor dentro de um objeto ou array como<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Um <code>value</code> corresponde exatamente, a menos que comece com <code>^</code> (prefixo), <code>~</code> (regex) ou <code>^^</code> (um <code>^</code> literal)',
+                p8: "Chaves com caracteres fora de <code>a-z A-Z 0-9 _ -</code> precisam de aspas: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Mapeia valores do ID token do provedor upstream para funções e grupos locais existentes. Uma regra adiciona seu destino quando o claim em <code>path</code> corresponde a <code>value</code>, e remove-o quando nenhuma de suas regras corresponde. Apenas os destinos configurados aqui são removidos, e um destino configurado aqui pertence ao provedor: uma função ou grupo atribuído manualmente àquele usuário por um admin também é removido em um login em que nenhuma regra corresponde.',
+            addMapping: 'Adicionar mapeamento',
+            removeMapping: 'Remover mapeamento',
+            mappingTyp: 'Tipo',
+            typRole: 'Função',
+            typGroup: 'Grupo',
+            pathClaim: 'Caminho do claim',
+            valueClaim: 'Valor do claim',
+            targetClaim: 'Função / Grupo',
+            noTargetSelected: '— Nenhuma função / grupo —',
+            targetMissing:
+                'O destino salvo {{ target }} não é mais uma função nem um grupo. Selecione um existente ou remova este mapeamento.',
+            groupAdminTarget: '(administrador do grupo)',
+            maxMappings: 'Um auth provider suporta no máximo 32 mapeamentos de claims.',
+            regexCost:
+                'Um <code>value</code> que começa com <code>~</code> é uma regex e é avaliada contra cada nó do claim em cada login: mantenha-a ancorada e o mais simples possível.',
             lookup: 'Procurar',
             pathAdminClaim: 'Path da claim de administrador',
             pathMfaClaim: 'Path da claim de MFA',

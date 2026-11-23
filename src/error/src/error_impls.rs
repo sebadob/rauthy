@@ -18,7 +18,6 @@ use oxttl::TurtleSyntaxError;
 use ring::error::{KeyRejected, Unspecified};
 use rsa::pkcs1::Error;
 use s3_simple::S3Error;
-use serde_json_path::ParseError;
 use spow::pow::PowError;
 use std::borrow::Cow;
 use std::string::FromUtf8Error;
@@ -462,16 +461,6 @@ impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
         debug!("PowError: {value:?}");
         ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
-    }
-}
-
-impl From<serde_json_path::ParseError> for ErrorResponse {
-    fn from(value: ParseError) -> Self {
-        debug!("serde_json_path::ParseError: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("JsonPath error: {value}"),
-        )
     }
 }
 

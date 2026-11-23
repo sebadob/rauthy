@@ -149,6 +149,7 @@ impl Client {
             client_secret_post: false,
             auto_onboarding: false,
             auto_link: false,
+            hide_login: false,
             client_id: "rauthy".to_owned(),
             client_secret: None,
             scope: String::new(),
@@ -156,6 +157,7 @@ impl Client {
             admin_claim_value: None,
             mfa_claim_path: None,
             mfa_claim_value: None,
+            claim_mappings: None,
         };
 
         match AuthProvider::find_by_iss(payload.issuer.clone()).await {

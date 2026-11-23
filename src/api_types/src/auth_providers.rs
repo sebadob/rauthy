@@ -1,7 +1,7 @@
 use crate::cust_validation::validate_vec_scopes;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_RESOURCE,
-    RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLAIM_VALUE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
+    RE_JSON_PATH, RE_RESOURCE, RE_ROLE_GROUP_TARGET, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_derive::FromPgRow;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,46 @@ pub enum AuthProviderType {
     GitHub,
     Google,
     OIDC,
+}
+
+/// What a claim mapping rule grants: an existing local role or an existing local group.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum ClaimMappingTyp {
+    Role,
+    Group,
+}
+
+/// One upstream claim -> one local role / group.
+///
+/// The matcher is derived from `claim_value`, there is no matcher field: a plain value is an exact
+/// compare, `^x` matches every value starting with `x`, `~x` is a regex, and `^^x` types a literal
+/// leading `^`. Rules are reconciled on every upstream login, and only the names a provider maps
+/// are ever removed.
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
+pub struct ClaimMapping {
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@[]{}<>"|; ]{1,256}` — charset and length
+    /// only. The path is parsed by Rauthy's JSONPath parser at config save, which is the real
+    /// validator, so a filter expression is rejected there.
+    #[validate(regex(
+        path = "*RE_JSON_PATH",
+        code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@[]{}<>\"|; ]{1,256}"
+    ))]
+    pub claim_path: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@^ ]{1,128}` — includes the `^` and `~`
+    /// sigils. A `~` value is compiled as a regex at config save, so an invalid pattern is a
+    /// BadRequest naming the rule.
+    #[validate(regex(
+        path = "*RE_CLAIM_VALUE",
+        code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@^ ]{1,128}"
+    ))]
+    pub claim_value: String,
+    pub typ: ClaimMappingTyp,
+    /// Validation: `[a-zA-Z0-9-_/:*.\s]{2,64}` — the name rules of a role and a group at once,
+    /// without the `,` that separates the entries of a user's role / group lists. The target must
+    /// already exist; that is checked at config save, naming the missing value.
+    #[validate(regex(path = "*RE_ROLE_GROUP_TARGET", code = "[a-zA-Z0-9-_/:*.\\s]{2,64}"))]
+    pub target: String,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -49,6 +89,9 @@ pub struct ProviderRequest {
     pub client_secret_post: bool,
     pub auto_onboarding: bool,
     pub auto_link: bool,
+    /// The provider is not rendered as a login button on the login and registration pages.
+    /// A login via the `idp_hint` query parameter still works.
+    pub hide_login: bool,
 
     // This validation is pretty loose, but if we make it too strict,
     // we will most probably get into compatibility issues.
@@ -62,18 +105,36 @@ pub struct ProviderRequest {
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
     pub scope: String,
 
-    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@[]{}<>"|; ]{1,256}`
+    #[validate(regex(
+        path = "*RE_JSON_PATH",
+        code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@[]{}<>\"|; ]{1,256}"
+    ))]
     pub admin_claim_path: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@^ ]{1,128}`
+    #[validate(regex(
+        path = "*RE_CLAIM_VALUE",
+        code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@^ ]{1,128}"
+    ))]
     pub admin_claim_value: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@[]{}<>"|; ]{1,256}`
+    #[validate(regex(
+        path = "*RE_JSON_PATH",
+        code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@[]{}<>\"|; ]{1,256}"
+    ))]
     pub mfa_claim_path: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]"))]
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@^ ]{1,128}`
+    #[validate(regex(
+        path = "*RE_CLAIM_VALUE",
+        code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@^ ]{1,128}"
+    ))]
     pub mfa_claim_value: Option<String>,
+
+    /// Claim mappings to local roles and groups. Each rule is validated with its own rules; the
+    /// rule cap is `CLAIM_MAPPINGS_MAX_RULES` and is checked at config save, where the message
+    /// names it.
+    #[validate(nested)]
+    pub claim_mappings: Option<Vec<ClaimMapping>>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -193,12 +254,17 @@ pub struct ProviderResponse {
     pub admin_claim_value: Option<String>,
     pub mfa_claim_path: Option<String>,
     pub mfa_claim_value: Option<String>,
+    /// Claim mappings to local roles and groups.
+    pub claim_mappings: Vec<ClaimMapping>,
 
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
     pub auto_onboarding: bool,
     pub auto_link: bool,
+    /// The provider is not rendered as a login button on the login and registration pages.
+    /// A login via the `idp_hint` query parameter still works.
+    pub hide_login: bool,
 }
 
 #[derive(Serialize, Deserialize, FromPgRow, ToSchema)]

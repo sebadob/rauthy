@@ -475,6 +475,10 @@ export let I18nAdminDe: I18nAdmin = {
             autoLinkDesc2: `ACHTUNG: Diese Option kann sehr gefährlich sein und zur Account-Übernahme führen, wenn der
                 Provider keine vollständige E-Mail Überprüfung durchführt und es möglich macht eine fremde Adresse
                 für einen Benutzer einzutragen! Darf in einem solchen Fall NIEMALS verwendet werden!`,
+            hideLogin: 'Login-Button ausblenden',
+            hideLoginDesc: `Der Login-Button dieses Providers wird auf der Login- und Registrierungsseite
+                ausgeblendet. Ein Login ist weiterhin über den Query-Parameter "idp_hint" möglich, darüber kann ein
+                eigener Login-Button für diesen Provider eingebunden werden.`,
             clientName: 'Client Name',
             custRootCa: 'Eigenes Root CA PEM',
             descAuthMethod: `Die Authentication Method, welche für den <code>/token</code> Endpunkt genutzt werden soll.
@@ -499,7 +503,26 @@ export let I18nAdminDe: I18nAdmin = {
                 p5: '<code>$.roles</code> hätte als Ziel den Wert <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> kann auf einen Wert innerhalb eines Arrays oder Objects wie z.B.<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code> verweisen`,
+                p7: 'Ein <code>value</code> passt exakt, außer er beginnt mit <code>^</code> (Präfix), <code>~</code> (Regex) oder <code>^^</code> (ein literales <code>^</code>)',
+                p8: "Keys mit Zeichen außerhalb von <code>a-z A-Z 0-9 _ -</code> brauchen Anführungszeichen: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Werte aus dem ID Token des Upstream-Logins können auf bestehende lokale Rollen und Gruppen gemapped werden. Eine Regel ergänzt ihr Ziel, wenn der Claim unter <code>path</code> auf <code>value</code> passt, und entfernt es, wenn keine ihrer Regeln passt. Es werden ausschließlich die hier konfigurierten Ziele entfernt - und ein hier konfiguriertes Ziel gehört dem Provider: eine Rolle oder Gruppe, die ein Admin dem Nutzer manuell gegeben hat, wird bei einem Login ohne Treffer ebenfalls entfernt.',
+            addMapping: 'Mapping hinzufügen',
+            removeMapping: 'Mapping entfernen',
+            mappingTyp: 'Typ',
+            typRole: 'Rolle',
+            typGroup: 'Gruppe',
+            pathClaim: 'Claim Pfad',
+            valueClaim: 'Claim Wert',
+            targetClaim: 'Rolle / Gruppe',
+            noTargetSelected: '— Keine Rolle / Gruppe —',
+            targetMissing:
+                'Der gespeicherte Wert {{ target }} ist keine Rolle / Gruppe mehr. Wähle eine existierende aus, oder entferne dieses Mapping.',
+            groupAdminTarget: '(Gruppen-Admin)',
+            maxMappings: 'Ein Auth Provider unterstützt maximal 32 Claim Mappings.',
+            regexCost:
+                'Ein <code>value</code>, der mit <code>~</code> beginnt, ist eine Regex und wird bei jedem Login gegen jeden Claim-Knoten ausgewertet: verankere sie und halte sie so günstig wie möglich.',
             lookup: 'Prüfen',
             pathAdminClaim: 'Admin Claim Pfad',
             pathMfaClaim: 'MFA Claim Pfad',

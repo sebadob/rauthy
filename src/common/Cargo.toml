@@ -28,7 +28,6 @@ reqwest = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_json_path = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }

@@ -46,6 +46,8 @@
     let config: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
     let providers: AuthProviderTemplate[] = $state([]);
+    // `hide_login` providers are never rendered on this page
+    let visibleProviders = $derived(providers.filter(p => !p.hide_login));
 
     let isLoading = $state(false);
     let err = $state('');
@@ -398,10 +400,10 @@
                 </div>
             {/if}
 
-            {#if providers.length > 0}
+            {#if visibleProviders.length > 0}
                 <div class="providers flex-col gap-05">
                     <div class="public-divider">{t.register.orRegisterWith}</div>
-                    {#each providers as provider}
+                    {#each visibleProviders as provider}
                         <ButtonAuthProvider
                             ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
                             {provider}
