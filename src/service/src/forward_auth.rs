@@ -56,7 +56,7 @@ pub async fn get_forward_auth_client(
             if s.validate(&req, &client.id).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
-                        Ok(_) => Some(s),
+                        Ok(()) => Some(s),
                         Err(err) => {
                             error!(?err, "CSRF token check");
                             None
@@ -91,7 +91,7 @@ pub async fn get_forward_auth_client(
                         "The first configured `redirect_uri` must start with the `X-Forwarded-Host`",
                     ));
                 }
-                if uri.ends_with("*") {
+                if uri.ends_with('*') {
                     debug!(
                         "The first configured `redirect_uri` must be absolute for `forward_auth`"
                     );

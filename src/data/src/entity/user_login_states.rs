@@ -30,7 +30,7 @@ impl UserLoginState {
     ) -> Result<(), ErrorResponse> {
         for i in 1..=3 {
             match Self::insert_exec(user_id, client_id, session_id).await {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(err) => {
                     error!(
                         "Error inserting UserLoginState into DB: {} - retrying",

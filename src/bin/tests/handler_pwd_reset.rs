@@ -71,7 +71,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
 
     // extract the csrf token from the html
     let (_, content_split) = html.split_once("\"csrf_token\":\"").unwrap();
-    let (csrf_token, _) = content_split.split_once("\"").unwrap();
+    let (csrf_token, _) = content_split.split_once('"').unwrap();
     println!("Extracted csrf token: {csrf_token}");
     correct_headers.append(PWD_CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
     println!("Headers with cookie + csrf: {:?}", correct_headers);

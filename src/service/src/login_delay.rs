@@ -66,7 +66,7 @@ pub async fn handle_login_delay<T>(
             // value, we not only get the limiting for brute-force from a single IP, but also for
             // multiple small tries from different IPs for the same user / email.
             let combined = max(counter, user_failed_logins.unwrap_or(0));
-            let failed_logins = min(combined, u32::MAX as i64) as u32;
+            let failed_logins = min(combined, i64::from(u32::MAX)) as u32;
             warn!("Failed Logins from {peer_ip}: {failed_logins}");
 
             RauthyConfig::get()
@@ -85,10 +85,11 @@ pub async fn handle_login_delay<T>(
                 sleep_time_median
             };
 
-            let sleep_time = match sleep_time(failed_logins as u64, sleep_time_median, ip_checks) {
-                Ok(ms) => ms,
-                Err(nbf_seconds) => return build_send_event(&peer_ip, nbf_seconds).await,
-            };
+            let sleep_time =
+                match sleep_time(u64::from(failed_logins), sleep_time_median, ip_checks) {
+                    Ok(ms) => ms,
+                    Err(nbf_seconds) => return build_send_event(&peer_ip, nbf_seconds).await,
+                };
 
             debug!("Failed login - sleeping for {sleep_time} ms now");
             tokio::time::sleep(Duration::from_millis(sleep_time)).await;
@@ -163,7 +164,7 @@ mod tests {
         assert_eq!(sleep_time(7, 0, false), Ok(21_000));
         assert_eq!(sleep_time(15, 0, false), Ok(150_000));
         assert_eq!(sleep_time(25, 0, false), Ok(480_000));
-        assert_eq!(sleep_time(u32::MAX as u64, 0, false), Ok(480_000));
+        assert_eq!(sleep_time(u64::from(u32::MAX), 0, false), Ok(480_000));
         for failed in 0..100 {
             assert!(sleep_time(failed, 0, false).is_ok());
         }

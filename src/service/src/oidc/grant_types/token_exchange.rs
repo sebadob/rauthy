@@ -277,7 +277,7 @@ pub async fn grant_type_token_exchange(
 
     // Never outlive the subject token or the user, or re-exchanging could extend access forever.
     let now = Utc::now().timestamp();
-    let mut lifetime = (client.access_token_lifetime as i64).min(subject_exp - now);
+    let mut lifetime = i64::from(client.access_token_lifetime).min(subject_exp - now);
     if let Some(user_expires) = user.as_ref().and_then(|u| u.user_expires) {
         lifetime = lifetime.min(user_expires - now);
     }

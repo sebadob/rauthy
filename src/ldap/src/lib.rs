@@ -393,7 +393,7 @@ async fn search_client(
 
     let client = Client::find(client_id.to_string())
         .await
-        .and_then(|c| c.validate_enabled().map(|_| c))
+        .and_then(|c| c.validate_enabled().map(|()| c))
         .map_err(|_| {
             (
                 LdapResultCode::InsufficentAccessRights,
@@ -434,7 +434,7 @@ fn targets(
     search_base: &str,
     filter: &LdapFilter,
 ) -> Result<Option<Vec<Target>>, (LdapResultCode, String)> {
-    if user_count < threshold as i64 {
+    if user_count < i64::from(threshold) {
         return Ok(None);
     }
     if let Some(id) = user_id {

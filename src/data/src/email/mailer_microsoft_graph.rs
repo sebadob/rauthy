@@ -121,7 +121,7 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<(EMail, EMailCallback
             };
 
             match send_email(&email).await {
-                Ok(_) => {
+                Ok(()) => {
                     callback.call().await;
                 }
                 Err(err) => {

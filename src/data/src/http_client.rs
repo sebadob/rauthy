@@ -482,9 +482,13 @@ fn is_forbidden_v6(addr: &Ipv6Addr) -> bool {
         .iter()
         .any(|cidr| cidr.contains(addr))
     {
-        Some(Ipv4Addr::from(((seg[6] as u32) << 16) | seg[7] as u32))
+        Some(Ipv4Addr::from(
+            (u32::from(seg[6]) << 16) | u32::from(seg[7]),
+        ))
     } else if FORBIDDEN.six_to_four.contains(addr) {
-        Some(Ipv4Addr::from(((seg[1] as u32) << 16) | seg[2] as u32))
+        Some(Ipv4Addr::from(
+            (u32::from(seg[1]) << 16) | u32::from(seg[2]),
+        ))
     } else {
         // IPv4-mapped (::ffff:a.b.c.d) and IPv4-compatible (::a.b.c.d)
         addr.to_ipv4()

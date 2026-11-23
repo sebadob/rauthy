@@ -169,7 +169,7 @@ impl LogoutToken<'_> {
     ) -> Result<(serde_json::Value, LogoutToken<'a>), ErrorResponse> {
         // Before we can actually validate the token, we need to decode it and take a peek at the
         // issuer, so we can validate that we do have the issuer configured as an upstream provider.
-        let mut split = logout_token.split(".");
+        let mut split = logout_token.split('.');
 
         let header = match split.next() {
             None => {

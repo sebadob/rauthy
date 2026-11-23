@@ -90,7 +90,7 @@ RETURNING *
                 &[
                     &id,
                     &hostname,
-                    &(gid as i64),
+                    &i64::from(gid),
                     &enc,
                     &force_mfa,
                     &local_password_only,
@@ -323,7 +323,7 @@ LIMIT 1
             let mut row = DB::hql().query_raw_one(sql, params!(gid)).await?;
             row.get("count")
         } else {
-            let row = DB::pg_query_one_row(sql, &[&(gid as i64)]).await?;
+            let row = DB::pg_query_one_row(sql, &[&i64::from(gid)]).await?;
             row.get("count")
         };
 
@@ -336,7 +336,7 @@ LIMIT 1
         let mut hosts: Vec<Self> = if is_hiqlite() {
             DB::hql().query_map(sql, params!(gid)).await?
         } else {
-            DB::pg_query(sql, &[&(gid as i64)], 8).await?
+            DB::pg_query(sql, &[&i64::from(gid)], 8).await?
         };
 
         let aliases = Self::find_aliases_all().await?;
@@ -453,7 +453,7 @@ WHERE id = $6
                 sql_update,
                 &[
                     &payload.hostname,
-                    &(payload.gid as i64),
+                    &i64::from(payload.gid),
                     &payload.force_mfa,
                     &payload.local_password_only,
                     &payload.notes,
@@ -510,7 +510,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
                 .map(|mut r| r.get("name"))
                 .collect::<Vec<String>>()
         } else {
-            DB::pg_query_rows(sql, &[&(self.gid as i64), &true], 4)
+            DB::pg_query_rows(sql, &[&i64::from(self.gid), &true], 4)
                 .await?
                 .into_iter()
                 .map(|r| r.get("name"))
@@ -534,7 +534,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
                 .await
                 .is_ok()
         } else {
-            DB::pg_query_one_row(sql, &[&(self.gid as i64), &(user.id as i64)])
+            DB::pg_query_one_row(sql, &[&i64::from(self.gid), &i64::from(user.id)])
                 .await
                 .is_ok()
         }

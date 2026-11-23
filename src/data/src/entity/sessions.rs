@@ -671,12 +671,12 @@ impl Session {
                 ));
             } else {
                 let target = now
-                    .add(chrono::Duration::seconds(exp_in as i64))
+                    .add(chrono::Duration::seconds(i64::from(exp_in)))
                     .timestamp();
                 if ts < target { ts } else { target }
             }
         } else {
-            now.add(chrono::Duration::seconds(exp_in as i64))
+            now.add(chrono::Duration::seconds(i64::from(exp_in)))
                 .timestamp()
         };
 
@@ -703,7 +703,7 @@ impl Session {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),
-            RauthyConfig::get().vars.fedcm.session_lifetime as i64,
+            i64::from(RauthyConfig::get().vars.fedcm.session_lifetime),
             SameSite::None,
         )
     }

@@ -41,7 +41,7 @@ async fn execute(
     let groups_local = Group::find_all().await?;
 
     for failure in failures {
-        if failure.retry_count >= RauthyConfig::get().vars.scim.retry_count as i32 {
+        if failure.retry_count >= i32::from(RauthyConfig::get().vars.scim.retry_count) {
             warn!("Retry count exceeded for scim task {failure:?}");
 
             Event::scim_task_failed(&failure.client_id, &failure.action, failure.retry_count)
@@ -120,7 +120,7 @@ async fn execute(
         };
 
         match res {
-            Ok(_) => {
+            Ok(()) => {
                 info!(
                     "Success retrying failed scim task for {}",
                     client_scim.client_id
