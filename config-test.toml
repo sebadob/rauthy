@@ -34,10 +34,12 @@ enable = true
 rate_limit_reg = 3
 
 [cred_stuff_detection]
-# The integration test suite logs in with a brand new user in (almost) every test, and the
-# credential stuffing detector counts each `email + password` combination per IP: the suite would
-# blacklist its own 127.0.0.1 for 24 h. Its own target covers the endpoint, not this detector.
-enable = false
+# The detector stores every distinct `email + password` pair it sees per source IP and blacklists
+# that IP when the count reaches `blacklist_threshold` inside `scan_window`. (Almost) every
+# integration test logs in with a brand new user, so a full suite run inserts a few dozen new pairs
+# from 127.0.0.1 alone, and it repeats inside the 3 h window. The threshold is deliberately out of
+# reach for tests; the recording code path stays active.
+blacklist_threshold = 1000
 
 [email]
 rauthy_admin_email = 'admin@localhost'
