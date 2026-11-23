@@ -174,7 +174,10 @@ impl WellKnown {
             ui_locales_supported,
             claims_parameter_supported: true,
             authorization_response_iss_parameter_supported: true,
-            client_id_metadata_document_supported: true,
+            client_id_metadata_document_supported: RauthyConfig::get()
+                .vars
+                .ephemeral_clients
+                .enable,
         }
     }
 }
