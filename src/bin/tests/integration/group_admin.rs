@@ -1,4 +1,4 @@
-use crate::common::{get_auth_headers, get_backend_url, session_headers_with};
+use crate::common::{USER_PASSWORD, get_auth_headers, get_backend_url, session_headers_with};
 use crate::expect_status;
 use crate::expect_status_json;
 use pretty_assertions::assert_eq;
@@ -16,7 +16,12 @@ use reqwest::header::{AUTHORIZATION, HeaderMap};
 use std::error::Error;
 
 /// Password of the group-admin user this test creates and logs in with.
-const PWD: &str = "123SuperSafe123";
+const PWD: &str = USER_PASSWORD;
+
+/// The password of step 7. It satisfies the same rules as [`PWD`], because the shared password
+/// policy can be swapped while this runs, and it differs from it, because `not_recently_used`
+/// rejects a password the user has used recently.
+const PWD_OTHER: &str = "GroupAdmin-TEST.5678%&@";
 
 /// Group-admin delegation is defined by the group prefix in the role name
 /// (`rauthy_admin:<group>`), so every run works on a prefix of its own and its groups, users, and
@@ -325,7 +330,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
 
     // 7. it CAN set a password for a managed user (they cannot priv-esc anyway)
     let mut pwd = upd(&member);
-    pwd.password = Some("SomeOtherPwd123".to_string());
+    pwd.password = Some(PWD_OTHER.to_string());
     let res = client
         .put(format!("{backend}/users/{}", member.id))
         .headers(ga_headers.clone())
