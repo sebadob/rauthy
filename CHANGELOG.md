@@ -133,6 +133,46 @@ log_file_archive_after = '3d'
 ```
 
 [#1962](https://github.com/sebadob/rauthy/pull/1962)
+#### Custom JSON path claim matcher
+
+Rauthy now ships a customized, simplified JSONPath matcher. It brings new possibilities and fixes
+some issues with the old one, and it improves the performance for many concurrent provider logins:
+the old matcher re-parsed the path on every single login, the new one compiles a provider's paths
+and regexes once at config save and caches them.
+
+A non-string claim node is compared by its text form, which is what the old matcher did as well, so
+`true` matches a boolean claim and `23` a number. New on top of that are the sigils of a claim
+value, which the old exact comparison did not have: `^` is a prefix match, `~` a regex, and `^^`
+types a literal leading `^`.
+
+[#1961](https://github.com/sebadob/rauthy/pull/1961)
+
+#### Claim mapping to roles and groups
+
+An upstream provider can map values from the ID token of a federated login to existing local roles
+and groups.
+
+Each rule is a `claim_path`, a `claim_value`, a `typ` (`role` / `group`) and the existing `target`
+name, and it is reconciled on every login. Only the targets a provider maps are ever removed, and a
+mapped target belongs to that provider: a login without a match revokes it even when an admin granted
+that role or group to the user by hand. The paths use Rauthy's own reduced JSONPath parser, the
+values support `^` prefix and `~` regex sigils, a provider supports at most 32 rules, a target name
+cannot contain a `,` - the separator of a user's role and group lists - and every path and regex is
+validated when the config is saved.
+
+The `rauthy_admin` prefix is not valid rule targets, because the admin role is granted by the
+provider's own admin claim mapping only. The Admin UI has a rule editor for it, and the
+[provider docs](https://sebadob.github.io/rauthy/auth_providers/) document the grammar and the
+reconcile behavior.
+
+[#1961](https://github.com/sebadob/rauthy/pull/1961)
+
+#### Hide the login button of an upstream provider
+
+An auth provider has a new `hide_login` flag. When it is active, the button of that provider is
+not rendered on the login page and the registration page, which keeps an internal provider away
+from normal users. Everything else about the provider behaves like before, including a targeted
+login via the `idp_hint` query parameter, which is the intended way to reach such a provider.
 
 #### Self-Service E-Mail Change Can Be Denied
 

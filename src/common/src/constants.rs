@@ -79,6 +79,13 @@ pub static API_KEY_LENGTH: usize = 64;
 pub static DEVICE_KEY_LENGTH: u8 = 64;
 /// Max serialized length of a client's custom `claims` JSON object.
 pub const CLIENT_CLAIMS_MAX_LEN: usize = 1024;
+/// Max number of claim mapping rules a single auth provider may have. It bounds the
+/// size of the `claim_mappings` column and the compiled rule work of a federated login.
+pub const CLAIM_MAPPINGS_MAX_RULES: usize = 32;
+/// The leading char of a `claim_value` that selects a matcher instead of an exact compare:
+/// `~` is a regex, `^` is a prefix, and a doubled `^^` types a literal `^`.
+pub const CLAIM_VALUE_SIGIL_REGEX: char = '~';
+pub const CLAIM_VALUE_SIGIL_PREFIX: char = '^';
 /// Max length in bytes of a consent source URL.
 pub const CONSENT_SOURCE_MAX_LEN: usize = 1024;
 pub static EVENTS_LATEST_LIMIT: u16 = 100;

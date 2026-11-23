@@ -13,6 +13,8 @@
             <li>{@html ta.providers.config.jsonPath.p4}</li>
             <li>{@html ta.providers.config.jsonPath.p5}</li>
             <li>{@html ta.providers.config.jsonPath.p6}</li>
+            <li>{@html ta.providers.config.jsonPath.p7}</li>
+            <li>{@html ta.providers.config.jsonPath.p8}</li>
         </ul>
     </div>
 </details>

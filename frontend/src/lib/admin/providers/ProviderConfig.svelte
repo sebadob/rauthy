@@ -37,6 +37,7 @@
             provider.admin_claim_value = provider.admin_claim_value || '';
             provider.mfa_claim_path = provider.mfa_claim_path || '';
             provider.mfa_claim_value = provider.mfa_claim_value || '';
+            provider.claim_mappings = provider.claim_mappings ?? [];
         }
     });
 
@@ -76,6 +77,7 @@
             client_secret_post: provider.client_secret_post,
             auto_onboarding: provider.auto_onboarding,
             auto_link: provider.auto_link,
+            hide_login: provider.hide_login,
 
             client_id: provider.client_id,
             client_secret: provider.client_secret || undefined,
@@ -85,6 +87,7 @@
             admin_claim_value: provider.admin_claim_value || undefined,
             mfa_claim_path: provider.mfa_claim_path || undefined,
             mfa_claim_value: provider.mfa_claim_value || undefined,
+            claim_mappings: provider.claim_mappings.length ? provider.claim_mappings : undefined,
         };
 
         isLoading = true;
@@ -123,11 +126,22 @@
                     >
                         {ta.providers.config.autoLink}
                     </InputCheckbox>
+                    <InputCheckbox
+                        ariaLabel={ta.providers.config.hideLogin}
+                        bind:checked={provider.hide_login}
+                    >
+                        {ta.providers.config.hideLogin}
+                    </InputCheckbox>
                 </div>
                 {#if provider.auto_link}
                     <div transition:slide={{ duration: 150 }}>
                         <p>{ta.providers.config.autoLinkDesc1}</p>
                         <p class="err">{ta.providers.config.autoLinkDesc2}</p>
+                    </div>
+                {/if}
+                {#if provider.hide_login}
+                    <div transition:slide={{ duration: 150 }}>
+                        <p>{ta.providers.config.hideLoginDesc}</p>
                     </div>
                 {/if}
             </Section>
@@ -155,6 +169,7 @@
                 bind:adminClaimValue={provider.admin_claim_value}
                 bind:mfaClaimPath={provider.mfa_claim_path}
                 bind:mfaClaimValue={provider.mfa_claim_value}
+                bind:claimMappings={provider.claim_mappings}
                 usePKCE={provider.use_pkce}
                 {inputWidth}
             >

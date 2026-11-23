@@ -403,12 +403,15 @@ export interface I18nAdmin {
                 tokenAuth?: string;
                 adminMapping?: string;
                 mfaMapping?: string;
+                roleGroupMapping?: string;
                 claimHelp?: string;
             };
             allowInsecureTls: string;
             autoLink: string;
             autoLinkDesc1: string;
             autoLinkDesc2: string;
+            hideLogin: string;
+            hideLoginDesc: string;
             clientName: string;
             custRootCa: string;
             // inserted as html
@@ -431,7 +434,26 @@ export interface I18nAdmin {
                 p5: string;
                 // inserted as html
                 p6: string;
+                // inserted as html
+                p7: string;
+                // inserted as html
+                p8: string;
             };
+            mapRoleGroups: string;
+            addMapping: string;
+            removeMapping: string;
+            mappingTyp: string;
+            typRole: string;
+            typGroup: string;
+            pathClaim: string;
+            valueClaim: string;
+            targetClaim: string;
+            noTargetSelected: string;
+            targetMissing: string;
+            groupAdminTarget: string;
+            maxMappings: string;
+            // inserted as html
+            regexCost: string;
             lookup: string;
             pathAdminClaim: string;
             pathMfaClaim: string;

@@ -458,6 +458,7 @@ export let I18nAdminEn: I18nAdmin = {
     providers: {
         config: {
             sections: {
+                roleGroupMapping: 'Roles and Groups',
                 tokenAuth: 'Token authentication',
                 adminMapping: 'Admin access',
                 mfaMapping: 'Multi-factor authentication',
@@ -474,6 +475,10 @@ export let I18nAdminEn: I18nAdmin = {
             autoLinkDesc2: `CAUTION: This option can be very dangerous and lead to account takeover if the provider
                 does not fully validate E-Mail addresses for users and therefore makes it possible to add a foreign
                 address for a user! MUST NEVER be used in such a case!`,
+            hideLogin: 'Hide Login Button',
+            hideLoginDesc: `The login button of this provider is hidden on the login and registration pages. A login
+                is still possible via the "idp_hint" query parameter, with which a dedicated login button for this
+                provider can be added.`,
             clientName: 'Client Name',
             custRootCa: 'Custom Root CA PEM',
             descAuthMethod: `The authentication method to use on the <code>/token</code> endpoint.<br>
@@ -496,7 +501,26 @@ export let I18nAdminEn: I18nAdmin = {
                 p5: '<code>$.roles</code> would target <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> can target a value inside an object or array like<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'A <code>value</code> matches exactly, unless it starts with <code>^</code> (prefix match), <code>~</code> (regex), or <code>^^</code> (a literal <code>^</code>)',
+                p8: "Keys with characters outside <code>a-z A-Z 0-9 _ -</code> need quotes: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Map values from the upstream ID token to existing local roles and groups. A rule adds its target when the claim at <code>path</code> matches <code>value</code>, and removes it when none of its rules match. Only targets configured here are ever removed, and a target configured here belongs to the provider: a role or group an admin assigned to that user by hand is removed as well on a login where no rule matches.',
+            addMapping: 'Add mapping',
+            removeMapping: 'Remove mapping',
+            mappingTyp: 'Type',
+            typRole: 'Role',
+            typGroup: 'Group',
+            pathClaim: 'Claim Path',
+            valueClaim: 'Claim Value',
+            targetClaim: 'Role / Group',
+            noTargetSelected: '— No role / group —',
+            targetMissing:
+                'The saved target {{ target }} is not a role / group anymore. Select an existing one, or remove this mapping.',
+            groupAdminTarget: '(group admin)',
+            maxMappings: 'An auth provider supports at most 32 claim mappings.',
+            regexCost:
+                'A <code>value</code> that starts with <code>~</code> is a regex and is evaluated against every claim node of every login: keep it anchored and as cheap as possible.',
             lookup: 'Lookup',
             pathAdminClaim: 'Admin Claim Path',
             pathMfaClaim: 'MFA Claim Path',

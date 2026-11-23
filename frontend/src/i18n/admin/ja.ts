@@ -403,6 +403,9 @@ export let I18nAdminJa: I18nAdmin = {
                 '「ユーザーを自動で連携」を有効にすると、このプロバイダーでログインしたときに、まだ連携していない既存のユーザーがいれば自動でこのプロバイダーと連携します。',
             autoLinkDesc2:
                 '注意: プロバイダーがユーザーのメールアドレスを十分に確認せず、他人のアドレスを追加できてしまう場合、このオプションは非常に危険で、アカウントの乗っ取りにつながります！そのような場合は絶対に使わないでください！',
+            hideLogin: 'ログインボタンを表示しない',
+            hideLoginDesc:
+                'このプロバイダーのログインボタンはログインページと登録ページに表示されません。クエリパラメーター "idp_hint" を使ったログインはそのまま可能で、これを使ってこのプロバイダー専用のログインボタンを追加できます。',
             clientName: 'Client の名前',
             custRootCa: '独自のルート CA（PEM）',
             descAuthMethod:
@@ -423,7 +426,26 @@ export let I18nAdminJa: I18nAdmin = {
                 p4: 'パスの中で <code>*</code> をワイルドカードとして使えます',
                 p5: '<code>$.roles</code> は <code>&#123;"roles": "value"&#125;</code> を対象にします',
                 p6: '<code>$.roles.*</code> は、次のようなオブジェクトや配列の中の値を対象にできます<br><code>&#123;"roles": ["value", "notMyValue"]&#125;</code>',
+                p7: '<code>value</code> は完全一致です。先頭が <code>^</code> (プレフィックス)、<code>~</code> (正規表現)、<code>^^</code> (リテラルの <code>^</code>) の場合は除きます',
+                p8: "<code>a-z A-Z 0-9 _ -</code> 以外の文字を含むキーは引用符が必要です: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                '上流プロバイダの ID トークンの値を、既存のローカルのロールとグループにマッピングします。ルールは <code>path</code> のクレームが <code>value</code> に一致した場合にターゲットを追加し、いずれのルールも一致しない場合に削除します。ここで設定したターゲットのみが削除され、ここで設定したターゲットはプロバイダに属します - 管理者がそのユーザーに手動で付与したロールとグループも、いずれのルールも一致しないログインでは削除されます。',
+            addMapping: 'マッピングを追加',
+            removeMapping: 'マッピングを削除',
+            mappingTyp: 'タイプ',
+            typRole: 'ロール',
+            typGroup: 'グループ',
+            pathClaim: 'クレームパス',
+            valueClaim: 'クレーム値',
+            targetClaim: 'ロール / グループ',
+            noTargetSelected: '— ロール / グループなし —',
+            targetMissing:
+                '保存されたターゲット {{ target }} はもうロール / グループではありません。既存のターゲットを選択するか、このマッピングを削除してください。',
+            groupAdminTarget: '(グループ管理者)',
+            maxMappings: '認証プロバイダは最大 32 件のクレームマッピングをサポートします。',
+            regexCost:
+                '<code>~</code> で始まる <code>value</code> は正規表現で、ログインごとのすべてのクレームノードに対して評価されます。アンカーを付け、できるだけ軽いパターンにしてください。',
             lookup: '照会',
             pathAdminClaim: '管理者 Claim のパス',
             pathMfaClaim: '多要素認証 Claim のパス',

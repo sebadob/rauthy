@@ -1,13 +1,20 @@
 <script lang="ts">
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import { PATTERN_CLIENT_NAME, PATTERN_SCOPE_SPACE, PATTERN_URI } from '#utils/patterns.ts';
+    import {
+        PATTERN_CLAIM_VALUE,
+        PATTERN_CLIENT_NAME,
+        PATTERN_JSON_PATH,
+        PATTERN_SCOPE_SPACE,
+        PATTERN_URI,
+    } from '#utils/patterns.ts';
     import Input from '#lib/form/Input.svelte';
-    import JsonPathDesc from '#lib/admin/providers/JsonPathDesc.svelte';
     import InputPassword from '#lib/form/InputPassword.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
     import type { Snippet } from 'svelte';
     import Section from '#lib/Section.svelte';
+    import ProviderClaimMappings from '#lib/admin/providers/blocks/ProviderClaimMappings.svelte';
+    import type { ClaimMapping } from '#api/types/auth_provider.ts';
 
     let {
         scope = $bindable(),
@@ -22,6 +29,7 @@
         adminClaimValue = $bindable(),
         mfaClaimPath = $bindable(),
         mfaClaimValue = $bindable(),
+        claimMappings = $bindable(),
 
         usePKCE,
         inputWidth,
@@ -39,6 +47,7 @@
         adminClaimValue: undefined | string;
         mfaClaimPath: undefined | string;
         mfaClaimValue: undefined | string;
+        claimMappings: undefined | ClaimMapping[];
 
         usePKCE: boolean;
         inputWidth: string;
@@ -125,7 +134,7 @@
                 autocomplete="off"
                 label={ta.providers.config.pathAdminClaim}
                 placeholder="$.roles.*"
-                pattern={PATTERN_URI}
+                pattern={PATTERN_JSON_PATH}
                 width={inputWidth}
             />
             <Input
@@ -133,7 +142,7 @@
                 autocomplete="off"
                 label={ta.providers.config.valueAdminClaim}
                 placeholder="rauthy_admin"
-                pattern={PATTERN_URI}
+                pattern={PATTERN_CLAIM_VALUE}
                 width={inputWidth}
                 required={!!adminClaimPath}
             />
@@ -148,7 +157,7 @@
                 autocomplete="off"
                 label={ta.providers.config.pathMfaClaim}
                 placeholder="$.amr.*"
-                pattern={PATTERN_URI}
+                pattern={PATTERN_JSON_PATH}
                 width={inputWidth}
             />
             <Input
@@ -156,12 +165,12 @@
                 autocomplete="off"
                 label={ta.providers.config.valueMfaClaim}
                 placeholder="mfa"
-                pattern={PATTERN_URI}
+                pattern={PATTERN_CLAIM_VALUE}
                 width={inputWidth}
                 required={!!mfaClaimPath}
             />
         </fieldset>
-        <JsonPathDesc />
+        <ProviderClaimMappings bind:claimMappings {inputWidth} />
     </div>
 </Section>
 

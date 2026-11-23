@@ -36,6 +36,7 @@ cidr = { workspace = true }
 constant_time_eq = { workspace = true }
 cron = { workspace = true }
 cryptr = { workspace = true }
+dashmap = { workspace = true }
 ed25519-compact = { workspace = true }
 flate2 = { workspace = true }
 flume = { workspace = true }
@@ -72,7 +73,6 @@ semver = { workspace = true }
 serde = { workspace = true }
 serde_cbor_2 = { workspace = true }
 serde_json = { workspace = true }
-serde_json_path = { workspace = true }
 serde_rusqlite = { workspace = true }
 spow = { workspace = true }
 svg-hush = { workspace = true }
