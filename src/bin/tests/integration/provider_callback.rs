@@ -1,13 +1,13 @@
 use crate::common::{
     cookie_csrf_headers_from_res_direct, get_auth_headers, get_backend_url, get_solved_pow,
 };
+use crate::expect_status;
 use rauthy_api_types::auth_providers::{ProviderCallbackRequest, ProviderLoginRequest};
 use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::new_store_id;
 use reqwest::header::{self, HeaderValue, LOCATION};
 use std::error::Error;
-
-mod common;
 
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 
@@ -22,14 +22,18 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
     // The endpoints are never reached: the token request only happens after a fully validated
     // callback, and nothing listens on this port.
     let upstream = "http://localhost:1";
+    // a unique provider per run: its issuer is what the backend enforces as unique, so no other
+    // test, and no concurrent run of this one, can collide with it
+    let suffix = new_store_id();
+    let issuer = format!("{upstream}/issuer-{suffix}");
     let res = http
         .post(format!("{backend_url}/providers/create"))
         .headers(auth_headers.clone())
         .json(&serde_json::json!({
-            "name": "Callback Test",
+            "name": format!("Callback Test {suffix}"),
             "typ": "custom",
             "enabled": true,
-            "issuer": format!("{upstream}/issuer"),
+            "issuer": issuer,
             "authorization_endpoint": format!("{upstream}/authorize"),
             "token_endpoint": format!("{upstream}/token"),
             "userinfo_endpoint": format!("{upstream}/userinfo"),

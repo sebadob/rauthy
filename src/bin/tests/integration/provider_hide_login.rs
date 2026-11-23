@@ -1,22 +1,30 @@
 use crate::common::{get_auth_headers, get_backend_url};
+use crate::{expect_status, expect_status_json};
+use rauthy_common::utils::new_store_id;
 use reqwest::header::HeaderMap;
 use std::error::Error;
-
-mod common;
-
-const ISSUER: &str = "http://localhost:1/hide-login-test";
 
 /// Nothing on this port listens: this test never reaches the upstream at all.
 const UNREACHABLE: &str = "http://localhost:1";
 
+/// The upstream of this test: nothing listens on port 1, the provider is never reached.
+const ISSUER_BASE: &str = "http://localhost:1/hide-login-test";
+
+/// The provider identity of one test run: `name` and `issuer` are both free-form strings, so they
+/// travel together and cannot be swapped at a call site.
+struct ProviderIdentity {
+    name: String,
+    issuer: String,
+}
+
 /// `ProviderRequest` has no field defaults, so every request sends the full config and only flips
 /// `hide_login`.
-fn payload(hide_login: bool) -> serde_json::Value {
+fn payload(hide_login: bool, identity: &ProviderIdentity) -> serde_json::Value {
     serde_json::json!({
-        "name": "Hide Login Test",
+        "name": identity.name,
         "typ": "custom",
         "enabled": true,
-        "issuer": ISSUER,
+        "issuer": identity.issuer,
         "authorization_endpoint": format!("{UNREACHABLE}/authorize"),
         "token_endpoint": format!("{UNREACHABLE}/token"),
         "userinfo_endpoint": format!("{UNREACHABLE}/userinfo"),
@@ -31,12 +39,13 @@ fn payload(hide_login: bool) -> serde_json::Value {
     })
 }
 
-/// The provider of [`ISSUER`] from the admin provider list, `None` when it does not exist. The
+/// The provider of `issuer` from the admin provider list, `None` when it does not exist. The
 /// `issuer` is unique, which is what identifies the provider here.
 async fn find_by_issuer(
     http: &reqwest::Client,
     url: &str,
     headers: &HeaderMap,
+    issuer: &str,
 ) -> Result<Option<serde_json::Value>, Box<dyn Error>> {
     let res = http
         .post(format!("{url}/providers"))
@@ -46,15 +55,16 @@ async fn find_by_issuer(
     let providers = expect_status_json!(res, 200, Vec<serde_json::Value>);
     Ok(providers
         .into_iter()
-        .find(|p| p["issuer"].as_str() == Some(ISSUER)))
+        .find(|p| p["issuer"].as_str() == Some(issuer)))
 }
 
 async fn delete_by_issuer(
     http: &reqwest::Client,
     url: &str,
     headers: &HeaderMap,
+    issuer: &str,
 ) -> Result<(), Box<dyn Error>> {
-    if let Some(provider) = find_by_issuer(http, url, headers).await? {
+    if let Some(provider) = find_by_issuer(http, url, headers, issuer).await? {
         let id = provider["id"].as_str().expect("the provider id");
         let res = http
             .delete(format!("{url}/providers/{id}"))
@@ -87,20 +97,24 @@ async fn test_provider_hide_login() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
     let http = reqwest::Client::new();
-
-    // A leftover from a previous, failed run would skew the very first assertion.
-    delete_by_issuer(&http, &backend_url, &auth_headers).await?;
+    // a unique issuer per run: the provider this test creates is identified by it, and no other
+    // test, or a concurrent run of this one, can use the same one
+    let identity = ProviderIdentity {
+        name: format!("Hide Login Test {}", new_store_id()),
+        issuer: format!("{ISSUER_BASE}/{}", new_store_id()),
+    };
+    let issuer = identity.issuer.clone();
 
     let res = http
         .post(format!("{backend_url}/providers/create"))
         .headers(auth_headers.clone())
-        .json(&payload(true))
+        .json(&payload(true, &identity))
         .send()
         .await?;
     let created = expect_status_json!(res, 200, serde_json::Value);
     let id = created["id"].as_str().expect("the provider id").to_string();
 
-    let provider = find_by_issuer(&http, &backend_url, &auth_headers)
+    let provider = find_by_issuer(&http, &backend_url, &auth_headers, &issuer)
         .await?
         .expect("the created provider");
     assert_eq!(
@@ -118,12 +132,12 @@ async fn test_provider_hide_login() -> Result<(), Box<dyn Error>> {
     let res = http
         .put(format!("{backend_url}/providers/{id}"))
         .headers(auth_headers.clone())
-        .json(&payload(false))
+        .json(&payload(false, &identity))
         .send()
         .await?;
     expect_status!(res, 200);
 
-    let provider = find_by_issuer(&http, &backend_url, &auth_headers)
+    let provider = find_by_issuer(&http, &backend_url, &auth_headers, &issuer)
         .await?
         .expect("the updated provider");
     assert_eq!(
@@ -136,7 +150,7 @@ async fn test_provider_hide_login() -> Result<(), Box<dyn Error>> {
         "the template carries the updated flag",
     );
 
-    delete_by_issuer(&http, &backend_url, &auth_headers).await?;
+    delete_by_issuer(&http, &backend_url, &auth_headers, &issuer).await?;
 
     Ok(())
 }

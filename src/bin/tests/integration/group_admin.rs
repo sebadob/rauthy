@@ -1,4 +1,6 @@
 use crate::common::{get_auth_headers, get_backend_url, session_headers_with};
+use crate::expect_status;
+use crate::expect_status_json;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
@@ -7,15 +9,43 @@ use rauthy_api_types::roles::RoleRequest;
 use rauthy_api_types::users::{
     NewUserRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
 };
-use rauthy_common::utils::new_store_id;
-use rauthy_data::entity::groups::Group;
+use rauthy_common::utils::{get_rand, new_store_id};
+use rauthy_data::entity::{groups::Group, roles::Role};
 use reqwest::Client;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
 use std::error::Error;
 
-mod common;
-
+/// Password of the group-admin user this test creates and logs in with.
 const PWD: &str = "123SuperSafe123";
+
+/// Group-admin delegation is defined by the group prefix in the role name
+/// (`rauthy_admin:<group>`), so every run works on a prefix of its own and its groups, users, and
+/// role are deleted again at the end.
+struct GaSetup {
+    role: String,
+    group: String,
+    other: String,
+    member: String,
+    outsider: String,
+    ga: String,
+    coadmin: String,
+    outsider2: String,
+}
+
+fn ga_setup() -> GaSetup {
+    let suffix = get_rand(12).to_lowercase();
+    let group = format!("ga{suffix}");
+    GaSetup {
+        role: format!("rauthy_admin:{group}"),
+        other: format!("{group}x"),
+        member: format!("member-{suffix}@gatest.io"),
+        outsider: format!("outsider-{suffix}@gatest.io"),
+        ga: format!("ga-{suffix}@gatest.io"),
+        coadmin: format!("coadmin-{suffix}@gatest.io"),
+        outsider2: format!("outsider2-{suffix}@gatest.io"),
+        group,
+    }
+}
 
 /// Builds an `UpdateUserRequest` that mirrors the user's current state, so a test can
 /// change one thing at a time.
@@ -70,30 +100,31 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     let admin = get_auth_headers().await?;
     let backend = get_backend_url();
     let client = Client::new();
+    let setup = ga_setup();
 
-    // --- setup: a group-admin role + two groups (tolerate left-overs from a prior run)
+    // --- setup: a group-admin role + two groups
     let res = client
         .post(format!("{backend}/roles"))
         .headers(admin.clone())
         .json(&RoleRequest {
-            role: "rauthy_admin:gatest".to_string(),
+            role: setup.role.clone(),
             meta: None,
         })
         .send()
         .await?;
-    assert!(res.status() == 200 || res.status() == 400);
+    expect_status!(res, 200, "create the group-admin role");
 
-    for group in ["gatest", "gaother"] {
+    for group in [&setup.group, &setup.other] {
         let res = client
             .post(format!("{backend}/groups"))
             .headers(admin.clone())
             .json(&GroupRequest {
-                group: group.to_string(),
+                group: group.clone(),
                 meta: None,
             })
             .send()
             .await?;
-        assert!(res.status() == 200 || res.status() == 400);
+        expect_status!(res, 200, "create group {group}");
     }
 
     // --- setup: users
@@ -102,9 +133,9 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         &client,
         &backend,
         &admin,
-        "ga-member@gatest.io",
+        &setup.member,
         vec!["user".to_string()],
-        vec!["gatest".to_string()],
+        vec![setup.group.clone()],
     )
     .await?;
     // a normal user in a different, unmanaged group
@@ -112,9 +143,9 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         &client,
         &backend,
         &admin,
-        "ga-outsider@gatest.io",
+        &setup.outsider,
         vec!["user".to_string()],
-        vec!["gaother".to_string()],
+        vec![setup.other.clone()],
     )
     .await?;
     // the group admin itself
@@ -122,9 +153,9 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         &client,
         &backend,
         &admin,
-        "ga-admin@gatest.io",
-        vec!["rauthy_admin:gatest".to_string()],
-        vec!["gatest".to_string()],
+        &setup.ga,
+        vec![setup.role.clone()],
+        vec![setup.group.clone()],
     )
     .await?;
     // a second admin in the same managed group, to test the "cannot manage another admin" path
@@ -132,9 +163,9 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         &client,
         &backend,
         &admin,
-        "ga-coadmin@gatest.io",
-        vec!["rauthy_admin:gatest".to_string()],
-        vec!["gatest".to_string()],
+        &setup.coadmin,
+        vec![setup.role.clone()],
+        vec![setup.group.clone()],
     )
     .await?;
 
@@ -152,7 +183,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     expect_status!(res, 200);
 
     // --- log in as the group admin
-    let ga_headers = session_headers_with("ga-admin@gatest.io", PWD).await;
+    let ga_headers = session_headers_with(&setup.ga, PWD).await;
 
     // 1. a group admin sees the (full) user list
     let res = client
@@ -220,8 +251,8 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     let groups = expect_status_json!(res, 200, Vec<Group>);
     let managed = groups
         .iter()
-        .find(|g| g.name == "gatest")
-        .expect("the 'gatest' group exists");
+        .find(|g| g.name == setup.group)
+        .unwrap_or_else(|| panic!("the group {} exists", setup.group));
     let res = client
         .get(format!("{backend}/groups/{}/users", managed.id))
         .headers(ga_headers.clone())
@@ -230,7 +261,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     let members = expect_status_json!(res, 200, Vec<UserResponseSimple>);
     assert!(
         members.iter().any(|u| u.id == member.id),
-        "the managed user is a member of 'gatest'",
+        "the managed user is a member of its group",
     );
 
     // 2d. it can read the MFA devices (webauthn) of a managed user (the MFA tab)
@@ -283,7 +314,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
 
     // 6. it cannot add a membership in a group it does not manage
     let mut grp = upd(&member);
-    grp.groups = Some(vec!["gatest".to_string(), "gaother".to_string()]);
+    grp.groups = Some(vec![setup.group.clone(), setup.other.clone()]);
     let res = client
         .put(format!("{backend}/users/{}", member.id))
         .headers(ga_headers.clone())
@@ -438,10 +469,10 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
 
     // 11. the "add an unmanaged user to my groups" flow: a groups-only PATCH that brings the
     // outsider into a managed group is allowed, even though the admin could not see it before.
-    // The PATCH only sends the in-scope group; the unmanaged `gaother` membership the admin
+    // The PATCH only sends the in-scope group; the unmanaged membership of the other group the admin
     // cannot see must be preserved.
     let patch = serde_json::json!({
-        "put": [{ "key": "groups", "value": ["gatest"] }],
+        "put": [{ "key": "groups", "value": [&setup.group] }],
         "del": [],
     });
     let res = client
@@ -452,7 +483,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     expect_status!(res, 200);
 
-    // now the outsider is managed: full details are visible, and it kept `gaother`
+    // now the outsider is managed: full details are visible, and it kept its other group
     let res = client
         .get(format!("{backend}/users/{}", outsider.id))
         .headers(ga_headers.clone())
@@ -460,17 +491,17 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     let managed = expect_status_json!(res, 200, UserResponse);
     let groups = managed.groups.unwrap_or_default();
-    assert!(groups.iter().any(|i| i == "gatest"));
-    assert!(groups.iter().any(|i| i == "gaother"));
+    assert!(groups.iter().any(|i| i == &setup.group));
+    assert!(groups.iter().any(|i| i == &setup.other));
 
     // a groups-only PATCH that does NOT bring the user into scope is still rejected
     let outsider2 = create_user(
         &client,
         &backend,
         &admin,
-        "ga-outsider2@gatest.io",
+        &setup.outsider2,
         vec!["user".to_string()],
-        vec!["gaother".to_string()],
+        vec![setup.other.clone()],
     )
     .await?;
     let patch = serde_json::json!({
@@ -530,9 +561,9 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&serde_json::json!({
             "scheduled": future_ts,
             "filter_type": "in_group",
-            "filter_value": "gaother",
+            "filter_value": &setup.other,
             "content_type": "text",
-            "subject": "admin gaother",
+            "subject": "admin ga-other",
             "body": "x",
         }))
         .send()
@@ -550,9 +581,9 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&serde_json::json!({
             "scheduled": future_ts,
             "filter_type": "in_group",
-            "filter_value": "gatest",
+            "filter_value": &setup.group,
             "content_type": "text",
-            "subject": "ga gatest",
+            "subject": "ga group",
             "body": "x",
         }))
         .send()
@@ -581,7 +612,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&serde_json::json!({
             "scheduled": future_ts,
             "filter_type": "in_group",
-            "filter_value": "gaother",
+            "filter_value": &setup.other,
             "content_type": "text",
             "subject": "ga gaother",
             "body": "x",
@@ -619,16 +650,16 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .as_array()
         .cloned()
         .unwrap_or_default();
-    let mut ga_gatest_job_id = None;
+    let mut ga_own_job_id = None;
     for job in &ga_jobs {
         assert_eq!(job["filter_type"], "in_group");
-        assert_ne!(job["filter_value"], "gaother");
-        if job["status"] == "Open" && ga_gatest_job_id.is_none() {
-            ga_gatest_job_id = job["id"].as_i64();
+        assert_ne!(job["filter_value"], setup.other);
+        if job["status"] == "Open" && ga_own_job_id.is_none() {
+            ga_own_job_id = job["id"].as_i64();
         }
     }
 
-    // a full admin sees everything, including the gaother job; grab its id
+    // a full admin sees everything, including the job of the other group; grab its id
     let res = client
         .get(format!("{backend}/email"))
         .headers(admin.clone())
@@ -641,13 +672,13 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .as_array()
         .cloned()
         .unwrap_or_default();
-    let gaother_job_id = all_jobs
+    let other_job_id = all_jobs
         .iter()
-        .find(|j| j["filter_value"] == "gaother" && j["status"] == "Open")
+        .find(|j| j["filter_value"] == setup.other && j["status"] == "Open")
         .and_then(|j| j["id"].as_i64());
 
     // the group admin may cancel a job in its scope ...
-    if let Some(id) = ga_gatest_job_id {
+    if let Some(id) = ga_own_job_id {
         let res = client
             .post(format!("{backend}/email/cancel/{id}"))
             .headers(ga_headers.clone())
@@ -656,7 +687,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         expect_status!(res, 200);
     }
     // ... but not one outside it
-    if let Some(id) = gaother_job_id {
+    if let Some(id) = other_job_id {
         let res = client
             .post(format!("{backend}/email/cancel/{id}"))
             .headers(ga_headers.clone())
@@ -665,7 +696,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         expect_status!(res, 403);
     }
 
-    // --- cleanup (full admin can still do everything: non-breaking)
+    // --- cleanup: everything this test created is gone again
     for id in [&member.id, &outsider.id, &outsider2.id, &coadmin.id, &ga.id] {
         let res = client
             .delete(format!("{backend}/users/{id}"))
@@ -674,6 +705,44 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
             .await?;
         expect_status!(res, 204);
     }
+    for group in [&setup.group, &setup.other] {
+        let res = client
+            .get(format!("{backend}/groups"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        let groups = expect_status_json!(res, 200, Vec<Group>);
+        let id = groups
+            .iter()
+            .find(|g| g.name == *group)
+            .unwrap_or_else(|| panic!("the group {group} exists"))
+            .id
+            .clone();
+        let res = client
+            .delete(format!("{backend}/groups/{id}"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        expect_status!(res, 200, "delete group {group}");
+    }
+    let res = client
+        .get(format!("{backend}/roles"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let roles = expect_status_json!(res, 200, Vec<Role>);
+    let id = roles
+        .iter()
+        .find(|r| r.name == setup.role)
+        .unwrap_or_else(|| panic!("the role {} exists", setup.role))
+        .id
+        .clone();
+    let res = client
+        .delete(format!("{backend}/roles/{id}"))
+        .headers(admin)
+        .send()
+        .await?;
+    expect_status!(res, 200, "delete the group-admin role");
 
     Ok(())
 }

@@ -38,13 +38,48 @@ at the recipes. Use `just -l` to get a summary of all the recipes.
 
 ## Integration Tests
 
-Integration tests in `src/bin/tests/` expect a backend on :8081 with the seeded
-bootstrap data (init_client / init_admin@localhost); the test recipes set
-`PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081`. Usually started with any of
+The whole suite is **one** test binary:
+[src/bin/tests/integration/main.rs](./src/bin/tests/integration/main.rs) with one module per area,
+pinned by `autotests = false` and two `[[test]]` blocks in
+[src/bin/Cargo.toml](./src/bin/Cargo.toml). Cargo compiles and links the whole dependency graph once
+per test *target*, so a loose test file is not free: each one adds a full link step over ~1400
+units. One target means one of each, and Cargo runs test binaries one after another while the tests
+**inside** a binary run in parallel — which is exactly what this layout is built for.
+
+The only second target is [src/bin/tests/ip_blacklist.rs](./src/bin/tests/ip_blacklist.rs): it
+blacklists the source address the whole suite connects from, so no other test may overlap its
+window. Its helpers are not duplicated — it includes the very same module the integration binary
+compiles with `#[path = "integration/common.rs"]`.
+
+```sh
+cargo test -p rauthy --test integration                       # the whole suite
+cargo test -p rauthy --test integration users::               # one area
+cargo test -p rauthy --test integration users::test_users     # one test
+cargo test -p rauthy --test integration -- --test-threads=8   # wider parallelism
+cargo test -p rauthy --test integration -- --ignored          # the manual measurements
+```
+
+How a test is run must not matter: full suite, one area, one test, any order, any number of times,
+on a backend that has been running for a week. Two tests are `#[ignore]` for that reason and they
+are the only ones: `auth_flow::test_certs` rotates the backend's signing key set (37 s, and it
+invalidates every token the other tests hold), and `auth_flow::test_concurrent_logins` is a load
+measurement that ends in a deliberate `assert_eq!(1, 2)` and is heavy on a runner.
+
+Every test expects a backend on :8081 with the seeded bootstrap data (init_client /
+init_admin@localhost). The test recipes set `PUB_URL=localhost:8081
+RP_ORIGIN=http://localhost:8081`. Usually started with any of
 
 - `just test-backend` (starts hiqlite backend without running tests)
 - `just test-hiqlite`
 - `just test-postgres`
+
+Anything a test needs comes in through the public API. When the public API cannot deliver it,
+that is exactly what the dev-only endpoints under `/dev/{typ}`
+([src/api/src/dev_only/dev_handler.rs](./src/api/src/dev_only/dev_handler.rs)) exist for — dev
+mode only, never part of the public API. A password reset magic link is the example: it leaves
+the backend only via mail, so `/dev/magic_link` returns the id of a user's current reset link,
+just like `/dev/otp_code` returns an emailed OTP code. A test that builds its own setup and
+reveals what it needs this way runs on any backend, in any order, as often as you want.
 
 Unit tests can be run without any issues.
 
@@ -377,10 +412,24 @@ document it like the library it may become.
   removed in the long run.
 - Test observable behavior and properties (monotonic, round-trips, idempotent), not
   restated constants or mirrored branches.
-- **Never prefix a test file name with `z` to order it.** The `src/bin/tests/zz*_` files exist
-  only because a few legacy tests depend on running late; that is legacy, not a pattern. A new
-  test is named after what it tests, is self-contained, and removes everything it created, so its
-  result never depends on the file that ran before it.
+- **New tests go inside the integration binary, never next to it.** A new area is one module file
+  under [src/bin/tests/integration/](./src/bin/tests/integration/) and one `mod` line in its
+  `main.rs`. The helpers already exist in
+  [src/bin/tests/integration/common.rs](./src/bin/tests/integration/common.rs) and its macros land
+  at the crate root: `use crate::{expect_status, expect_status_json};`. `ip_blacklist.rs` is the
+  only other target, it is not a place to add tests, and it is not duplicated: it includes the very
+  same helper module via `#[path = "integration/common.rs"]`. Name a test after what it tests, keep
+  it self-contained, and delete everything it created, so its result never depends on the module
+  that ran before it.
+- **Never mutate what another test depends on.** That is the whole game: no rotated client secret of
+  a seeded client, no global password policy left changed, no logout of `init_admin` (it ends every
+  session of that user), no blacklisted source address, no renamed seeded role, no signed key set
+  rotated. Create your own user / client / group / role / cust-attr with a `new_store_id()` suffix
+  (`.to_lowercase()` for emails: Rauthy lowercases them, and the email rules reject a space), work
+  on it, assert on it, delete it. A test that only passes alone, in a specific order, or on a
+  backend it wiped itself, is a bug in the test, not a property of the suite. The `#[ignore]` tests
+  are the ones whose subject *is* a global mutation (`test_certs`) and a heavy measurement
+  (`test_concurrent_logins`).
 - Write a failing test before fixing a bug. Cover each feature combination and each
   platform-specific path. When something is broken, run what already exists first and read
   the output; analyse by hand only what is still unclear afterwards.

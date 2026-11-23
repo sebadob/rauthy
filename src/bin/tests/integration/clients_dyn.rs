@@ -1,4 +1,6 @@
 use crate::common::{get_auth_headers, get_backend_url};
+use crate::expect_status;
+use crate::expect_status_json;
 use pretty_assertions::{assert_eq, assert_ne};
 use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, UpdateClientRequest,
@@ -6,8 +8,6 @@ use rauthy_api_types::clients::{
 use rauthy_api_types::oidc::GrantType;
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
-
-mod common;
 
 const GOOD_REDIRECT_URI: &str = "http://localhost:8080/cb";
 const BAD_REDIRECT_URIS: [&str; 4] = [
@@ -395,6 +395,14 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     assert!(!after.enabled);
     assert_eq!(after.name.as_deref(), Some("Dyn Test Client 1234567"));
     assert_eq!(after.access_token_lifetime, 42);
+
+    // the registered client is gone again
+    let res = reqwest::Client::new()
+        .delete(format!("{backend_url}/clients/{client_id}"))
+        .headers(get_auth_headers().await?)
+        .send()
+        .await?;
+    expect_status!(res, 200, "delete the dynamic client");
 
     Ok(())
 }

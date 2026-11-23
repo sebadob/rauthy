@@ -7,6 +7,7 @@ use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
 use rauthy_api_types::users::NewUserRegistrationRequest;
 use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
+use rauthy_data::entity::magic_links::MagicLink;
 use rauthy_data::entity::one_time_password::OneTimePassword;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::html::templates::HtmlTemplate;
@@ -25,6 +26,13 @@ pub struct TemplateQuery {
 /// Dev-only: integration tests need the email OTP code which is normally never returned anywhere.
 #[derive(serde::Deserialize)]
 pub struct DevOtpCodeRequest {
+    user_id: String,
+}
+
+/// Dev-only: integration tests need the id of a password reset magic link, which is normally
+/// only ever transported via mail.
+#[derive(serde::Deserialize)]
+pub struct DevMagicLinkRequest {
     user_id: String,
 }
 
@@ -115,6 +123,14 @@ pub async fn post_dev_only_endpoints(
             let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
             let principal = web::ReqData::<Principal>::extract(&req).await?;
             auth_providers::post_provider_callback_handle(req, payload, principal).await
+        }
+        "magic_link" => {
+            // Dev-only helper for integration tests: a password reset link leaves the backend
+            // only via mail, so tests have no other way to ever get the id of a valid link.
+            let payload = serde_json::from_slice::<DevMagicLinkRequest>(bytes)?;
+            let link = MagicLink::find_pwd_reset_for_user(&payload.user_id).await?;
+
+            Ok(HttpResponse::Ok().body(link.id))
         }
         "otp_code" => {
             // Dev-only helper for integration tests: an email OTP code is only ever sent out via

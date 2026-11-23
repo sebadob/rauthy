@@ -16,9 +16,8 @@
 //! Without them, every test skips itself and the plain `just test-hiqlite` run stays green. The
 //! code the dev-only reveal endpoint returns is the very code the backend has emailed, which is the
 //! only way a test can ever get one, because emails go nowhere during tests.
-mod common;
-
 use crate::common::{cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow};
+use crate::{expect_status, expect_status_json};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::LoginRequest;
 use rauthy_api_types::users::{
@@ -27,17 +26,22 @@ use rauthy_api_types::users::{
     UpdateUserRequest, UserResponseSimple,
 };
 use rauthy_common::sha256;
-use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::{base64_url_encode, new_store_id};
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest::{Client, StatusCode};
 use ring::hmac;
 use std::error::Error;
+use std::sync::LazyLock;
 
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 /// The password of the user these tests create. The seeded password policy has a minimum length,
 /// and this satisfies it with all of its likely `include_*` rules.
 const PASSWORD_ONLY: &str = "OtpSecret!Regression0123";
-const OTP_USER: &str = "otp-secret-user@localhost";
+/// The user of these tests carries a random suffix: it is created, updated and logged in by email,
+/// and two runs on one backend must not share the account.
+static SUFFIX: LazyLock<String> = LazyLock::new(|| new_store_id().to_lowercase());
+static OTP_USER: LazyLock<String> =
+    LazyLock::new(|| format!("otp-secret-user-{}@localhost", *SUFFIX));
 /// The name inside `BOOTSTRAP_API_KEY` - the very key the `mfa_assurance` suite documents.
 const FIXTURE_KEY_NAME: &str = "mfa-assurance";
 /// The defaults of `otp.length` and `otp.digest_len_default`, which the test config keeps at their
@@ -370,10 +374,10 @@ async fn test_otp_secret_predictable_code_is_rejected() -> Result<(), Box<dyn Er
     if !gated_suite_ready().await? {
         return Ok(());
     }
-    let user_id = create_test_user(OTP_USER).await?;
-    ensure_otp(&user_id, OTP_USER).await?;
+    let user_id = create_test_user(OTP_USER.as_str()).await?;
+    ensure_otp(&user_id, OTP_USER.as_str()).await?;
 
-    let (session, start_code) = start_ceremony(OTP_USER).await?;
+    let (session, start_code) = start_ceremony(OTP_USER.as_str()).await?;
     let step = otp_rows(&user_id)
         .await?
         .first()
@@ -399,10 +403,10 @@ async fn test_otp_secret_mailed_code_completes_login() -> Result<(), Box<dyn Err
     if !gated_suite_ready().await? {
         return Ok(());
     }
-    let user_id = create_test_user(OTP_USER).await?;
-    ensure_otp(&user_id, OTP_USER).await?;
+    let user_id = create_test_user(OTP_USER.as_str()).await?;
+    ensure_otp(&user_id, OTP_USER.as_str()).await?;
 
-    let (session, start_code) = start_ceremony(OTP_USER).await?;
+    let (session, start_code) = start_ceremony(OTP_USER.as_str()).await?;
     let code = dev_otp_code(&user_id).await?;
     let res = otp_finish(&session, &start_code, &code).await?;
     expect_status!(res, 202);

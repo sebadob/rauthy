@@ -16,11 +16,10 @@
 //! with an OTP is created by these tests, so nothing here interferes with the rest of the suite.
 //! Without those variables, the gate under test is off and every test skips itself, so the plain
 //! `just test-hiqlite` run stays green.
-mod common;
-
 use crate::common::{
     PASSWORD, USERNAME, cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow,
 };
+use crate::{expect_status, expect_status_json};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::LoginRequest;
@@ -30,17 +29,22 @@ use rauthy_api_types::users::{
     UpdateUserRequest, UserResponseSimple,
 };
 use rauthy_common::sha256;
-use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::{base64_url_encode, new_store_id};
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest::{Client, StatusCode};
 use std::error::Error;
+use std::sync::LazyLock;
 
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 /// The password of every user these tests create: the seeded password policy has a minimum length,
 /// and this satisfies it with all of its likely `include_*` rules.
 const PASSWORD_ONLY: &str = "MfaAssurance!Regression0123";
-const MFA_USER: &str = "mfa-user@localhost";
-const ADMIN_WITH_OTP: &str = "admin-with-otp@localhost";
+/// The users of these tests carry this suffix: they are created and updated by email, and two runs
+/// on one backend must not share an account.
+static SUFFIX: LazyLock<String> = LazyLock::new(|| new_store_id().to_lowercase());
+static MFA_USER: LazyLock<String> = LazyLock::new(|| format!("mfa-user-{}@localhost", *SUFFIX));
+static ADMIN_WITH_OTP: LazyLock<String> =
+    LazyLock::new(|| format!("admin-with-otp-{}@localhost", *SUFFIX));
 const MFA_REQUIRED: u16 = 406;
 const FIXTURE_KEY_NAME: &str = "mfa-assurance";
 
@@ -390,11 +394,11 @@ async fn test_mfa_assurance_abandoned_ceremony_never_grants_access() -> Result<(
         return Ok(());
     }
 
-    let mfa_user_id = create_test_user(MFA_USER, &["user"]).await?;
-    ensure_otp(&mfa_user_id, MFA_USER).await?;
+    let mfa_user_id = create_test_user(MFA_USER.as_str(), &["user"]).await?;
+    ensure_otp(&mfa_user_id, MFA_USER.as_str()).await?;
 
     let session = init_session().await?;
-    let res = login(MFA_USER, PASSWORD_ONLY, &session).await;
+    let res = login(MFA_USER.as_str(), PASSWORD_ONLY, &session).await;
     // the 2nd factor is requested here and it is never completed
     expect_status!(res, 200);
 
@@ -416,7 +420,7 @@ async fn test_mfa_assurance_completed_ceremony_grants_access() -> Result<(), Box
         return Ok(());
     }
 
-    let (_admin_id, session) = assured_admin_session(ADMIN_WITH_OTP).await?;
+    let (_admin_id, session) = assured_admin_session(ADMIN_WITH_OTP.as_str()).await?;
 
     assert_eq!(admin_api_status(&session).await?, 200);
 
@@ -432,7 +436,7 @@ async fn test_mfa_assurance_relogin_as_other_admin_resets() -> Result<(), Box<dy
         return Ok(());
     }
 
-    let (_admin_id, session) = assured_admin_session(ADMIN_WITH_OTP).await?;
+    let (_admin_id, session) = assured_admin_session(ADMIN_WITH_OTP.as_str()).await?;
     assert_eq!(admin_api_status(&session).await?, 200);
 
     // a login for the MFA-less admin on the very same session: fully logged in and admin
@@ -452,12 +456,12 @@ async fn test_mfa_assurance_ceremony_is_bound_to_its_session() -> Result<(), Box
         return Ok(());
     }
 
-    let admin_id = create_test_user(ADMIN_WITH_OTP, &["rauthy_admin"]).await?;
-    ensure_otp(&admin_id, ADMIN_WITH_OTP).await?;
+    let admin_id = create_test_user(ADMIN_WITH_OTP.as_str(), &["rauthy_admin"]).await?;
+    ensure_otp(&admin_id, ADMIN_WITH_OTP.as_str()).await?;
 
     let session = init_session().await?;
     let challenge = expect_status_json!(
-        login(ADMIN_WITH_OTP, PASSWORD_ONLY, &session).await,
+        login(ADMIN_WITH_OTP.as_str(), PASSWORD_ONLY, &session).await,
         200,
         OtpChallenge
     );

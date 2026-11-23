@@ -402,6 +402,7 @@ impl Default for Vars {
                 sources: BTreeMap::default(),
             },
             cred_stuff_detect: VarsCredStuff {
+                enable: true,
                 blacklist_duration: Duration::from_secs(24 * 3600),
                 blacklist_threshold: 15,
                 scan_window: Duration::from_secs(3 * 3600),
@@ -2146,6 +2147,14 @@ impl Vars {
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "cred_stuff_detection");
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "cred_stuff_detection",
+            "enable",
+            "CRED_STUFF_ENABLE",
+        ) {
+            self.cred_stuff_detect.enable = v;
+        }
         if let Some(v) = t_duration(
             &mut table,
             "cred_stuff_detection",
@@ -4997,6 +5006,9 @@ impl VarsConsentSource {
 
 #[derive(Debug)]
 pub struct VarsCredStuff {
+    /// The detector only ever does something with this enabled: it counts login attempts with a
+    /// password per IP and blacklists an IP that exceeds `blacklist_threshold` of them.
+    pub enable: bool,
     pub blacklist_duration: Duration,
     pub blacklist_threshold: u32,
     pub scan_window: Duration,

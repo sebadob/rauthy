@@ -28,6 +28,16 @@ pg_password = '123SuperSafe'
 
 [dynamic_clients]
 enable = true
+# The seed default is one hour per IP. The suite registers dynamic clients from one source IP and
+# runs more than once per backend, so the window is as short as the "immediately again" assertion
+# in the DCR test needs it.
+rate_limit_reg = 3
+
+[cred_stuff_detection]
+# The integration test suite logs in with a brand new user in (almost) every test, and the
+# credential stuffing detector counts each `email + password` combination per IP: the suite would
+# blacklist its own 127.0.0.1 for 24 h. Its own target covers the endpoint, not this detector.
+enable = false
 
 [email]
 rauthy_admin_email = 'admin@localhost'
