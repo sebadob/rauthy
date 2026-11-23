@@ -592,8 +592,8 @@ fn serve_mock_idp() {
                 .expect("port 10081 to be free for the mock IdP")
                 .run()
                 .await
-                .expect("the mock IdP to start")
-        })
+                .expect("the mock IdP to start");
+        });
     });
 
     for _ in 0..50 {
