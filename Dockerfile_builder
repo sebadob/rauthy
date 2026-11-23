@@ -5,11 +5,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
 ENV PKG_CONFIG_ALLOW_CROSS=1
-ENV RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 
 COPY assets/node_setup_builder/node_setup_22.sh .
 
-RUN <<EOF
+RUN <<DOCKER_EOF
 #!/bin/bash
 set -e
 
@@ -22,6 +21,15 @@ apt-get install -y build-essential clang gcc-aarch64-linux-gnu g++-aarch64-linux
   libpam0g-dev librust-libudev-sys-dev nodejs mold lld
 apt-get clean
 
+mkdir -p /work/.cargo
+cat > /work/.cargo/config.toml <<'CARGO_EOF'
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+CARGO_EOF
+
 rustup target add aarch64-unknown-linux-gnu
 rustup target add x86_64-unknown-linux-gnu
 rustup component add clippy
@@ -29,7 +37,7 @@ rustup component add rustfmt
 
 cargo install just wasm-pack
 
-EOF
+DOCKER_EOF
 
 WORKDIR /work
 
