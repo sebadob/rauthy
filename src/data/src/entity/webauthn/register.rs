@@ -66,7 +66,8 @@ pub async fn reg_start(
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
-            ccr.public_key.timeout = Some(min(cfg.req_exp.as_millis(), u32::MAX as u128) as u32);
+            ccr.public_key.timeout =
+                Some(min(cfg.req_exp.as_millis(), u128::from(u32::MAX)) as u32);
 
             let cache_idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
             let reg_data = WebauthnReg {

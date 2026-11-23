@@ -5748,7 +5748,7 @@ fn parse_duration(input: &str) -> Option<Duration> {
         .ok()
         // i64 casting here is necessary to guarantee safety when we downcast later on
         // for cache TTL and so on.
-        .map(|v| Duration::from_secs((v as i64).saturating_mul(mul) as u64))
+        .map(|v| Duration::from_secs(i64::from(v).saturating_mul(mul) as u64))
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
@@ -5850,7 +5850,7 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 
 fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u32> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u32::MAX as i64 {
+        if v < 0 || v > i64::from(u32::MAX) {
             panic!("{}", err_t(key, parent, "u32"));
         }
         Some(v as u32)
@@ -5860,7 +5860,7 @@ fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u16> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u16::MAX as i64 {
+        if v < 0 || v > i64::from(u16::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u16)
@@ -5870,7 +5870,7 @@ fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u8> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u8::MAX as i64 {
+        if v < 0 || v > i64::from(u8::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u8)
