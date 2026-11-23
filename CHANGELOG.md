@@ -88,6 +88,51 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### Rolling App Log Files
+
+By default, Rauthy only logs to stdout. With `logging.log_file`, it writes a rolling app log file
+instead: the file is rolled over every day (UTC) into `<file_name>.<YYYY-MM-DD>` files and stdout
+gets no logs at all. A background task, running on the cron schedule of `logging.log_file_cleanup`,
+cleans the files up afterwards: it deletes everything older than `logging.log_file_keep_for` and
+compresses the ones older than `logging.log_file_archive_after` into `.gz` files first.
+
+```toml
+[logging]
+# If you want Rauthy to log into a file instead of stdout, set the
+# path to that log file here. The file is rolled over every day into
+# `<file_name>.<YYYY-MM-DD>` files and stdout will get no logs at all.
+# The parent directory is created if it does not exist.
+#
+# default: None - logs go to stdout
+# overwritten by: LOG_FILE
+log_file = './rauthy.log'
+
+# When the rolling log file cleanup task runs.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 3 * * * *" - every day at 03:00
+# overwritten by: LOG_FILE_CLEANUP
+log_file_cleanup = "0 0 3 * * * *"
+
+# How long rolling log files are kept before the cleanup task deletes
+# them. Accepts Durations like '60s', '10h', '7d', ...
+# '0' disables the cleanup task entirely, including compression.
+#
+# default: 30d
+# overwritten by: LOG_FILE_KEEP_FOR
+log_file_keep_for = '30d'
+
+# Rolling log files older than this Duration are compressed into a
+# `.gz` file before the cleanup deletes them, for instance '3d'.
+# Needs `log_file` to be set.
+#
+# default: None - log files are never compressed
+# overwritten by: LOG_FILE_ARCHIVE_AFTER
+log_file_archive_after = '3d'
+```
+
+[#1962](https://github.com/sebadob/rauthy/pull/1962)
 #### Custom JSON path claim matcher
 
 Rauthy now ships a customized, simplified JSONPath matcher. It brings new possibilities and fixes

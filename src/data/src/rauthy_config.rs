@@ -21,6 +21,7 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, btree_map};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -41,6 +42,10 @@ const FROM_SECRETS: &str = "$SECRETS";
 /// which would break the login PoW with a 500 at runtime instead of failing at startup.
 const POW_DIFFICULTY_MIN: u8 = 10;
 const POW_DIFFICULTY_MAX: u8 = 99;
+
+/// How long rolling log files are kept when `logging.log_file` is set. Changing this changes how
+/// much disk space the default log file cleanup will occupy.
+const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -645,6 +650,10 @@ impl Default for Vars {
                 level: "info".into(),
                 level_database: "info".into(),
                 level_access: "modifying".into(),
+                log_file: None,
+                log_file_cleanup: "0 0 3 * * * *".into(),
+                log_file_keep_for: DEFAULT_LOG_FILE_KEEP_FOR,
+                log_file_archive_after: None,
                 log_fmt: "text".into(),
             },
             matrix: VarsMatrix {
@@ -3569,6 +3578,33 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "logging", "level_access", "LOG_LEVEL_ACCESS") {
             self.logging.level_access = v.into();
         }
+        if let Some(v) = t_str(&mut table, "logging", "log_file", "LOG_FILE") {
+            self.logging.log_file = Some(v.into());
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "logging",
+            "log_file_cleanup",
+            "LOG_FILE_CLEANUP",
+        ) {
+            self.logging.log_file_cleanup = v.into();
+        }
+        if let Some(v) = t_duration(
+            &mut table,
+            "logging",
+            "log_file_keep_for",
+            "LOG_FILE_KEEP_FOR",
+        ) {
+            self.logging.log_file_keep_for = v;
+        }
+        if let Some(v) = t_duration(
+            &mut table,
+            "logging",
+            "log_file_archive_after",
+            "LOG_FILE_ARCHIVE_AFTER",
+        ) {
+            self.logging.log_file_archive_after = Some(v);
+        }
         if let Some(v) = t_str(&mut table, "logging", "log_fmt", "LOG_FMT") {
             self.logging.log_fmt = v.into();
         }
@@ -4612,6 +4648,7 @@ impl Vars {
             "lifetimes.jwk_autorotate_cron",
             &self.lifetimes.jwk_autorotate_cron,
         );
+        validate_cron("logging.log_file_cleanup", &self.logging.log_file_cleanup);
         self.validate_ephemeral_clients();
         self.validate_ldap();
         self.validate_reg_acc_init_immediate();
@@ -5313,6 +5350,10 @@ pub struct VarsLogging {
     pub level: Cow<'static, str>,
     pub level_database: Cow<'static, str>,
     pub level_access: Cow<'static, str>,
+    pub log_file: Option<PathBuf>,
+    pub log_file_cleanup: Cow<'static, str>,
+    pub log_file_keep_for: Duration,
+    pub log_file_archive_after: Option<Duration>,
     pub log_fmt: Cow<'static, str>,
 }
 
