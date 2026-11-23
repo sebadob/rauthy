@@ -231,7 +231,7 @@ pub async fn handle_put_user_password_reset<'a>(
     let ml_redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
         MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
         MagicLinkUsage::PasswordReset(redirect_uri) => redirect_uri,
-        _ => None,
+        MagicLinkUsage::EmailChange(_) => None,
     };
     let redirect_uri = ml_redirect_uri.or_else(|| {
         RauthyConfig::get()
