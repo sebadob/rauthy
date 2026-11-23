@@ -54,7 +54,8 @@ use async_compression::brotli;
 use async_compression::tokio::bufread::{BrotliEncoder, GzipEncoder};
 use rauthy_error::ErrorResponse;
 use std::io::Cursor;
-use tokio::io::BufReader;
+use std::path::Path;
+use tokio::io::{AsyncWriteExt, BufReader};
 use tokio_util::io::ReaderStream;
 
 /// Brotli compression with good quality for static content
@@ -96,6 +97,22 @@ pub async fn compress_gzip(input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
     tokio::io::copy(&mut compressor, &mut bytes).await?;
 
     Ok(bytes)
+}
+
+/// Streams the file at `src` into a gzip file at `dest` without loading it into memory.
+pub async fn compress_file_gzip(src: &Path, dest: &Path) -> Result<(), ErrorResponse> {
+    let mut src_file = tokio::fs::File::open(src).await?;
+    let dest_file = tokio::fs::File::create(dest.with_added_extension("~")).await?;
+
+    let level = async_compression::Level::Precise(5);
+    let mut compressor =
+        async_compression::tokio::write::GzipEncoder::with_quality(dest_file, level);
+    tokio::io::copy(&mut src_file, &mut compressor).await?;
+    compressor.shutdown().await?;
+
+    tokio::fs::rename(dest.with_added_extension("~"), dest).await?;
+
+    Ok(())
 }
 
 #[inline]

@@ -57,6 +57,8 @@ danger_insecure = true
 
 [logging]
 level = 'debug'
+log_file = 'src/bin/tests/test_data/rauthy.log'
+log_file_keep_for = '1d'
 
 [mfa]
 admin_force_mfa = false
