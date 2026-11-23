@@ -210,7 +210,7 @@ async fn send_channel_notifications(notification: &Notification) -> bool {
 
     if let Some((_, notifier)) = NOTIFIER_SLACK.get() {
         match notifier.notify(notification).await {
-            Ok(_) => {
+            Ok(()) => {
                 channels_configured = true;
             }
             Err(err) => {
@@ -221,7 +221,7 @@ async fn send_channel_notifications(notification: &Notification) -> bool {
 
     if let Some((_, notifier)) = NOTIFIER_MATRIX.get() {
         match notifier.notify(notification).await {
-            Ok(_) => {
+            Ok(()) => {
                 channels_configured = true;
             }
             Err(err) => {

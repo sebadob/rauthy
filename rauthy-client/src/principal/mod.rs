@@ -3,7 +3,6 @@ use crate::rauthy_error::RauthyError;
 use crate::tokens::claims::AccessToken;
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::ops::Deref;
 
 #[cfg(feature = "actix-web")]
 mod actix_web;
@@ -92,8 +91,8 @@ impl PrincipalOidc {
         let roles = claims.roles.unwrap_or_default();
         let groups = claims.groups.unwrap_or_default();
 
-        let is_admin = config.admin_claim.matches(roles.deref(), groups.deref());
-        let is_user = is_admin || config.user_claim.matches(roles.deref(), groups.deref());
+        let is_admin = config.admin_claim.matches(&roles, &groups);
+        let is_user = is_admin || config.user_claim.matches(&roles, &groups);
 
         Ok(Self {
             id,

@@ -12,7 +12,7 @@ pub struct UserValuesValidator<'a> {
     pub given_name: Option<&'a str>,
     pub family_name: Option<&'a str>,
     pub preferred_username: Option<&'a str>,
-    pub user_values: &'a Option<UserValuesRequest>,
+    pub user_values: Option<&'a UserValuesRequest>,
 }
 
 impl<'a> UserValuesValidator<'a> {
@@ -25,7 +25,7 @@ impl<'a> UserValuesValidator<'a> {
             given_name: req.given_name.as_deref(),
             family_name: req.family_name.as_deref(),
             preferred_username,
-            user_values: &req.user_values,
+            user_values: req.user_values.as_ref(),
         }
     }
 
@@ -46,10 +46,10 @@ impl<'a> UserValuesValidator<'a> {
         config: &VarsUserValuesConfig,
     ) -> Result<(), ErrorResponse> {
         fn uv(
-            values: &Option<UserValuesRequest>,
+            values: Option<&UserValuesRequest>,
             field: fn(&UserValuesRequest) -> &Option<String>,
         ) -> Option<&str> {
-            values.as_ref().and_then(|v| field(v).as_deref())
+            values.and_then(|v| field(v).as_deref())
         }
         let (old, new) = (stored.user_values, self.user_values);
         let fields = [
@@ -158,7 +158,7 @@ impl<'a> UserValuesValidator<'a> {
 
         // Run the required checks even when `user_values` is omitted entirely.
         let default_uv = UserValuesRequest::default();
-        let uv = self.user_values.as_ref().unwrap_or(&default_uv);
+        let uv = self.user_values.unwrap_or(&default_uv);
         if config.birthdate == UserValueConfigValue::Required
             && (uv.birthdate.is_none() || uv.birthdate.as_deref() == Some(""))
         {
@@ -221,7 +221,7 @@ impl<'a> UserValuesValidator<'a> {
     }
 
     fn validate_tz(&self) -> Result<(), ErrorResponse> {
-        if let Some(tz) = self.user_values.as_ref().and_then(|uv| uv.tz.as_deref())
+        if let Some(tz) = self.user_values.and_then(|uv| uv.tz.as_deref())
             && chrono_tz::Tz::from_str(tz).is_err()
         {
             return Err(ErrorResponse::new(
@@ -256,7 +256,7 @@ impl<'a> UserValuesValidator<'a> {
                 given_name: Some(&user.given_name),
                 family_name: user.family_name.as_deref(),
                 preferred_username: uv.preferred_username.as_deref(),
-                user_values: &user_values,
+                user_values: user_values.as_ref(),
             }
             .validate()
             .is_err();
@@ -283,7 +283,7 @@ mod tests {
             given_name: Some("A"),
             family_name: None,
             preferred_username: None,
-            user_values: &None,
+            user_values: None,
         };
 
         assert!(validator.validate_with(&config).is_err());
@@ -302,7 +302,7 @@ mod tests {
             given_name: Some("A"),
             family_name: None,
             preferred_username: None,
-            user_values: &user_values,
+            user_values: user_values.as_ref(),
         };
 
         assert!(validator.validate_with(&config).is_err());
@@ -317,7 +317,7 @@ mod tests {
 
     fn validator<'a>(
         preferred_username: Option<&'a str>,
-        user_values: &'a Option<UserValuesRequest>,
+        user_values: Option<&'a UserValuesRequest>,
     ) -> UserValuesValidator<'a> {
         UserValuesValidator {
             given_name: Some("A"),
@@ -333,11 +333,11 @@ mod tests {
         config.preferred_username.preferred_username = UserValueConfigValue::Required;
         let uv = values(Some("Main St"));
 
-        let stored = validator(Some("alfred"), &uv);
-        let updated = validator(Some("alfred"), &uv);
+        let stored = validator(Some("alfred"), uv.as_ref());
+        let updated = validator(Some("alfred"), uv.as_ref());
         assert!(updated.validate_update_with(&stored, &config).is_ok());
         assert!(updated.validate_with(&config).is_ok());
-        assert!(validator(None, &uv).validate_with(&config).is_err());
+        assert!(validator(None, uv.as_ref()).validate_with(&config).is_err());
     }
 
     #[test]
@@ -348,14 +348,14 @@ mod tests {
         let cleared = values(Some(""));
         let deleted = None;
 
-        let stored = validator(None, &stored_uv);
+        let stored = validator(None, stored_uv.as_ref());
         assert!(
-            validator(None, &cleared)
+            validator(None, cleared.as_ref())
                 .validate_update_with(&stored, &config)
                 .is_err()
         );
         assert!(
-            validator(None, &deleted)
+            validator(None, deleted)
                 .validate_update_with(&stored, &config)
                 .is_err()
         );
@@ -367,9 +367,9 @@ mod tests {
         config.street = UserValueConfigValue::Required;
         let missing = values(None);
 
-        let stored = validator(None, &missing);
+        let stored = validator(None, missing.as_ref());
         assert!(
-            validator(None, &missing)
+            validator(None, missing.as_ref())
                 .validate_update_with(&stored, &config)
                 .is_ok()
         );
@@ -379,7 +379,7 @@ mod tests {
             ..Default::default()
         });
         assert!(
-            validator(None, &bad_tz)
+            validator(None, bad_tz.as_ref())
                 .validate_update_with(&stored, &config)
                 .is_err()
         );
@@ -391,12 +391,12 @@ mod tests {
         config.street = UserValueConfigValue::Required;
         let missing_street = values(None);
 
-        let stored = validator(None, &missing_street);
+        let stored = validator(None, missing_street.as_ref());
         let cleared_given_name = UserValuesValidator {
             given_name: None,
             family_name: None,
             preferred_username: None,
-            user_values: &missing_street,
+            user_values: missing_street.as_ref(),
         };
         assert!(
             cleared_given_name
@@ -406,7 +406,7 @@ mod tests {
 
         let unrelated_edit = UserValuesValidator {
             family_name: Some("B"),
-            ..validator(None, &missing_street)
+            ..validator(None, missing_street.as_ref())
         };
         assert!(
             unrelated_edit

@@ -296,7 +296,7 @@ OFFSET $5"#;
                     latest_ts = s.exp;
                 }
                 res = Some(rows);
-            };
+            }
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
@@ -342,7 +342,7 @@ OFFSET $3"#;
                 latest_ts = s.exp;
             }
             res = Some(rows);
-        };
+        }
 
         let res = res
             .expect("sessions paginated should always be at least an empty Vec<_> at this point");
@@ -671,12 +671,12 @@ impl Session {
                 ));
             } else {
                 let target = now
-                    .add(chrono::Duration::seconds(exp_in as i64))
+                    .add(chrono::Duration::seconds(i64::from(exp_in)))
                     .timestamp();
                 if ts < target { ts } else { target }
             }
         } else {
-            now.add(chrono::Duration::seconds(exp_in as i64))
+            now.add(chrono::Duration::seconds(i64::from(exp_in)))
                 .timestamp()
         };
 
@@ -703,7 +703,7 @@ impl Session {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),
-            RauthyConfig::get().vars.fedcm.session_lifetime as i64,
+            i64::from(RauthyConfig::get().vars.fedcm.session_lifetime),
             SameSite::None,
         )
     }
@@ -857,7 +857,7 @@ impl Session {
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
         if self.groups.is_none() {
             return Ok(Vec::default());
-        };
+        }
         let mut res = Vec::new();
         self.groups
             .as_ref()

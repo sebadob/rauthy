@@ -95,6 +95,9 @@ pub struct NewUserRequest {
 pub struct NewUserRegistrationRequest {
     #[validate(email)]
     pub email: String,
+    /// Only read when `[user_registration].danger_reg_acc_init_immediate` is set, it is validated
+    /// against the `[passwords]` policy in `User::apply_password_rules`.
+    pub password: Option<String>,
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,

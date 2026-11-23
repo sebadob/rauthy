@@ -8,9 +8,9 @@ use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
     AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
-    HealthResponse, I18nConfigResponse, KeepAliveResponse, LoginTimeResponse,
-    PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse, SearchParams,
-    SearchParamsType,
+    HealthResponse, I18nConfigResponse, InstanceLabelResponse, KeepAliveResponse,
+    LoginTimeResponse, PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
+    SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
@@ -341,6 +341,15 @@ pub async fn put_password_policy(
     let mut rules = PasswordPolicy::find().await?;
     rules.apply_req(payload);
     rules.save().await?;
+
+    if RauthyConfig::get()
+        .vars
+        .user_registration
+        .danger_reg_acc_init_immediate
+    {
+        DB::hql().clear_cache(Cache::Html).await?;
+    }
+
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
 }
 
@@ -401,7 +410,7 @@ pub async fn get_search(
         principal.validate_group_admin_session()?;
     }
 
-    let limit = params.limit.unwrap_or(100) as i64;
+    let limit = i64::from(params.limit.unwrap_or(100));
     match params.ty {
         SearchParamsType::Session => {
             let res = Session::search(&params.idx, &params.q, limit)
@@ -550,7 +559,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     let vars = &RauthyConfig::get().vars.suspicious_requests;
     if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
-        warn!("Suspicious request path '{}' from {}", path, ip)
+        warn!("Suspicious request path '{}' from {}", path, ip);
     }
 
     if !vars.blacklist.is_zero()
@@ -617,7 +626,7 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
                 current: RAUTHY_VERSION.to_string(),
                 last_check: Some(latest.timestamp),
                 latest: Some(latest.latest_version.to_string()),
-                latest_url: Some(latest.release_url.to_string()),
+                latest_url: Some(latest.release_url.clone()),
                 update_available,
             }
         }
@@ -630,6 +639,21 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
         },
     };
     Ok(HttpResponse::Ok().json(resp))
+}
+
+/// Returns the configured Instance Label
+#[utoipa::path(
+    get,
+    path = "/instance_label",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = InstanceLabelResponse),
+    ),
+)]
+#[get("/instance_label")]
+pub async fn get_instance_label() -> Result<HttpResponse, ErrorResponse> {
+    let label = RauthyConfig::get().vars.server.instance_label.as_deref();
+    Ok(HttpResponse::Ok().json(InstanceLabelResponse { label }))
 }
 
 /// Returns the remote IP that Rauthy has extracted for this client

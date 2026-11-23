@@ -50,7 +50,7 @@ pub async fn send_pwd_reset_info(user: User) {
     let text = EmailResetInfoTxt {
         email_sub_prefix,
         link: &link,
-        exp: &exp.to_string(),
+        exp: &exp.clone(),
         expires_1: i18n.expires_1,
         expires_2: i18n.expires_2,
         update: i18n.update,
@@ -64,7 +64,7 @@ pub async fn send_pwd_reset_info(user: User) {
         theme_vars,
         email_sub_prefix,
         link: &link,
-        exp: &exp.to_string(),
+        exp: &exp.clone(),
         expires_1: i18n.expires_1,
         expires_2: i18n.expires_2,
         update: i18n.update,
@@ -74,7 +74,7 @@ pub async fn send_pwd_reset_info(user: User) {
     let req = EMail {
         typ: EmailType::PasswordResetInfo,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
         text: Some(
             text.render()
@@ -94,7 +94,7 @@ pub async fn send_pwd_reset_info(user: User) {
         )
         .await;
     match res {
-        Ok(_) => {
+        Ok(()) => {
             debug!("User {} notified about password expiry", user.email);
         }
         Err(ref e) => {

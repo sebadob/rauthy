@@ -34,7 +34,7 @@ impl From<tokio_postgres::Row> for EmailJob {
         Self {
             id: row.get("id"),
             scheduled: row.get("scheduled"),
-            status: EmailJobStatus::from(row.get::<_, i16>("status") as i64),
+            status: EmailJobStatus::from(i64::from(row.get::<_, i16>("status"))),
             updated: row.get("updated"),
             last_user_ts: row.get("last_user_ts"),
             filter: row.get::<_, String>("filter").parse().unwrap(),
@@ -337,7 +337,7 @@ impl EmailJob {
             EmailContentType::Markdown => {
                 Cow::from(markdown::render_sanitized_markdown(&self.body))
             }
-            EmailContentType::Html => Cow::from(self.body.to_string()),
+            EmailContentType::Html => Cow::from(self.body.clone()),
         };
 
         Ok(Some(email::custom::build_custom_html_email(&body).await?))
@@ -441,7 +441,7 @@ impl EmailJob {
                     )
                     .await
                     {
-                        Ok(_) => {
+                        Ok(()) => {
                             trace!(
                                 "E-Mail to {} sent to Mailer-Task (internally) successfully",
                                 user.email

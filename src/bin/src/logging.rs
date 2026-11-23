@@ -45,7 +45,7 @@ pub fn setup_logging() -> tracing::Level {
             .finish();
         tracing::subscriber::set_global_default(subscriber)
             .expect("setting default subscriber failed");
-    };
+    }
 
     log_level
 }

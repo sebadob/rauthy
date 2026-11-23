@@ -93,7 +93,7 @@ fn code_from_secret(secret: &[u8], step: i64) -> String {
         hash[offset + 2],
         hash[offset + 3],
     ]);
-    let digits = 10u32.pow(CODE_LEN as u32);
+    let digits = 10u32.pow(u32::from(CODE_LEN));
     format!("{:0width$}", binary % digits, width = CODE_LEN as usize)
 }
 

@@ -227,8 +227,10 @@ fn update_time_taken_fp(start: Instant) {
     TIME_TAKEN_FAST_PATH_MICROS.store(
         // The downcast of `start.elapsed().as_micros()` is fine. We will never even nearly need a
         // u128 for these. The expected micros are in the 2-digit or lower 3-digit range.
-        (TIME_TAKEN_FAST_PATH_MICROS.load(Ordering::Relaxed) + start.elapsed().as_micros() as u64)
-            / 2,
+        u64::midpoint(
+            TIME_TAKEN_FAST_PATH_MICROS.load(Ordering::Relaxed),
+            start.elapsed().as_micros() as u64,
+        ),
         Ordering::Relaxed,
     );
 }

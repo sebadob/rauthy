@@ -106,10 +106,15 @@ fn build_values(attr_names: &[String], scope: &Scope) -> (Option<String>, Option
     let attr_include_access = build_attrs(
         attr_names,
         scope,
-        &scope.attr_include_access,
+        scope.attr_include_access.as_deref(),
         "attr_include_access",
     );
-    let attr_include_id = build_attrs(attr_names, scope, &scope.attr_include_id, "attr_include_id");
+    let attr_include_id = build_attrs(
+        attr_names,
+        scope,
+        scope.attr_include_id.as_deref(),
+        "attr_include_id",
+    );
 
     // `claims_at_root` is only meaningful for custom scopes; normalize it so a
     // default OIDC scope can never be stored as requesting root emission.
@@ -160,7 +165,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
 fn build_attrs(
     attr_names: &[String],
     scope: &Scope,
-    attrs: &Option<Vec<String>>,
+    attrs: Option<&[String]>,
     debug_name: &str,
 ) -> Option<String> {
     if let Some(names) = attrs {

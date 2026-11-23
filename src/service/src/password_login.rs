@@ -32,7 +32,7 @@ pub async fn password_login(
     };
 
     match user.validate_password(password.clone()).await {
-        Ok(_) => {
+        Ok(()) => {
             // Very important to do these checks only AFTER a possibly existing password for the user was
             // validated to never leak data. The errors of these 2 checks are forwarded to the UI for better
             // UX, to inform the user about an issue with their account while their password was ok.

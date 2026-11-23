@@ -195,7 +195,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
                 if user.password.is_some() {
                     user.password_expires = Some(
                         Utc::now()
-                            .add(chrono::Duration::days(valid_days as i64))
+                            .add(chrono::Duration::days(i64::from(valid_days)))
                             .timestamp(),
                     );
                 } else {

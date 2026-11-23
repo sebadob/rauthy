@@ -2826,6 +2826,17 @@ swagger_ui_enable = false
 # overwritten by: SSP_THRESHOLD
 #ssp_threshold = 1000
 
+# An optional label for this Rauthy instance.
+# If set, it will be displayed in the Admin UI in the bottom left
+# corner next to the version number.  This can be useful when you have
+# multiple Rauthy instances (e.g. staging, production, or in a HA
+# cluster) to quickly identify which one you are currently working
+# with.
+#
+# default: not set
+# overwritten by: INSTANCE_LABEL
+#instance_label = 'Production'
+
 [suspicious_requests]
 # The "catch all" route handler on `/` will compare the request
 # path against a hardcoded list of common scan targets from bots
@@ -3094,20 +3105,47 @@ storage_type = 'db'
 # overwritten by: USER_REG_OPEN_REDIRECT
 #allow_open_redirect = false
 
-# The default redirect target for a browser after a user has successfully reset
-# their password via a magic link, or completed the initial setup of a new
-# account. It can be a relative path, like '/auth/v1/account', or a full URL to
-# your own application.
+# The default redirect target for a browser after a user has
+# successfully reset their password via a magic link, or completed  the
+# initial setup of a new account. It can be a relative path, like
+# '/auth/v1/account', or a full URL to your own application.
 #
-# Only used when the magic link itself did not carry a 'redirect_uri', which can
-# be set during a user registration, or with a password reset request from a
-# client. Such a 'redirect_uri' always has priority.
+# Only used when the magic link itself did not carry a 'redirect_uri',
+# which can be set during a user registration, or with a password reset
+# request from a client. Such a 'redirect_uri' always has priority.
 #
-# If this is not set, no 'Location' header will be returned, and the frontend
-# redirects to the account dashboard, which keeps the current behavior.
+# If this is not set, no 'Location' header will be returned, and the
+# frontend redirects to the account dashboard, which keeps the current
+# behavior.
 #
 # overwritten by: USER_REG_POST_RESET_REDIRECT_URI
 #post_reset_redirect_uri = 'https://example.com'
+
+# Reject any E-Mail address which contains a `+` in its local part,
+# for the open registration and for a self-service E-Mail change.
+#
+# default: false
+# overwritten by: USER_REG_REJECT_PLUS_SUBADDRESSING
+#reject_plus_subaddressing = false
+
+# The local parts of an E-Mail address that are blocked for the open
+# registration and for a self-service E-Mail change. The match is exact
+# and case-insensitive.
+#
+# default: [ 'abuse', 'admin', 'administrator', 'daemon', 'ftp',
+#   'hostmaster', 'mailnull', 'mailer-daemon', 'noc', 'no-reply',
+#   'noreply', 'null', 'operator', 'postmaster', 'proxy', 'root',
+#   'security', 'support', 'uucp', 'usenet', 'webmaster', 'www'
+# ]
+# overwritten by: USER_REG_RESERVED_NAMES - single String, \n separated values
+#reserved_names = ['ceo', 'root']
+
+# Ask for the password in the open registration form and init the account
+# right away, instead of sending out the password reset Magic Link.
+#
+# default: false
+# overwritten by: USER_REG_DANGER_REG_ACC_INIT_IMEDIATE
+#danger_reg_acc_init_immediate = false
 
 [user_values]
 # In this section, you can configure the requirements for different
@@ -3177,6 +3215,14 @@ storage_type = 'db'
 # default: 5
 # overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
 #password_reset_redirect_timeout = 5
+
+# Deny any self-service E-Mail address change. The account dashboard
+# will disable the E-Mail field. Changing the address of a user is an
+# admin only action.
+#
+# default: false
+# overwritten by: USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY
+#self_service_email_change_deny = false
 
 [user_values.preferred_username]
 

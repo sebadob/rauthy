@@ -28,7 +28,7 @@ pub async fn trigger() {
         } else {
             format!("^(http|https|{additional_schemes})://[a-z0-9.:-]+$")
         };
-        RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap()
+        RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap();
     }
 
     {
@@ -38,7 +38,7 @@ pub async fn trigger() {
             "https"
         };
         let uri = format!("{scheme}://{}/auth/v1/oidc/token", vars.server.pub_url);
-        DPOP_TOKEN_ENDPOINT.set(uri).unwrap()
+        DPOP_TOKEN_ENDPOINT.set(uri).unwrap();
     }
 
     DEV_MODE.set(vars.dev.dev_mode).unwrap();

@@ -186,7 +186,13 @@ impl HtmlCached {
             }
             Self::UserRegistration => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
-                UserRegisterHtml::build(&lang, theme_ts, HtmlTemplate::AuthProviders(providers))
+                let acc_init = HtmlTemplate::reg_acc_init_immediate().await?;
+                UserRegisterHtml::build(
+                    &lang,
+                    theme_ts,
+                    acc_init,
+                    HtmlTemplate::AuthProviders(providers),
+                )
             }
         };
 

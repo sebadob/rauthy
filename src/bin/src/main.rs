@@ -40,13 +40,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     args.secrets_file,
                     false,
                 )
-                .await?
+                .await?;
             } else {
                 #[cfg(any(debug_assertions, feature = "profiling"))]
                 let test_mode = args.test;
                 #[cfg(not(any(debug_assertions, feature = "profiling")))]
                 let test_mode = false;
-                server::run(args.config_file, args.secrets_file, test_mode).await?
+                server::run(args.config_file, args.secrets_file, test_mode).await?;
             }
         }
         Args::Bootstrap(args) => utils::bootstrap::run(args).await?,

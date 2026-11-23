@@ -432,7 +432,7 @@ impl TokenSet {
                 }
 
                 if let Some(zone) = &uv.tz {
-                    claims.zoneinfo = Some(zone)
+                    claims.zoneinfo = Some(zone);
                 }
             }
 
@@ -625,7 +625,7 @@ impl TokenSet {
             None,
             client,
             dpop_fingerprint,
-            client.access_token_lifetime as i64,
+            i64::from(client.access_token_lifetime),
             TokenScopes::new(scope.as_str()),
             None,
             None,
@@ -809,10 +809,10 @@ impl TokenSet {
                 ));
             }
 
-            let client_lt = client.access_token_lifetime.unsigned_abs() as i64;
+            let client_lt = i64::from(client.access_token_lifetime.unsigned_abs());
             if client_lt < diff { client_lt } else { diff }
         } else {
-            client.access_token_lifetime.unsigned_abs() as i64
+            i64::from(client.access_token_lifetime.unsigned_abs())
         };
 
         let token_type = if dpop_fingerprint.is_some() {

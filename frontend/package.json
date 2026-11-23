@@ -13,6 +13,7 @@
         "test:webauthn-reg": "./node_modules/.bin/svelte-kit sync && node --test tests/webauthn-reg.node.mjs",
         "test:redirect-uri": "node --test tests/redirect-uri.node.mjs",
         "test:patterns": "node --test tests/patterns.node.mjs",
+        "test:email-domain": "node --test tests/email-domain.node.mjs",
         "test:generate-password": "./node_modules/.bin/svelte-kit sync && node --test tests/generate-password.node.mjs",
         "test:fetch-error": "./node_modules/.bin/svelte-kit sync && node --test tests/fetch-error.node.mjs",
         "test:password-reset": "npm run build && node --test tests/password-reset.node.mjs",

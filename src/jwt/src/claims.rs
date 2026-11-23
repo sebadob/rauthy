@@ -105,7 +105,7 @@ impl AddressClaim<'_> {
 impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
     fn from(value: &rauthy_api_types::oidc::AddressClaim) -> AddressClaim<'_> {
         AddressClaim {
-            formatted: value.formatted.to_string(),
+            formatted: value.formatted.clone(),
             street_address: value.street_address.as_deref(),
             locality: value.locality.as_deref(),
             postal_code: value.postal_code.as_deref(),

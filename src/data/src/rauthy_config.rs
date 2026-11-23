@@ -13,6 +13,7 @@ use hiqlite::NodeConfig;
 use rauthy_common::constants::{CookieMode, DEFAULT_CONFIG_PATH};
 use rauthy_common::logging::LogLevelAccess;
 use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME, RE_RESOURCE};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use regex::Regex;
 use serde::Serialize;
 use spow::pow::Pow;
@@ -35,6 +36,11 @@ use webauthn_rs::Webauthn;
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
 
 const FROM_SECRETS: &str = "$SECRETS";
+
+/// The difficulty range `spow` accepts. Outside of it, every `Pow::with_difficulty` call returns an `Err`,
+/// which would break the login PoW with a 500 at runtime instead of failing at startup.
+const POW_DIFFICULTY_MIN: u8 = 10;
+const POW_DIFFICULTY_MAX: u8 = 99;
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -706,6 +712,7 @@ impl Default for Vars {
                 swagger_ui_public: false,
                 see_keep_alive: Duration::from_secs(30),
                 ssp_threshold: 1000,
+                instance_label: None,
             },
             sponsor: VarsSponsor {
                 email_reminder_disable: false
@@ -1552,6 +1559,9 @@ Your account has not been compromised and no data was leaked."#.into()),
                 domain_blacklist: Vec::default(),
                 allow_open_redirect: false,
                 post_reset_redirect_uri: None,
+                reject_plus_subaddressing: false,
+                reserved_names: default_reserved_names(),
+                danger_reg_acc_init_immediate: false,
             },
             user_values: VarsUserValuesConfig {
                 given_name: UserValueConfigValue::Required,
@@ -1566,6 +1576,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 revalidate_during_login: false,
                 name_order_reverse: false,
                 password_reset_redirect_timeout: 5,
+                self_service_email_change_deny: false,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -1603,14 +1614,15 @@ impl Vars {
             .expect("Cannot parse USE_VAULT_CONFIG as bool");
         let slf = Self::default();
 
-        let config = match use_vault_config {
-            true => match VaultConfig::load_config().await {
+        let config = if use_vault_config {
+            match VaultConfig::load_config().await {
                 Ok(config) => config,
                 Err(err) => {
                     panic!("Cannot read config from Vault. {err}");
                 }
-            },
-            _ => match fs::read_to_string(path_config).await {
+            }
+        } else {
+            match fs::read_to_string(path_config).await {
                 Ok(s) => s,
                 // A config via env vars only is a valid setup, but only for the default path.
                 // A file that was given explicitly, or exists but cannot be read, is an error.
@@ -1624,7 +1636,7 @@ impl Vars {
                 Err(err) => {
                     panic!("Cannot read config from {path_config}: {err}");
                 }
-            },
+            }
         };
 
         Self::parse(slf, config, path_secrets).await
@@ -3829,6 +3841,9 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "server", "ssp_threshold", "SSP_THRESHOLD") {
             self.server.ssp_threshold = v;
         }
+        if let Some(v) = t_str(&mut table, "server", "instance_label", "INSTANCE_LABEL") {
+            self.server.instance_label = Some(v);
+        }
 
         check_table_empty(table, "server");
     }
@@ -4280,7 +4295,7 @@ impl Vars {
             "domain_restriction",
             "USER_REG_DOMAIN_RESTRICTION",
         ) {
-            self.user_registration.domain_restriction = Some(v);
+            self.user_registration.domain_restriction = Some(v.to_lowercase());
         }
         if let Some(v) = t_str_vec(
             &mut table,
@@ -4288,7 +4303,8 @@ impl Vars {
             "domain_blacklist",
             "USER_REG_DOMAIN_BLACKLIST",
         ) {
-            self.user_registration.domain_blacklist = v;
+            self.user_registration.domain_blacklist =
+                v.into_iter().map(|v| v.to_lowercase()).collect();
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -4305,6 +4321,32 @@ impl Vars {
             "USER_REG_POST_RESET_REDIRECT_URI",
         ) {
             self.user_registration.post_reset_redirect_uri = Some(v);
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_registration",
+            "reject_plus_subaddressing",
+            "USER_REG_REJECT_PLUS_SUBADDRESSING",
+        ) {
+            self.user_registration.reject_plus_subaddressing = v;
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "user_registration",
+            "reserved_names",
+            "USER_REG_RESERVED_NAMES",
+        ) {
+            self.user_registration.reserved_names =
+                v.into_iter().map(|name| name.to_lowercase()).collect();
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_registration",
+            "danger_reg_acc_init_immediate",
+            "USER_REG_DANGER_REG_ACC_INIT_IMMEDIATE",
+        ) {
+            self.user_registration.danger_reg_acc_init_immediate = v;
         }
 
         check_table_empty(table, "user_registration");
@@ -4364,6 +4406,14 @@ impl Vars {
             "PASSWORD_RESET_REDIRECT_TIMEOUT",
         ) {
             self.user_values.password_reset_redirect_timeout = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_values",
+            "self_service_email_change_deny",
+            "USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY",
+        ) {
+            self.user_values.self_service_email_change_deny = v;
         }
 
         let mut pref_username = t_table(&mut table, "preferred_username");
@@ -4546,6 +4596,13 @@ impl Vars {
             panic!("device_grant.user_code_length must be <=255");
         }
 
+        if !(POW_DIFFICULTY_MIN..=POW_DIFFICULTY_MAX).contains(&self.pow.difficulty) {
+            panic!(
+                "`pow.difficulty` must be within {POW_DIFFICULTY_MIN}..={POW_DIFFICULTY_MAX}, it is: {}",
+                self.pow.difficulty
+            );
+        }
+
         if let Err(err) = validate_max_document_bytes(self.ephemeral_clients.max_document_bytes) {
             panic!("{err}");
         }
@@ -4557,6 +4614,7 @@ impl Vars {
         );
         self.validate_ephemeral_clients();
         self.validate_ldap();
+        self.validate_reg_acc_init_immediate();
         self.validate_used_after_db_init();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
@@ -4705,6 +4763,44 @@ impl Vars {
     fn validate_ldap(&self) {
         if self.ldap.plain_text && !self.server.proxy_mode {
             panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
+        }
+    }
+
+    /// `user_registration.danger_reg_acc_init_immediate` sets the password of a new account in the
+    /// registration form itself, so Rauthy hands out control over that mailbox address without ever
+    /// having proven control over it. The only defense is that the address space is fully controlled,
+    /// which is what these values provide, so this rejects anything that is not the hardened set.
+    /// `pow.difficulty` is validated in `validate()` for every configuration.
+    fn validate_reg_acc_init_immediate(&self) {
+        if !self.user_registration.danger_reg_acc_init_immediate {
+            return;
+        }
+
+        let mut missing = Vec::new();
+        if !self.user_registration.enable {
+            missing.push("`user_registration.enable = true`");
+        }
+        if self.user_registration.domain_restriction.is_none() {
+            missing.push("`user_registration.domain_restriction = '<your domain>'`");
+        }
+        if !self.user_registration.reject_plus_subaddressing {
+            missing.push("`user_registration.reject_plus_subaddressing = true`");
+        }
+        if self.user_registration.reserved_names.is_empty() {
+            missing.push("`user_registration.reserved_names` must not be empty");
+        }
+        if !self.user_values.self_service_email_change_deny {
+            missing.push("`user_values.self_service_email_change_deny = true`");
+        }
+        if self.user_registration.allow_open_redirect {
+            missing.push("`user_registration.allow_open_redirect = false`");
+        }
+
+        if !missing.is_empty() {
+            panic!(
+                "`user_registration.danger_reg_acc_init_immediate` is only allowed with all of these:\n{}",
+                missing.join("\n")
+            );
         }
     }
 
@@ -5001,6 +5097,41 @@ pub struct VarsEncryption {
     pub keys: Vec<String>,
 }
 
+/// The local parts that are reserved when `[user_registration].reserved_names` is not set.
+///
+/// RFC 2142 defines `allowance`, `abuse`, `help`, `hostmaster`, `postmaster`, `privacy`, `usenet`, and
+/// team addresses like `webmaster` / `ftp`. Mail daemons and system accounts are included because a
+/// self-registration for one of them claims a mailbox that is almost never owned by a real user.
+fn default_reserved_names() -> Vec<String> {
+    [
+        "abuse",
+        "admin",
+        "administrator",
+        "daemon",
+        "ftp",
+        "hostmaster",
+        "mailnull",
+        "mailer-daemon",
+        "noc",
+        "no-reply",
+        "noreply",
+        "null",
+        "operator",
+        "postmaster",
+        "proxy",
+        "root",
+        "security",
+        "support",
+        "uucp",
+        "usenet",
+        "webmaster",
+        "www",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect()
+}
+
 /// `ephemeral_clients.max_document_bytes` must leave room for a minimal CIMD document.
 pub fn validate_max_document_bytes(v: u32) -> Result<(), String> {
     if v < 1024 {
@@ -5276,6 +5407,7 @@ pub struct VarsServer {
     pub swagger_ui_public: bool,
     pub see_keep_alive: Duration,
     pub ssp_threshold: u16,
+    pub instance_label: Option<String>,
 }
 
 #[derive(Debug)]
@@ -5368,6 +5500,76 @@ pub struct VarsUserRegistration {
     pub domain_blacklist: Vec<String>,
     pub allow_open_redirect: bool,
     pub post_reset_redirect_uri: Option<String>,
+    pub reject_plus_subaddressing: bool,
+    pub reserved_names: Vec<String>,
+    pub danger_reg_acc_init_immediate: bool,
+}
+
+impl VarsUserRegistration {
+    pub fn validate_email_domain(&self, email: &str) -> Result<(), ErrorResponse> {
+        if self.domain_restriction.is_none() && self.domain_blacklist.is_empty() {
+            return Ok(());
+        }
+
+        let Some((_, domain)) = email.rsplit_once('@') else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid E-Mail address",
+            ));
+        };
+
+        if let Some(restriction) = &self.domain_restriction {
+            if !domain.eq_ignore_ascii_case(restriction) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Domains are restricted to '@{restriction}'"),
+                ));
+            }
+        } else if self
+            .domain_blacklist
+            .iter()
+            .any(|blacklisted| domain.eq_ignore_ascii_case(blacklisted))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Domain is blacklisted",
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_email_name(&self, email: &str) -> Result<(), ErrorResponse> {
+        if !self.reject_plus_subaddressing && self.reserved_names.is_empty() {
+            return Ok(());
+        }
+
+        let Some((local, _)) = email.split_once('@') else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid E-Mail address",
+            ));
+        };
+
+        if self.reject_plus_subaddressing && local.contains('+') {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Subaddressed E-Mail addresses are not allowed",
+            ));
+        }
+
+        let local = local.to_lowercase();
+        for reserved in &self.reserved_names {
+            if local == *reserved {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotAccepted,
+                    format!("The E-Mail address '{local}' is reserved"),
+                ));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -5384,6 +5586,7 @@ pub struct VarsUserValuesConfig {
     pub revalidate_during_login: bool,
     pub name_order_reverse: bool,
     pub password_reset_redirect_timeout: u16,
+    pub self_service_email_change_deny: bool,
     pub preferred_username: VarsUserPreferredUsername,
 }
 
@@ -5550,7 +5753,7 @@ fn parse_duration(input: &str) -> Option<Duration> {
         .ok()
         // i64 casting here is necessary to guarantee safety when we downcast later on
         // for cache TTL and so on.
-        .map(|v| Duration::from_secs((v as i64).saturating_mul(mul) as u64))
+        .map(|v| Duration::from_secs(i64::from(v).saturating_mul(mul) as u64))
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
@@ -5652,7 +5855,7 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 
 fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u32> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u32::MAX as i64 {
+        if v < 0 || v > i64::from(u32::MAX) {
             panic!("{}", err_t(key, parent, "u32"));
         }
         Some(v as u32)
@@ -5662,7 +5865,7 @@ fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u16> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u16::MAX as i64 {
+        if v < 0 || v > i64::from(u16::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u16)
@@ -5672,7 +5875,7 @@ fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u8> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u8::MAX as i64 {
+        if v < 0 || v > i64::from(u8::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u8)
@@ -6094,6 +6297,52 @@ url = 'https://consent.example.com'
     }
 
     #[test]
+    fn user_values_self_service_email_change_deny() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_values.self_service_email_change_deny);
+
+        let mut table: toml::Table =
+            toml::from_str("[user_values]\nself_service_email_change_deny = true").unwrap();
+        vars.parse_user_values(&mut table);
+        assert!(vars.user_values.self_service_email_change_deny);
+    }
+
+    #[test]
+    fn user_registration_validate_email_domain() {
+        let mut vars = Vars::default();
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\ndomain_restriction = 'my-domain.com'").unwrap();
+        vars.parse_user_registration(&mut table);
+
+        vars.user_registration
+            .validate_email_domain("me@my-domain.com")
+            .expect("inside the restricted domain");
+        let err = vars
+            .user_registration
+            .validate_email_domain("me@other.tld")
+            .expect_err("outside the restricted domain");
+        assert!(err.message.contains("@my-domain.com"), "{err:?}");
+
+        let mut vars = Vars::default();
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\ndomain_blacklist = ['spam.tld']").unwrap();
+        vars.parse_user_registration(&mut table);
+
+        vars.user_registration
+            .validate_email_domain("me@ok.tld")
+            .expect("not blacklisted");
+        vars.user_registration
+            .validate_email_domain("me@spam.tld")
+            .expect_err("blacklisted domain");
+
+        // no restriction and no blacklist: anything passes
+        let vars = Vars::default();
+        vars.user_registration
+            .validate_email_domain("me@anywhere.tld")
+            .expect("no domain rules configured");
+    }
+
+    #[test]
     #[should_panic(expected = "Array of Strings")]
     fn test_t_str_vec_rejects_string() {
         let mut table: toml::Table = toml::from_str("domain_blacklist = 'x'").unwrap();
@@ -6389,5 +6638,186 @@ default_scopes = ['profile']
     fn validate_cron_rejects_exhausted_schedule() {
         // valid syntax, but the year is in the past -> never fires again
         validate_cron("geo.maxmind_update_cron", "0 30 3 1 * * 2020");
+    }
+
+    #[test]
+    fn validate_accepts_pow_difficulty_inside_spow_range() {
+        let mut vars = vars_minimally_valid();
+        vars.pow.difficulty = POW_DIFFICULTY_MIN;
+        vars.validate();
+        vars.pow.difficulty = POW_DIFFICULTY_MAX;
+        vars.validate();
+    }
+
+    #[test]
+    #[should_panic(expected = "`pow.difficulty` must be within 10..=99, it is: 5")]
+    fn validate_rejects_pow_difficulty_below_spow_range() {
+        let mut vars = vars_minimally_valid();
+        vars.pow.difficulty = 5;
+        vars.validate();
+    }
+
+    #[test]
+    #[should_panic(expected = "`pow.difficulty` must be within 10..=99, it is: 100")]
+    fn validate_rejects_pow_difficulty_above_spow_range() {
+        let mut vars = vars_minimally_valid();
+        vars.pow.difficulty = 100;
+        vars.validate();
+    }
+
+    #[test]
+    fn user_registration_reserved_names_and_subaddressing() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_registration.reject_plus_subaddressing);
+        assert!(
+            vars.user_registration
+                .reserved_names
+                .iter()
+                .any(|i| i == "postmaster")
+        );
+
+        let mut table: toml::Table = toml::from_str(
+            "[user_registration]\nreject_plus_subaddressing = true\nreserved_names = ['CEO', 'root']",
+        )
+        .unwrap();
+        vars.parse_user_registration(&mut table);
+        assert!(vars.user_registration.reject_plus_subaddressing);
+        assert_eq!(
+            vars.user_registration.reserved_names,
+            vec!["ceo".to_string(), "root".to_string()]
+        );
+    }
+
+    #[test]
+    fn user_registration_danger_reg_acc_init_immediate() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_registration.danger_reg_acc_init_immediate);
+
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\ndanger_reg_acc_init_immediate = true").unwrap();
+        vars.parse_user_registration(&mut table);
+        assert!(vars.user_registration.danger_reg_acc_init_immediate);
+    }
+
+    #[test]
+    fn user_registration_validate_email_name() {
+        let mut vars = Vars::default();
+        vars.user_registration.reserved_names = vec!["postmaster".to_string()];
+
+        assert!(
+            vars.user_registration
+                .validate_email_name("PostMaster@mail.example")
+                .is_err()
+        );
+        assert!(
+            vars.user_registration
+                .validate_email_name("postmaster@mail.example")
+                .is_err()
+        );
+        assert!(
+            vars.user_registration
+                .validate_email_name("postmaster.news@mail.example")
+                .is_ok()
+        );
+        assert!(
+            vars.user_registration
+                .validate_email_name("ceo+news@mail.example")
+                .is_ok()
+        );
+
+        vars.user_registration.reject_plus_subaddressing = true;
+        let err = vars
+            .user_registration
+            .validate_email_name("ceo+news@mail.example")
+            .expect_err("must be rejected");
+        assert!(err.message.contains("Subaddressed"));
+    }
+
+    /// A `Vars` that passes every startup check of `validate()`, to test one check at a time.
+    fn vars_minimally_valid() -> Vars {
+        let mut vars = Vars::default();
+        vars.encryption.key_active = "0".to_string();
+        vars.encryption.keys = vec!["0-test-key".to_string()];
+        vars.server.pub_url = "localhost:8081".to_string();
+        vars.webauthn.rp_id = "localhost".to_string();
+        vars.webauthn.rp_origin = "http://localhost:8081".to_string();
+        vars
+    }
+
+    /// The full hardened set `danger_reg_acc_init_immediate` requires on top of `vars_minimally_valid()`.
+    fn vars_hardened_acc_init_immediate() -> Vars {
+        let mut vars = vars_minimally_valid();
+        vars.user_registration.danger_reg_acc_init_immediate = true;
+        vars.user_registration.enable = true;
+        vars.user_registration.domain_restriction = Some("localhost".to_string());
+        vars.user_registration.reject_plus_subaddressing = true;
+        vars.user_values.self_service_email_change_deny = true;
+        vars
+    }
+
+    #[test]
+    #[should_panic(expected = "danger_reg_acc_init_immediate` is only allowed with all of these")]
+    fn validate_reg_acc_init_immediate_lists_the_hardened_requirements() {
+        let mut vars = vars_minimally_valid();
+        vars.user_registration.danger_reg_acc_init_immediate = true;
+        vars.validate();
+    }
+
+    #[test]
+    fn validate_reg_acc_init_immediate_accepts_the_hardened_config() {
+        vars_hardened_acc_init_immediate().validate();
+    }
+
+    fn parse_user_reg(toml_src: &str) -> VarsUserRegistration {
+        let mut table: toml::Table = toml::from_str(toml_src).unwrap();
+        let mut vars = Vars::default();
+        vars.parse_user_registration(&mut table);
+        vars.user_registration
+    }
+
+    #[test]
+    fn validate_email_domain_matches_the_domain_part_exactly() {
+        let reg = parse_user_reg("[user_registration]\ndomain_restriction = 'example.com'");
+        assert!(reg.validate_email_domain("me@example.com").is_ok());
+        assert!(reg.validate_email_domain("me@EXAMPLE.com").is_ok());
+        assert!(reg.validate_email_domain("me@exAMPLE.com").is_ok());
+
+        // a plain `ends_with` accepted all of these, and each one is a domain under control of
+        // someone else than the restricted one
+        for evil in [
+            "me@evil-example.com",
+            "me@example.com.evil.tld",
+            "me@sub.example.com",
+            "meexample.com",
+            "me@sub.example.com.evil.tld",
+        ] {
+            assert!(reg.validate_email_domain(evil).is_err(), "accepted {evil}");
+        }
+    }
+
+    #[test]
+    fn validate_email_domain_blacklist_is_exact_and_case_insensitive() {
+        let reg = parse_user_reg("[user_registration]\ndomain_blacklist = [ 'spam.tld' ]");
+        assert!(reg.validate_email_domain("me@spam.tld").is_err());
+        assert!(reg.validate_email_domain("me@SPAM.TLD").is_err());
+        assert!(reg.validate_email_domain("me@SpAm.TlD").is_err());
+        // not a domain match anymore: this is a different, non blacklisted domain
+        assert!(reg.validate_email_domain("me@evil-spam.tld").is_ok());
+        assert!(reg.validate_email_domain("me@ham.tld").is_ok());
+    }
+
+    #[test]
+    fn validate_email_name_is_exact_and_case_insensitive() {
+        let reg = parse_user_reg(
+            "[user_registration]\nreserved_names = [ 'ceo' ]\nreject_plus_subaddressing = true",
+        );
+        assert!(reg.validate_email_name("ceo@mail.example").is_err());
+        assert!(reg.validate_email_name("CEO@mail.example").is_err());
+        assert!(reg.validate_email_name("CeO@mail.example").is_err());
+        assert!(reg.validate_email_name("ceo+news@mail.example").is_err());
+        assert!(reg.validate_email_name("ceO.news@mail.example").is_ok());
+
+        let reg = parse_user_reg("[user_registration]\nreject_plus_subaddressing = false");
+        assert!(reg.validate_email_name("ceo+news@mail.example").is_ok());
     }
 }

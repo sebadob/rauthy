@@ -576,6 +576,7 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_timezones)
                 .service(generic::post_update_language)
                 .service(generic::get_version)
+                .service(generic::get_instance_label)
                 .service(generic::get_whoami)
                 .service(kv::get_kv_ns)
                 .service(kv::post_kv_ns)
@@ -788,7 +789,7 @@ fn workers() -> usize {
             let reserve = if is_hiqlite() { 2 } else { 1 };
             workers = max(
                 2,
-                cores as i64 - vars.hashing.max_hash_threads as i64 - reserve,
+                cores as i64 - i64::from(vars.hashing.max_hash_threads) - reserve,
             ) as usize;
         }
     }

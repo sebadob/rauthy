@@ -321,7 +321,7 @@ impl UserPicture {
                 match fs::remove_file(&path).await {
                     Ok(()) => {}
                     Err(err) if err.kind() == io::ErrorKind::NotFound => {
-                        debug!(path, "Local picture already removed")
+                        debug!(path, "Local picture already removed");
                     }
                     Err(err) => error!(path, ?err, "Error cleaning up local picture"),
                 }
@@ -331,7 +331,7 @@ impl UserPicture {
                     .delete(&Self::file_name(&slf.id, &slf.content_type))
                     .await
                 {
-                    error!(object_id = slf.id, ?err, "Error cleaning up s3 picture")
+                    error!(object_id = slf.id, ?err, "Error cleaning up s3 picture");
                 }
             }
             // an unknown `storage` of a stored picture: its data cannot be found, but the row
@@ -341,7 +341,7 @@ impl UserPicture {
                     picture_id = slf.id,
                     storage = slf.storage,
                     "Unknown storage of a picture, its data is not cleaned up"
-                )
+                );
             }
         }
 

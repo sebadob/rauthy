@@ -92,7 +92,7 @@ SET data = $2
 
     pub async fn create_end_entity(&self) -> Result<SelfSignedCert, ErrorResponse> {
         let pub_url = &RauthyConfig::get().vars.server.pub_url;
-        let name = if let Some((name, _)) = pub_url.rsplit_once(":") {
+        let name = if let Some((name, _)) = pub_url.rsplit_once(':') {
             name
         } else {
             pub_url

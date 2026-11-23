@@ -449,16 +449,13 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
             (FedCMLoginStatus::LoggedOut, String::default())
         }
         Some(sid) => {
-            let session = match Session::find(sid).await {
-                Ok(s) => s,
-                Err(_) => {
-                    debug!("FedCM session not found -> user_id is logged-out",);
-                    return (FedCMLoginStatus::LoggedOut, String::default());
-                }
+            let Ok(session) = Session::find(sid).await else {
+                debug!("FedCM session not found -> user_id is logged-out",);
+                return (FedCMLoginStatus::LoggedOut, String::default());
             };
 
             if session.is_valid(
-                RauthyConfig::get().vars.fedcm.session_timeout as i64,
+                i64::from(RauthyConfig::get().vars.fedcm.session_timeout),
                 real_ip_from_req(req).ok(),
                 req.path(),
             ) {

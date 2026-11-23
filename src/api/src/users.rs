@@ -107,9 +107,9 @@ pub async fn get_users(
 
     let user_count = User::count().await?;
     let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    if user_count >= ssp_threshold as i64 {
-        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
-        let offset = params.offset.unwrap_or(0) as i64;
+    if user_count >= i64::from(ssp_threshold) {
+        let page_size = i64::from(max(params.page_size.unwrap_or(20), ssp_threshold));
+        let offset = i64::from(params.offset.unwrap_or(0));
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
             Some(ContinuationToken::from_str(token.as_str())?)
@@ -168,7 +168,7 @@ pub async fn post_users(
     payload.validate()?;
     // A group admin may create users too, but only without any role and into at least
     // one group it manages, so the new account stays within its scope.
-    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
+    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_deref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
     // and an admin may have good reason to not set some values, like e.g. the preferred username.
@@ -361,7 +361,7 @@ pub async fn get_user_picture_config(
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
         upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: RauthyConfig::get().vars.user_pictures.upload_limit_mb as u32
+        content_len_limit: u32::from(RauthyConfig::get().vars.user_pictures.upload_limit_mb)
             * 1024
             * 1024,
     }))
@@ -400,6 +400,7 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
     request_body = NewUserRegistrationRequest,
     responses(
         (status = 204, description = "NoContent"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
@@ -415,7 +416,7 @@ pub async fn post_users_register(
 #[inline(always)]
 pub async fn post_users_register_handle(
     req: HttpRequest,
-    payload: NewUserRegistrationRequest,
+    mut payload: NewUserRegistrationRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
@@ -429,29 +430,31 @@ pub async fn post_users_register_handle(
         given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         preferred_username: payload.preferred_username.as_deref(),
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate()?;
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
-    if let Some(restriction) = &reg.domain_restriction {
-        if !payload.email.ends_with(restriction) {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Domain for the open registration are restricted to '@{restriction}'"),
-            ));
-        }
-    } else if !reg.domain_blacklist.is_empty() {
-        for blacklisted in &reg.domain_blacklist {
-            if payload.email.ends_with(blacklisted) {
+    reg.validate_email_domain(&payload.email)?;
+    reg.validate_email_name(&payload.email)?;
+
+    // Only the deployment config can initialize an account from a password. A password from the
+    // request is dropped when the flag is off, which keeps the Magic Link the only proof of control
+    // over an E-Mail address for every deployment that did not harden itself.
+    let init_pwd = if reg.danger_reg_acc_init_immediate {
+        match payload.password.take() {
+            Some(pwd) => Some(pwd),
+            None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Domain is blacklisted",
+                    "The user registration requires a password",
                 ));
             }
         }
-    }
+    } else {
+        None
+    };
 
     // Note: Always keep the PoW validation BEFORE any other expensive checks with DB access.
     let challenge = Pow::validate(&payload.pow)?;
@@ -465,7 +468,7 @@ pub async fn post_users_register_handle(
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let email = payload.email.clone();
-    let user = match User::create_from_reg(payload, lang).await {
+    let user = match User::create_from_reg(payload, lang, init_pwd).await {
         Ok(u) => u,
         Err(err) => {
             // email is probably registered already.
@@ -1513,7 +1516,7 @@ pub async fn get_user_revoke(
         .unwrap_or_default();
 
     let html = match user_revoke_handle(user_id, code, params.ip).await {
-        Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
+        Ok(()) => UserRevokeHtml::build(&lang, theme_ts),
         Err(err) => {
             debug!("Error during user revoke: {err}");
             Error3Html::build(&lang, theme_ts, err.status_code(), "Code not found")
@@ -2002,9 +2005,9 @@ pub async fn post_webauthn_auth_start(
                             ErrorResponseType::BadRequest,
                             "Malformed magic link binding cookie".to_string(),
                         ));
-                    };
+                    }
                 }
-            };
+            }
 
             id.into_inner()
         }
@@ -2535,7 +2538,7 @@ pub async fn post_user_password_request_reset(
         Ok(user) => user
             .request_password_reset(payload.redirect_uri)
             .await
-            .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
+            .map(|()| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {
             // always return OK, no matter what, for username enumeration prevention
             Ok(HttpResponse::Ok().status(StatusCode::OK).finish())
@@ -2604,7 +2607,7 @@ pub async fn put_user_by_id(
         family_name: payload.family_name.as_deref(),
         // has its own endpoint for updates
         preferred_username: None,
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate()?;
 
@@ -2776,6 +2779,8 @@ async fn handle_put_user_by_id(
     request_body = UpdateUserSelfRequest,
     responses(
         (status = 200, description = "Ok", body = UserResponse),
+        (status = 202, description = "E-Mail change accepted", body = UserResponse),
+        (status = 400, description = "E-Mail change denied", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -2799,7 +2804,7 @@ pub async fn put_user_self(
         given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         preferred_username: preferred_username.as_deref(),
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate_update(&UserValuesValidator::from_update_req(
         &stored,

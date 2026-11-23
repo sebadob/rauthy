@@ -93,7 +93,7 @@ pub async fn send_login_location(
     let req = EMail {
         typ: EmailType::LoginLocation,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
         text: Some(
             text.render()
@@ -110,7 +110,7 @@ pub async fn send_login_location(
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 user.email, error = ?e,

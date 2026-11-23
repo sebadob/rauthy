@@ -74,7 +74,7 @@ WHERE password_expires <= $1 AND NOT EXISTS (
         Err(err) => {
             error!("password_expiry_checker error: {}", err.message);
         }
-    };
+    }
 
     Ok(())
 }

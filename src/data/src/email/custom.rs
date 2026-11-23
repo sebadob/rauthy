@@ -91,7 +91,7 @@ pub async fn send_custom(
     let req = EMail {
         typ: EmailType::Custom,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {subject}"),
         text,
         html,

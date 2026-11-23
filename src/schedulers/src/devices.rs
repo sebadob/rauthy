@@ -35,7 +35,7 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
                     debug!("Cleaned up {rows_affected} expired devices");
                 }
                 Err(err) => {
-                    error!(?err, "devices_cleanup")
+                    error!(?err, "devices_cleanup");
                 }
             }
         } else {
@@ -45,10 +45,10 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
                     debug!("Cleaned up {rows_affected} expired devices");
                 }
                 Err(err) => {
-                    error!(?err, "devices_cleanup")
+                    error!(?err, "devices_cleanup");
                 }
             }
-        };
+        }
 
         // For some reason, the interval could `.tick()` multiple times,
         // if it finished too quickly.
