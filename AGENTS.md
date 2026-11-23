@@ -430,6 +430,10 @@ document it like the library it may become.
   backend it wiped itself, is a bug in the test, not a property of the suite. The `#[ignore]` tests
   are the ones whose subject *is* a global mutation (`test_certs`) and a heavy measurement
   (`test_concurrent_logins`).
+- **Every password a test sets satisfies the strictest policy the suite installs.** The policy is
+  global, and `password_policy::STRICT_RULES` is live while other tests run: len 12, 2 lower, 3
+  upper, 4 digits, 5 special. Use `common::USER_PASSWORD`; when a test changes a password, give it a
+  second policy-compliant one, because `not_recently_used` rejects a recently used password.
 - Write a failing test before fixing a bug. Cover each feature combination and each
   platform-specific path. When something is broken, run what already exists first and read
   the output; analyse by hand only what is still unclear afterwards.
