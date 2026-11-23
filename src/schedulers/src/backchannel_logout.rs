@@ -103,9 +103,7 @@ async fn execute_logout_retries(
             sid,
             kp.unwrap(),
             &mut tasks,
-        )
-        .await
-        {
+        ) {
             error!(?err, "executing Backchannel Logout");
         }
     }

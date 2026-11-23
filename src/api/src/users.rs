@@ -1709,7 +1709,7 @@ pub async fn put_user_otp(
     token.validate(principal.user_id()?, ip)?;
 
     let mut otp = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await?;
-    otp.validate(&payload.otp_code).await?;
+    otp.validate(&payload.otp_code)?;
     otp.activate().await?;
     Ok(HttpResponse::Ok().finish())
 }
