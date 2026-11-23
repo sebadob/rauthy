@@ -4,7 +4,7 @@ use chrono::Utc;
 use cryptr::EncKeys;
 use std::fmt::Write;
 
-pub async fn generate(args: ArgsGenKey) -> Result<(), StdError> {
+pub fn generate(args: ArgsGenKey) -> Result<(), StdError> {
     let kid = if let Some(kid) = args.with_key_id {
         kid
     } else {
