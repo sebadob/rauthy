@@ -746,7 +746,7 @@
                         autocomplete="current-password"
                         label={t.common.password}
                         placeholder={t.common.password}
-                        maxLength={256}
+                        maxLength={1024}
                         disabled={tooManyRequests || clientMfaForce || isLoading}
                         width={inputWidth}
                         required

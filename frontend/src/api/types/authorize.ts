@@ -4,7 +4,7 @@ export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
 export interface LoginRequest {
     /// Validation: `email`
     email?: string;
-    /// Validation: max 256
+    /// Validation: Applies password policy - max 1024 characters
     password?: string;
     pow: string;
     /// Validation: PATTERN_CLIENT_ID

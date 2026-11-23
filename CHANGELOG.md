@@ -504,6 +504,15 @@ of reloading its own document on every load.
 
 [#1929](https://github.com/sebadob/rauthy/issues/1929)
 
+#### Password Length Up To `1024`
+
+The max password length was validated twice with different values: the password policy's
+`length_max` was capped at `128`, and the request validators hard-capped plain passwords at `256`.
+Both are now `1024`, so a user base can be imported from an application that allowed longer
+passwords. The default password policy is untouched.
+
+[](<>)
+
 ### Bugfix
 
 - Changing the password from the account page cleared the given and family name and all user

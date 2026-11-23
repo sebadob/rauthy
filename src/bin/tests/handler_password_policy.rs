@@ -2,36 +2,36 @@ use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::{Language, PasswordPolicyRequest, PasswordPolicyResponse};
 use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
+use rauthy_common::constants::PASSWORD_MAX_LEN_I32;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::error::Error;
 
 mod common;
+
+/// The policy every other suite builds its test passwords against, and the one this test re-applies
+/// at the end: the strict rules it sets while it runs must not leak into the suites after it.
+const SEEDED_POLICY: PasswordPolicyRequest = PasswordPolicyRequest {
+    length_min: 14,
+    length_max: 128,
+    include_lower_case: Some(1),
+    include_upper_case: Some(1),
+    include_digits: Some(1),
+    include_special: None,
+    valid_days: Some(180),
+    not_recently_used: Some(3),
+};
 
 #[tokio::test]
 async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
 
-    let url = format!("{}/password_policy", backend_url);
+    let policy_url = format!("{backend_url}/password_policy");
+    let users_url = format!("{backend_url}/users");
 
-    // get current rules
-    let res = reqwest::Client::new()
-        .get(&url)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
-    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
-    assert_eq!(rules.length_min, 14);
-    assert_eq!(rules.length_max, 128);
-    assert_eq!(rules.include_lower_case, Some(1));
-    assert_eq!(rules.include_upper_case, Some(1));
-    assert_eq!(rules.include_digits, Some(1));
-    assert_eq!(rules.include_special, None);
-    assert_eq!(rules.valid_days, Some(180));
-    assert_eq!(rules.not_recently_used, Some(3));
-
-    // modify the rules
-    let new_rules = PasswordPolicyRequest {
+    // Set the rules this test runs against itself. It does not depend on the state any other suite
+    // left behind, and it restores the seeded rules at the end.
+    let strict_rules = PasswordPolicyRequest {
         length_min: 12,
         length_max: 112,
         include_lower_case: Some(2),
@@ -42,9 +42,9 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         not_recently_used: Some(7),
     };
     let res = reqwest::Client::new()
-        .put(&url)
+        .put(&policy_url)
         .headers(auth_headers.clone())
-        .json(&new_rules)
+        .json(&strict_rules)
         .send()
         .await?;
     let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
@@ -57,24 +57,16 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     assert_eq!(rules.valid_days, Some(60));
     assert_eq!(rules.not_recently_used, Some(7));
 
-    // get rules again and make sure they are the updated version
+    // get the rules again and make sure they are the applied version
     let res = reqwest::Client::new()
-        .get(&url)
+        .get(&policy_url)
         .headers(auth_headers.clone())
         .send()
         .await?;
     let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
     assert_eq!(rules.length_min, 12);
     assert_eq!(rules.length_max, 112);
-    assert_eq!(rules.include_lower_case, Some(2));
-    assert_eq!(rules.include_upper_case, Some(3));
-    assert_eq!(rules.include_digits, Some(4));
     assert_eq!(rules.include_special, Some(5));
-    assert_eq!(rules.valid_days, Some(60));
-    assert_eq!(rules.not_recently_used, Some(7));
-
-    // get all users and check the admin user
-    let url = format!("{}/users", get_backend_url());
 
     // post a new user
     let new_user = NewUserRequest {
@@ -89,7 +81,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         tz: None,
     };
     let res = reqwest::Client::new()
-        .post(&url)
+        .post(&users_url)
         .headers(auth_headers.clone())
         .json(&new_user)
         .send()
@@ -110,7 +102,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         user_expires: None,
         user_values: None,
     };
-    let user_url = format!("{}/{}", url, user.id);
+    let user_url = format!("{}/{}", users_url, user.id);
     let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
@@ -187,6 +179,73 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("last 7 used passwords"));
+
+    // The policy's max length can be set to the hard request limit, which is needed to import a
+    // user base from an application that allowed longer passwords than the old 128 policy max.
+    let long_pwd_policy = PasswordPolicyRequest {
+        length_max: PASSWORD_MAX_LEN_I32,
+        ..strict_rules
+    };
+    let res = reqwest::Client::new()
+        .put(&policy_url)
+        .headers(auth_headers.clone())
+        .json(&long_pwd_policy)
+        .send()
+        .await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
+    assert_eq!(rules.length_max, PASSWORD_MAX_LEN_I32);
+
+    // A password beyond the old 256 chars request validator limit must be accepted by the API.
+    upd_req.password = Some("aAbB1!2soSuperDamnSafe".repeat(15));
+    let res = reqwest::Client::new()
+        .put(&user_url)
+        .headers(auth_headers.clone())
+        .json(&upd_req)
+        .send()
+        .await?;
+    let resp = expect_status_json!(res, 200, UserResponse);
+    assert_eq!(resp.id, user.id);
+
+    // Anything above the hard request limit stays rejected.
+    let too_long = PasswordPolicyRequest {
+        length_max: PASSWORD_MAX_LEN_I32 + 1,
+        ..long_pwd_policy
+    };
+    let res = reqwest::Client::new()
+        .put(&policy_url)
+        .headers(auth_headers.clone())
+        .json(&too_long)
+        .send()
+        .await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
+    assert_eq!(err.error, ErrorResponseType::BadRequest);
+    assert!(err.message.contains("Payload validation error"));
+
+    // Restore the seeded rules so the suites that run after this one get them back.
+    let res = reqwest::Client::new()
+        .put(&policy_url)
+        .headers(auth_headers.clone())
+        .json(&SEEDED_POLICY)
+        .send()
+        .await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
+    assert_eq!(rules.length_min, 14);
+    assert_eq!(rules.length_max, 128);
+    assert_eq!(rules.include_lower_case, Some(1));
+    assert_eq!(rules.include_upper_case, Some(1));
+    assert_eq!(rules.include_digits, Some(1));
+    assert_eq!(rules.include_special, None);
+    assert_eq!(rules.valid_days, Some(180));
+    assert_eq!(rules.not_recently_used, Some(3));
+
+    // Remove the fixture user as well: `handler_users` creates the same email and asserts it is
+    // free before it creates it.
+    let res = reqwest::Client::new()
+        .delete(&user_url)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 export interface PasswordPolicyRequest {
-    /// Validation: `8 <= length_min <= 128`
+    /// Validation: `8 <= length_min <= 1024`
     length_min: number;
-    /// Validation: `8 <= length_max <= 128`
+    /// Validation: `8 <= length_max <= 1024`
     length_max: number;
     /// Validation: `1 <= include_lower_case <= 32`
     include_lower_case?: number;

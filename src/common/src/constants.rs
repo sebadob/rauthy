@@ -88,6 +88,10 @@ pub const CLAIM_VALUE_SIGIL_REGEX: char = '~';
 pub const CLAIM_VALUE_SIGIL_PREFIX: char = '^';
 /// Max length in bytes of a consent source URL.
 pub const CONSENT_SOURCE_MAX_LEN: usize = 1024;
+/// Hard maximum length in characters of a plain password accepted by any request.
+pub const PASSWORD_MAX_LEN: u64 = 1024;
+/// [`PASSWORD_MAX_LEN`] as [`i32`], which is the type the password policy stores its lengths in.
+pub const PASSWORD_MAX_LEN_I32: i32 = PASSWORD_MAX_LEN as i32;
 pub static EVENTS_LATEST_LIMIT: u16 = 100;
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 pub const CACHE_TTL_APP: Option<i64> = Some(43200);

@@ -56,7 +56,7 @@ export interface UpdateUserRequest {
     /// Validation: PATTERN_USER_NAME
     family_name?: string;
     language?: Language;
-    /// Validation: Applies password policy - max 256 characters
+    /// Validation: Applies password policy - max 1024 characters
     password?: string;
     /// Validation: PATTERN_ROLE_SCOPE
     roles: string[];
