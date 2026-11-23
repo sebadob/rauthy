@@ -1120,7 +1120,7 @@ impl Event {
     #[inline(always)]
     pub async fn send(self) -> Result<(), ErrorResponse> {
         match RauthyConfig::get().tx_events.send_async(self).await {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 error!(?err, "Event::send()");
                 Err(ErrorResponse::new(

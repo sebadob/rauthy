@@ -1516,7 +1516,7 @@ pub async fn get_user_revoke(
         .unwrap_or_default();
 
     let html = match user_revoke_handle(user_id, code, params.ip).await {
-        Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
+        Ok(()) => UserRevokeHtml::build(&lang, theme_ts),
         Err(err) => {
             debug!("Error during user revoke: {err}");
             Error3Html::build(&lang, theme_ts, err.status_code(), "Code not found")
@@ -2538,7 +2538,7 @@ pub async fn post_user_password_request_reset(
         Ok(user) => user
             .request_password_reset(payload.redirect_uri)
             .await
-            .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
+            .map(|()| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {
             // always return OK, no matter what, for username enumeration prevention
             Ok(HttpResponse::Ok().status(StatusCode::OK).finish())

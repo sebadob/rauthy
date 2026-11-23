@@ -81,7 +81,7 @@ impl PromptPassword {
                 tokio::task::spawn_blocking(move || rpassword::prompt_password(msg)).await??;
 
             match self.validate(&password) {
-                Ok(_) => {
+                Ok(()) => {
                     return Ok(password);
                 }
                 Err(policy) => {

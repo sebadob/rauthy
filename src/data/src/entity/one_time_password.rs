@@ -716,7 +716,7 @@ pub async fn auth_finish(
 
     let otp = OneTimePassword::find(&auth_data.otp_id).await?;
     match otp.validate(&payload.otp_code).await {
-        Ok(_) => {
+        Ok(()) => {
             let mut user = User::find(user_id.clone()).await?;
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;

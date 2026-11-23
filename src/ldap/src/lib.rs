@@ -393,7 +393,7 @@ async fn search_client(
 
     let client = Client::find(client_id.to_string())
         .await
-        .and_then(|c| c.validate_enabled().map(|_| c))
+        .and_then(|c| c.validate_enabled().map(|()| c))
         .map_err(|_| {
             (
                 LdapResultCode::InsufficentAccessRights,

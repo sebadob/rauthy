@@ -885,7 +885,7 @@ pub async fn post_logout(
 pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    JWKS::rotate().await.map(|_| HttpResponse::Ok().finish())
+    JWKS::rotate().await.map(|()| HttpResponse::Ok().finish())
 }
 
 /// Create a new session

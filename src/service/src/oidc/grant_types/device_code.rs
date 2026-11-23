@@ -157,8 +157,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         // `force_mfa` is checked in `post_device_verify`, where the approving session is known.
         let access: Result<(), ErrorResponse> = user
             .check_enabled()
-            .and_then(|_| user.check_expired())
-            .and_then(|_| client.validate_user_groups(&user));
+            .and_then(|()| user.check_expired())
+            .and_then(|()| client.validate_user_groups(&user));
         if let Err(err) = access {
             if let Err(err) = code.delete().await {
                 error!(?err, "deleting DeviceAuthCode");

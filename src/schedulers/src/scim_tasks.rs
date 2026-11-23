@@ -120,7 +120,7 @@ async fn execute(
         };
 
         match res {
-            Ok(_) => {
+            Ok(()) => {
                 info!(
                     "Success retrying failed scim task for {}",
                     client_scim.client_id

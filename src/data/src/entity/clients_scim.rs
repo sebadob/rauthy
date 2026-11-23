@@ -267,7 +267,7 @@ impl ClientScim {
     /// and update on remote if necessary.
     pub async fn sync_groups(&self) -> Result<(), ErrorResponse> {
         match self.sync_groups_exec().await {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 let err = format!("Error during sync groups: {err:?}");
                 error!(err);
@@ -758,7 +758,7 @@ impl ClientScim {
             .sync_users_exec(&mut last_created, groups_local, groups_remote)
             .await
         {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 let err = format!("Error during sync users: {err}");
                 error!(err);
@@ -814,7 +814,7 @@ impl ClientScim {
                     )
                     .await
                 } {
-                    Ok(_) => {
+                    Ok(()) => {
                         *last_created = cursor;
                     }
                     Err(err) => {
