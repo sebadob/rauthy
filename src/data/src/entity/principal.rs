@@ -420,7 +420,7 @@ impl Principal {
     pub fn validate_group_admin_user_create(
         &self,
         new_roles: &[String],
-        new_groups: Option<&Vec<String>>,
+        new_groups: Option<&[String]>,
     ) -> Result<(), ErrorResponse> {
         if self.api_key.is_some() || self.is_admin() {
             return Ok(());
@@ -499,7 +499,7 @@ impl Principal {
     ) -> Result<(), ErrorResponse> {
         if let Some(api_key) = &self.api_key {
             match api_key.validate_access(&access_group, &access_rights) {
-                Ok(_) => Ok(()),
+                Ok(()) => Ok(()),
                 Err(_) => Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     format!(
@@ -564,7 +564,7 @@ impl Principal {
         access_rights: AccessRights,
     ) -> Result<(), ErrorResponse> {
         match self.validate_api_key(access_group, access_rights) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
 
             Err(err) => {
                 if err.error == ErrorResponseType::Forbidden {

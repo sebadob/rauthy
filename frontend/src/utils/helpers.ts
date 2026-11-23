@@ -51,6 +51,16 @@ export function normalizeClientUri(uri: string): string {
     return `https://${uri}`;
 }
 
+/**
+ * Matches an E-Mail address against a `[user_registration].domain_restriction` exactly like the
+ * backend does: the part after the last `@` must equal the restricted domain, case-insensitively.
+ * A plain suffix match would accept `me@sub.my-domain.com` and `me@my-domain.com.evil.tld`.
+ */
+export function emailDomainMatches(email: string, restrictedDomain: string): boolean {
+    const domain = email.split('@').pop() ?? '';
+    return domain.toLowerCase() === restrictedDomain.toLowerCase();
+}
+
 export const redirectToLogin = (state?: string) => {
     generatePKCE().then(pkce => {
         if (pkce) {

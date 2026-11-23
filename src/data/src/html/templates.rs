@@ -1,3 +1,4 @@
+use crate::entity::password::PasswordPolicy;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
@@ -5,6 +6,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::HEADER_HTML;
+use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
@@ -30,6 +32,15 @@ impl Display for FrontendAction {
 pub struct TplClientData {
     pub name: String,
     pub url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TplRegAccInitImmediate {
+    pub enabled: bool,
+    /// Only set when `enabled` is set — the `[passwords]` policy the registration form validates
+    /// its password fields against.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password_policy: Option<PasswordPolicyResponse>,
 }
 
 #[derive(Debug, Serialize)]
@@ -68,6 +79,7 @@ pub enum HtmlTemplate {
     OtpLength(u8),
     PasskeyRegType,
     PasswordReset(TplPasswordReset),
+    RegAccInitImmediate(TplRegAccInitImmediate),
     PasswordResetLinkAlways(bool),
     RestrictedEmailDomain(String),
     StatusCode(StatusCode),
@@ -97,6 +109,7 @@ impl HtmlTemplate {
             Self::OtpLength(_) => "tpl_otp_length",
             Self::PasskeyRegType => "tpl_passkey_reg_type",
             Self::PasswordReset(_) => "tpl_password_reset",
+            Self::RegAccInitImmediate(_) => "tpl_reg_acc_init_immediate",
             Self::PasswordResetLinkAlways(_) => "tpl_password_reset_link_always",
             Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
             Self::StatusCode(_) => "tpl_status_code",
@@ -109,15 +122,15 @@ impl HtmlTemplate {
     pub fn inner(&self) -> String {
         match self {
             Self::AdminButtonHide(i) => i.to_string(),
-            Self::AtprotoId(i) => i.to_string(),
-            Self::AuthProviders(i) => i.to_string(),
-            Self::ClientName(i) => i.to_string(),
-            Self::ClientUrl(i) => i.to_string(),
+            Self::AtprotoId(i) => i.clone(),
+            Self::AuthProviders(i) => i.clone(),
+            Self::ClientName(i) => i.clone(),
+            Self::ClientUrl(i) => i.clone(),
             Self::ClientFaviconUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
             Self::ClientLogoUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
-            Self::CsrfToken(i) => i.to_string(),
-            Self::EmailOld(i) => i.to_string(),
-            Self::EmailNew(i) => i.to_string(),
+            Self::CsrfToken(i) => i.clone(),
+            Self::EmailOld(i) => i.clone(),
+            Self::EmailNew(i) => i.clone(),
             Self::ErrorDetails(i) => i.to_string(),
             Self::ErrorText(i) => i.to_string(),
             Self::DeviceUserCodeLength(i) => i.to_string(),
@@ -127,13 +140,36 @@ impl HtmlTemplate {
             Self::OtpLength(i) => i.to_string(),
             Self::PasskeyRegType => RauthyConfig::get().vars.webauthn.passkey_reg_type_str(),
             Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
+            Self::RegAccInitImmediate(i) => serde_json::to_string(i).unwrap(),
             Self::PasswordResetLinkAlways(i) => i.to_string(),
             Self::StatusCode(i) => i.to_string(),
-            Self::RestrictedEmailDomain(i) => i.to_string(),
+            Self::RestrictedEmailDomain(i) => i.clone(),
             Self::UserValues => {
                 serde_json::to_string(&RauthyConfig::get().vars.user_values).unwrap()
             }
         }
+    }
+
+    /// The registration page renders password fields only with
+    /// `user_registration.danger_reg_acc_init_immediate`, and then it needs the `[passwords]`
+    /// policy, because the policy endpoint requires an authenticated session.
+    pub async fn reg_acc_init_immediate() -> Result<Self, ErrorResponse> {
+        let enabled = RauthyConfig::get()
+            .vars
+            .user_registration
+            .danger_reg_acc_init_immediate;
+
+        let password_policy = if enabled {
+            let policy = PasswordPolicy::find().await?;
+            Some(PasswordPolicyResponse::from(policy))
+        } else {
+            None
+        };
+
+        Ok(Self::RegAccInitImmediate(TplRegAccInitImmediate {
+            enabled,
+            password_policy,
+        }))
     }
 }
 
@@ -1010,12 +1046,18 @@ pub struct UserRegisterHtml<'a> {
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(lang: &Language, theme_ts: i64, auth_providers: HtmlTemplate) -> String {
+    pub fn build(
+        lang: &Language,
+        theme_ts: i64,
+        acc_init: HtmlTemplate,
+        auth_providers: HtmlTemplate,
+    ) -> String {
         UserRegisterHtml {
             lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
+                acc_init,
                 HtmlTemplate::RestrictedEmailDomain(
                     RauthyConfig::get()
                         .vars

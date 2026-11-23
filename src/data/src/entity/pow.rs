@@ -17,7 +17,7 @@ impl PowEntity {
 
         let pow = Pow::with_difficulty(
             difficulty,
-            min(cfg.pow.exp.as_secs(), u32::MAX as u64) as u32,
+            min(cfg.pow.exp.as_secs(), u64::from(u32::MAX)) as u32,
         )?;
 
         DB::hql()

@@ -65,6 +65,7 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
             .iter()
             .any(|m| m == "none")
     );
+    assert!(content.client_id_metadata_document_supported);
     // don't test the rest for now as it might change soon again
 
     Ok(())

@@ -63,7 +63,7 @@ pub async fn send_email_otp(code: &str, user: &User) {
     let req = EMail {
         typ: EmailType::OtpRequest,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {subject}"),
         text: Some(text.render().expect("Template rendering: EmailOtpTxt")),
         html: Some(html.render().expect("Template rendering: EmailOtpHtml")),
@@ -74,7 +74,7 @@ pub async fn send_email_otp(code: &str, user: &User) {
         .send_timeout((req, EMailCallback::None), Duration::from_secs(60))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 user.email, error = ?e,

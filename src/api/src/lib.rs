@@ -230,7 +230,7 @@ fn content_len_limit(req: &HttpRequest, limit_mb: u16) -> Result<(), ErrorRespon
         )),
         Some(value) => match value.to_str().unwrap_or("0").parse::<u32>() {
             Ok(len) => {
-                if len > limit_mb as u32 * 1024 * 1024 {
+                if len > u32::from(limit_mb) * 1024 * 1024 {
                     Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         format!("Max size {limit_mb}MB"),

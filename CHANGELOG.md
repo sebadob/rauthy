@@ -65,6 +65,27 @@ not rotate the session, so only invalidating it closes the window. Rauthy does n
 automatically, because it would log out every user on every instance, including the ones that
 never used Forward Auth.
 
+#### Self-Service E-Mail Changes Respect the Registration Domain Restrictions
+
+The `domain_restriction` and `domain_blacklist` of `[user_registration]` were only applied to the
+open registration form. An account could move itself to any address, including a restricted or
+blacklisted one, via the E-Mail change on the account dashboard, and the confirmation of that
+address applied it without any domain check. Both the request that creates the confirmation link and
+the confirmation of that link are validated now. Admins are not affected: creating a user, or
+editing the address of an existing one, is an admin decision and can still set any address.
+
+#### Registration Can Be Blocked For Reserved Mailbox Names
+
+`user_registration.reserved_names` blocks the local part of an E-Mail address, the way
+`domain_blacklist` blocks a domain, for the open registration and for a self-service E-Mail change.
+The default is the RFC 2142 team addresses plus the usual system accounts (`postmaster`, `abuse`,
+`root`, `mailer-daemon`, …). The match is exact and case-insensitive. A self-hosted mail server
+behind Rauthy can list every mailbox it does not want to be claimed by whoever registers first.
+
+`user_registration.reject_plus_subaddressing = true` rejects any address with a `+` in its local
+part for the same two paths, which is what makes such a list non-bypassable on a mail server that
+canonicalizes `ceo+news` into the mailbox `ceo`.
+
 ### Changes
 
 #### Custom JSON path claim matcher
@@ -107,6 +128,112 @@ An auth provider has a new `hide_login` flag. When it is active, the button of t
 not rendered on the login page and the registration page, which keeps an internal provider away
 from normal users. Everything else about the provider behaves like before, including a targeted
 login via the `idp_hint` query parameter, which is the intended way to reach such a provider.
+
+#### Self-Service E-Mail Change Can Be Denied
+
+You can now deny user self-service email changes via the account dashboard. This usually only comes
+in handy if you have an open registration with a domain restriction, and you want to prevent users
+from switching to something else afterwards.
+
+```toml
+[user_values]
+# Deny any self-service E-Mail address change. The account dashboard
+# will disable the E-Mail field. Changing the address of a user is an
+# admin only action.
+#
+# default: false
+# overwritten by: USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY
+self_service_email_change_deny = false
+```
+
+[#1939](https://github.com/sebadob/rauthy/pull/1939)
+
+#### Immediate Account Init From The Registration Form
+
+If you are in a special scenario where Rauthy is your IdP for your own(!) email server, you run into
+a chicken-and-egg problem when you want to have an open user registration.
+
+In that case, users will likely want the domain your server runs on as their login, and your mail
+server then creates a new mailbox on first login. However, Rauthy requires the user to validate the
+email via magic link, and then a user can only initialize the account with that link. That breaks
+the self-hosted mail server flow.
+
+You now have the option to solve this, but it requires you to GUARANTEE that Rauthy is the single
+source of truth for your users, and that you protect any possibly locally existing accounts on that
+server yourself. To make this whole flow possible, a user needs to set a password directly during
+registration (cannot validate email without access), AND the `email_verified` will be set to `true`,
+because OIDC clients usually reject logins when set to `false`.
+
+Rauthy tries as best as possible to prevent you from any issues in your config, and it only allows
+this flow when you have set the most secure settings for the user registration:
+
+```toml
+user_registration.enable = true
+user_registration.domain_restriction = '<your domain>'
+user_registration.reject_plus_subaddressing = true
+user_registration.reserved_names = [] # -> must not be empty, leave default (RFC 2142) otherwise
+user_values.self_service_email_change_deny = true
+user_registration.allow_open_redirect = false
+```
+
+**If you mess you the guarantees and deployment config, this can leads to trivial account
+takeover!**
+
+You have the following new config variables:
+
+```toml
+[user_values]
+# Deny any self-service E-Mail address change. The account dashboard
+# will disable the E-Mail field. Changing the address of a user is an
+# admin only action.
+#
+# default: false
+# overwritten by: USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY
+self_service_email_change_deny = false
+
+[user_registration]
+# Reject any E-Mail address which contains a `+` in its local part,
+# for the open registration and for a self-service E-Mail change.
+#
+# default: false
+# overwritten by: USER_REG_REJECT_PLUS_SUBADDRESSING
+reject_plus_subaddressing = false
+
+# The local parts of an E-Mail address that are blocked for the open
+# registration and for a self-service E-Mail change. The match is exact
+# and case-insensitive.
+#
+# default: [ 'abuse', 'admin', 'administrator', 'daemon', 'ftp',
+#   'hostmaster', 'mailnull', 'mailer-daemon', 'noc', 'no-reply',
+#   'noreply', 'null', 'operator', 'postmaster', 'proxy', 'root',
+#   'security', 'support', 'uucp', 'usenet', 'webmaster', 'www'
+# ]
+# overwritten by: USER_REG_RESERVED_NAMES - single String, \n separated values
+reserved_names = []
+
+[user_registration]
+# Ask for the password in the open registration form and init the account
+# right away, instead of sending out the password reset Magic Link.
+#
+# default: false
+# overwritten by: USER_REG_DANGER_REG_ACC_INIT_IMEDIATE
+danger_reg_acc_init_immediate = false
+```
+
+> This flow makes it possible for an attacker to do email account enumeration. It is impossible to
+> guard against it with this setup. Only do this with an open registration if this is your only
+> choice, and you have secured your setup properly!
+>
+> Also, keep in mind that whenever a password expires for a user, they have no way to request a
+> password reset, since the same mailbox is guarded by Rauthy, where they might not be able to log
+> in anymore, so such a case will always become a support task for an admin.
+
+[#1939](https://github.com/sebadob/rauthy/pull/1939)
+
+#### PoW Difficulty Is Validated At Startup
+
+`pow.difficulty` outside of the range `spow` accepts (`10..=99`) made every challenge request fail
+with a `500` at runtime. Rauthy exits at startup with such a config now.
 
 #### Token Exchange keeps the delegation chain of the `subject_token`
 

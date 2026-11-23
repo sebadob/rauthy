@@ -598,17 +598,14 @@ pub async fn post_device_auth(
                     error!(?err, "inserting IP into the cache for rate-limiting",);
                 }
             }
-        };
+        }
     }
 
-    let client = match Client::find(payload.client_id).await {
-        Ok(client) => client,
-        Err(_) => {
-            return HttpResponse::NotFound().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidClient,
-                error_description: Some(Cow::from("`client_id` does not exist")),
-            });
-        }
+    let Ok(client) = Client::find(payload.client_id).await else {
+        return HttpResponse::NotFound().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidClient,
+            error_description: Some(Cow::from("`client_id` does not exist")),
+        });
     };
 
     if !client.enabled {
@@ -888,7 +885,7 @@ pub async fn post_logout(
 pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    JWKS::rotate().await.map(|_| HttpResponse::Ok().finish())
+    JWKS::rotate().await.map(|()| HttpResponse::Ok().finish())
 }
 
 /// Create a new session

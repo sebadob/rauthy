@@ -671,10 +671,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                     params!(
                         b.aaguid,
                         b.description,
-                        b.key_protection.bits() as i64,
-                        b.attachment_hint.bits() as i64,
-                        b.attestation_types.bits() as i64,
-                        b.cert_level.as_u8() as i16
+                        i64::from(b.key_protection.bits()),
+                        i64::from(b.attachment_hint.bits()),
+                        i64::from(b.attestation_types.bits()),
+                        i16::from(b.cert_level.as_u8())
                     ),
                 )
                 .await?;
@@ -682,10 +682,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            let key_protection = b.key_protection.bits() as i64;
-            let attachment_hint = b.attachment_hint.bits() as i64;
-            let attestation_types = b.attestation_types.bits() as i64;
-            let cert_level = b.cert_level.as_u8() as i16;
+            let key_protection = i64::from(b.key_protection.bits());
+            let attachment_hint = i64::from(b.attachment_hint.bits());
+            let attestation_types = i64::from(b.attestation_types.bits());
+            let cert_level = i16::from(b.cert_level.as_u8());
             DB::pg_execute(
                 sql_2,
                 &[
@@ -1100,7 +1100,7 @@ VALUES ($1, $2, $3)"#;
         DB::pg_execute(sql_6, &[]).await?;
 
         for b in data_before {
-            DB::pg_execute(sql_7, &[&(b.id as i64), &b.name, &b.typ.as_str()]).await?;
+            DB::pg_execute(sql_7, &[&i64::from(b.id), &b.name, &b.typ.as_str()]).await?;
         }
 
         highest_id = max(highest_id + 1, 100000);
@@ -1139,7 +1139,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                 &[
                     &b.id,
                     &b.hostname,
-                    &(b.gid as i64),
+                    &i64::from(b.gid),
                     &b.secret,
                     &b.force_mfa,
                     &b.local_password_only,
@@ -1231,9 +1231,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql_1,
                 &[
-                    &(b.id as i64),
+                    &i64::from(b.id),
                     &b.name,
-                    &(b.gid as i64),
+                    &i64::from(b.gid),
                     &b.email,
                     &b.shell,
                     &b.home_dir,
@@ -1622,7 +1622,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql_2,
                 &[
-                    &(b.pam_uid as i64),
+                    &i64::from(b.pam_uid),
                     &b.ts_added,
                     &b.expires,
                     &b.typ,

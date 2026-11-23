@@ -51,7 +51,7 @@ impl PasswordHashTimes {
             let now = time::Instant::now();
             let _ = Self::new_password_hash("SuperRandomString1337", &params).await?;
             let elapsed = now.elapsed().as_millis();
-            time_taken = if elapsed > u32::MAX as u128 {
+            time_taken = if elapsed > u128::from(u32::MAX) {
                 u32::MAX
             } else {
                 elapsed as u32

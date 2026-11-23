@@ -84,7 +84,7 @@ pub async fn sender(rx: mpsc::Receiver<(EMail, EMailCallback)>) {
     } else {
         match vars.smtp_conn_mode {
             SmtpConnMode::Default | SmtpConnMode::XOauth2 => {
-                sender_default_smtp(url.as_deref().unwrap(), rx).await
+                sender_default_smtp(url.as_deref().unwrap(), rx).await;
             }
             SmtpConnMode::MicrosoftGraph => sender_microsoft_graph(rx).await,
             SmtpConnMode::Test => sender_test_debug(rx).await,

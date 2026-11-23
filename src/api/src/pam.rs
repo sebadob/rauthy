@@ -905,7 +905,7 @@ pub async fn post_pam_users(
     let pam_user = PamUser::insert(payload.username, user.email).await?;
 
     if let Some(mut groups) = payload.groups {
-        for g in groups.iter_mut() {
+        for g in &mut groups {
             g.uid = pam_user.id;
         }
         // update_groups does delete-all + re-insert, so include the user's
@@ -1040,7 +1040,7 @@ pub async fn get_pam_users_authorized_keys(
         };
         let mut bytes = base64_decode(b64)?;
         let data = String::from_utf8_lossy(bytes.as_ref());
-        let Some((host_id, host_secret)) = data.split_once(":") else {
+        let Some((host_id, host_secret)) = data.split_once(':') else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "'Authorization' invalid format",

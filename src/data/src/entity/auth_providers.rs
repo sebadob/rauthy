@@ -384,7 +384,7 @@ $21, $22, $23)"#;
                 ],
             )
             .await?;
-        };
+        }
 
         Self::invalidate_cache_all(None).await?;
         slf.cache_compiled_mappings()?;
@@ -826,7 +826,7 @@ impl AuthProvider {
         let claim_mappings = Self::validate_claim_mappings(&req)?;
 
         let scope = Self::cleanup_scope(&req.scope);
-        let secret = Self::secret_encrypted(&req.client_secret)?;
+        let secret = Self::secret_encrypted(req.client_secret.as_deref())?;
 
         Ok(Self {
             id,
@@ -972,8 +972,8 @@ impl AuthProvider {
         })
     }
 
-    fn secret_encrypted(secret: &Option<String>) -> Result<Option<Vec<u8>>, ErrorResponse> {
-        if let Some(secret) = &secret {
+    fn secret_encrypted(secret: Option<&str>) -> Result<Option<Vec<u8>>, ErrorResponse> {
+        if let Some(secret) = secret {
             Ok(Some(
                 EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec(),
             ))
@@ -1133,7 +1133,7 @@ impl AuthProviderCallback {
                 builder = builder.basic_auth(
                     &provider.client_id,
                     AuthProvider::secret_cleartext(&provider.secret)?,
-                )
+                );
             }
 
             builder
@@ -1550,7 +1550,7 @@ impl AuthProviderIdClaims<'_> {
         // Any json number would become a String too, which is what we need for compatibility.
         let claims_user_id = match claims_user_id_json {
             Value::Number(num) => num.to_string(),
-            Value::String(s) => s.to_string(),
+            Value::String(s) => s.clone(),
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1786,7 +1786,7 @@ impl AuthProviderIdClaims<'_> {
                     .map(|l| Language::from(l.as_ref()))
                     .unwrap_or_default(),
                 auth_provider_id: Some(provider.id.clone()),
-                federation_uid: Some(claims_user_id.to_string()),
+                federation_uid: Some(claims_user_id.clone()),
                 ..Default::default()
             };
             User::create_federated(new_user).await?

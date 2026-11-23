@@ -119,7 +119,7 @@ pub async fn delete_role(
 
     Role::delete(id.as_str())
         .await
-        .map(|_| HttpResponse::Ok().finish())
+        .map(|()| HttpResponse::Ok().finish())
 }
 
 /// Returns all users that are assigned to this role

@@ -69,7 +69,7 @@ impl From<tokio_postgres::Row> for ThemeCssFull {
         Self {
             client_id: row.get("client_id"),
             last_update: row.get("last_update"),
-            version: version as i64,
+            version: i64::from(version),
             light,
             dark,
             border_radius: row.get("border_radius"),
