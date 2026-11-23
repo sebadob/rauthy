@@ -182,7 +182,7 @@ impl KvVersion {
     fn get_api_path(&self, mount: &str, path: &str) -> String {
         match self {
             KvVersion::V1 => format!("/v1/{mount}/{path}"),
-            _ => format!("/v1/{mount}/data/{path}"),
+            KvVersion::V2 => format!("/v1/{mount}/data/{path}"),
         }
     }
 }
