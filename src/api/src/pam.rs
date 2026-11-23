@@ -1040,7 +1040,7 @@ pub async fn get_pam_users_authorized_keys(
         };
         let mut bytes = base64_decode(b64)?;
         let data = String::from_utf8_lossy(bytes.as_ref());
-        let Some((host_id, host_secret)) = data.split_once(":") else {
+        let Some((host_id, host_secret)) = data.split_once(':') else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "'Authorization' invalid format",

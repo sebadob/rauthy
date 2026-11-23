@@ -69,7 +69,7 @@ impl OidcProviderConfig {
         //
         // TODO remove the non-/ issuer with v0.14+ and mention the breaking change in the changelog
         let mut allowed_issuers = HashSet::with_capacity(2);
-        if iss.ends_with("/") {
+        if iss.ends_with('/') {
             allowed_issuers.insert(iss.trim_end_matches('/').to_string());
         } else {
             allowed_issuers.insert(format!("{iss}/"));
@@ -146,7 +146,7 @@ impl OidcProvider {
 
         let mut issuer = config.iss;
 
-        if !issuer.ends_with("/") {
+        if !issuer.ends_with('/') {
             issuer.push('/');
         }
 
