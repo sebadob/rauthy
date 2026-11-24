@@ -19,7 +19,7 @@ pub async fn magic_link_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::hql().is_leader_cache().await {
+        if !DB::is_leader().await {
             debug!(
                 "Running HA mode without being the leader - skipping magic_link_cleanup scheduler"
             );

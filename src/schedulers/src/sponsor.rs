@@ -62,7 +62,7 @@ pub async fn run_sponsor_reminder() {
 
         // only the leader sends, so we don't send it multiple times in HA deployments. If there
         // is no leader at all (election ongoing), just sleep a short time and check again.
-        if DB::hql().is_leader_cache().await {
+        if DB::is_leader().await {
             if let Err(err) = execute(now).await {
                 error!(?err, "Executing the Project sponsoring reminder failed");
             }

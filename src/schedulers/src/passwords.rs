@@ -20,7 +20,7 @@ pub async fn password_expiry_checker() {
     loop {
         interval.tick().await;
 
-        if !DB::hql().is_leader_cache().await {
+        if !DB::is_leader().await {
             debug!(
                 "Running HA mode without being the leader - skipping password_expiry_checker scheduler"
             );

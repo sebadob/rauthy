@@ -30,8 +30,10 @@ pub async fn jwks_auto_rotate() {
     loop {
         sleep_schedule_next(&schedule).await;
 
-        if !DB::hql().is_leader_cache().await {
-            debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
+        if !DB::is_leader().await {
+            debug!(
+                "Running HA mode without being the leader - skipping jwks_auto_rotate scheduler"
+            );
             continue;
         }
 
@@ -48,7 +50,7 @@ pub async fn jwks_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::hql().is_leader_cache().await {
+        if !DB::is_leader().await {
             debug!("Running HA mode without being the leader - skipping jwks_cleanup scheduler");
             continue;
         }

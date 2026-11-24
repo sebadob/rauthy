@@ -35,7 +35,7 @@ pub async fn fido_mds_updater() {
             info!("Found outdated MDS metadata. Next update was available: {next}");
         }
 
-        if !DB::hql().is_leader_cache().await {
+        if !DB::is_leader().await {
             debug!(
                 "Running HA mode without being the leader - skipping fido_mds_updater scheduler"
             );
