@@ -36,14 +36,11 @@ pub struct DevMagicLinkRequest {
     user_id: String,
 }
 
-/// Dev-only: the `lang` a remote consent source is fetched with.
 #[derive(serde::Deserialize)]
 pub struct DevConsentQuery {
     lang: String,
 }
 
-/// A remote consent document, as `GET {url}?lang=<BCP47>` of a `[[consent.sources]]` entry
-/// returns it, in `en` and `de`. Any other language is `404`, for which Rauthy shows the `en` one.
 pub fn get_consent(query: web::Query<DevConsentQuery>) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.dev.dev_mode {
         return Ok(HttpResponse::NotFound().finish());
@@ -115,6 +112,7 @@ pub fn get_consent(query: web::Query<DevConsentQuery>) -> Result<HttpResponse, E
                 },
             },
         }),
+        // Rauthy shows the `en` document for any language the source answers with 404
         _ => return Ok(HttpResponse::NotFound().finish()),
     };
 
