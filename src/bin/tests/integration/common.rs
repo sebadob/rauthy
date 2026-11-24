@@ -19,6 +19,10 @@ use reqwest::{Response, header};
 use serde_json::json;
 use spow::pow::Pow;
 use std::error::Error;
+use tokio::sync::OnceCell;
+
+/// Set once the admin has given its consent to the `rauthy` client in this test binary.
+static ADMIN_CONSENT: OnceCell<()> = OnceCell::const_new();
 
 pub const CLIENT_ID: &str = "init_client";
 pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
@@ -402,8 +406,19 @@ pub async fn get_token_set_init_client() -> TokenSet {
     res.json::<TokenSet>().await.unwrap()
 }
 
+/// A session of the admin on the `rauthy` client.
+///
+/// Almost every test starts with it. On a fresh backend the admin has not consented yet, and
+/// without the one login [`ADMIN_CONSENT`] waits for, all of them would be answered with
+/// `ConsentRequired` at once and log in a second time: twice the password hashes while the
+/// deliberate failed logins of other tests count towards the blacklist of the source address.
 pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let redirect_uri = format!("{}/oidc/callback", get_backend_url());
+    ADMIN_CONSENT
+        .get_or_init(async || {
+            session_headers_for_client("rauthy", None, &redirect_uri).await;
+        })
+        .await;
     session_headers_for_client("rauthy", None, &redirect_uri).await
 }
 
