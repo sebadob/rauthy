@@ -1239,12 +1239,8 @@ pub async fn delete_user_consent(
     params.validate()?;
 
     let user = User::find(user_id).await?;
-    let admin_email = consent_revoker_email(&principal, &user).await?;
-    let revoked_by = match (&principal.api_key, &admin_email) {
-        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
-        (None, Some(email)) => ConsentRevokedBy::Admin(email),
-        (None, None) => ConsentRevokedBy::User,
-    };
+    let admin_email = find_consent_revoker_email(&principal, &user).await?;
+    let revoked_by = consent_revoked_by(&principal, admin_email.as_deref());
 
     let target = ConsentTarget {
         client_id: &params.client_id,
@@ -1253,7 +1249,7 @@ pub async fn delete_user_consent(
     let ConsentRevoked {
         consent_deleted,
         refresh_tokens_deleted,
-    } = revoke_consent(&user, target, revoked_by, real_ip_from_req(&req)?).await?;
+    } = delete_consent(&user, target, revoked_by, real_ip_from_req(&req)?).await?;
 
     Session::invalidate_for_user(&user.id).await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
@@ -1296,12 +1292,8 @@ pub async fn delete_user_consents_all(
     validate_consent_access(&principal, &user_id, AccessRights::Delete).await?;
 
     let user = User::find(user_id).await?;
-    let admin_email = consent_revoker_email(&principal, &user).await?;
-    let revoked_by = match (&principal.api_key, &admin_email) {
-        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
-        (None, Some(email)) => ConsentRevokedBy::Admin(email),
-        (None, None) => ConsentRevokedBy::User,
-    };
+    let admin_email = find_consent_revoker_email(&principal, &user).await?;
+    let revoked_by = consent_revoked_by(&principal, admin_email.as_deref());
 
     let ip = real_ip_from_req(&req)?;
     let mut resp = UserConsentsDeleteResponse {
@@ -1313,7 +1305,7 @@ pub async fn delete_user_consents_all(
             client_id: &consent.client_id,
             resource: (!consent.resource.is_empty()).then_some(consent.resource.as_str()),
         };
-        let revoked = revoke_consent(&user, target, revoked_by, ip).await?;
+        let revoked = delete_consent(&user, target, revoked_by, ip).await?;
         resp.consents_deleted += usize::from(revoked.consent_deleted);
         resp.refresh_tokens_deleted += revoked.refresh_tokens_deleted;
     }
@@ -1327,7 +1319,7 @@ pub async fn delete_user_consents_all(
 /// The email of the admin or group admin session that revokes the consents of `user`, `None` for
 /// the user itself and for an API key, which authorized the request even with a session, see
 /// `validate_consent_access`.
-async fn consent_revoker_email(
+async fn find_consent_revoker_email(
     principal: &Principal,
     user: &User,
 ) -> Result<Option<String>, ErrorResponse> {
@@ -1337,8 +1329,19 @@ async fn consent_revoker_email(
     }
 }
 
+fn consent_revoked_by<'a>(
+    principal: &'a Principal,
+    admin_email: Option<&'a str>,
+) -> ConsentRevokedBy<'a> {
+    match (&principal.api_key, admin_email) {
+        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
+        (None, Some(email)) => ConsentRevokedBy::Admin(email),
+        (None, None) => ConsentRevokedBy::User,
+    }
+}
+
 /// Revokes a consent with [`UserConsent::revoke`] and sends the event when it deleted anything.
-async fn revoke_consent(
+async fn delete_consent(
     user: &User,
     target: ConsentTarget<'_>,
     revoked_by: ConsentRevokedBy<'_>,
