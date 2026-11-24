@@ -142,8 +142,9 @@ scopes. With a Passkey or an OTP, the grant is written once the ceremony succeed
 For a `local` source, the standard OIDC scopes come with built-in descriptions. For a `remote`
 one, the `description` of a scope is shown as plain text, HTML in it is not rendered. A user
 can list and revoke the grants in the Privacy tab of the account dashboard, and a revoke also
-deletes the refresh tokens of the client. FedCM shows no consent block and needs a grant from an
-earlier login.
+deletes the refresh tokens of the client and all sessions of the user, who then signs in again,
+with a backchannel logout. A revoke by an admin does the same. FedCM shows no consent block and
+needs a grant from an earlier login.
 
 ## Introspection
 

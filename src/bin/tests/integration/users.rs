@@ -1278,14 +1278,16 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         ]
     );
 
-    // --- a revoke with a `resource` drops the refresh tokens for the client as a whole
+    // --- a revoke with a `resource` drops the refresh tokens for the client as a whole; the
+    // revoke above deleted the session of the user
+    let user_headers = session_headers_with(&email, USER_PASSWORD).await;
     let ts = password_token_set(&client, &email, USER_PASSWORD).await;
     let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
     let res = client
         .delete(format!(
             "{url}?client_id={CLIENT_ID}&resource=https%3A%2F%2Fapi.example.com"
         ))
-        .headers(user_headers.clone())
+        .headers(user_headers)
         .send()
         .await?;
     let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
@@ -1815,6 +1817,73 @@ async fn test_user_consent_resource() -> Result<(), Box<dyn Error>> {
     let res = client.delete(&url_client).headers(admin).send().await?;
     expect_status!(res, 200);
     user.delete().await
+}
+
+/// A consent revoke deletes all sessions of the user, by the user itself and by an admin, and
+/// the sessions of the admin and of other users stay.
+#[tokio::test]
+async fn test_user_consent_revoke_deletes_sessions() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = TestUser::new("Consent Sessions", USER_PASSWORD).await?;
+    let other = TestUser::new("Consent Sessions other", USER_PASSWORD).await?;
+    let email = user.user.email.as_str();
+    let url_session = format!("{backend}/oidc/sessioninfo");
+    // the session logins consent to the `rauthy` client
+    let url_delete = format!("{backend}/users/{}/consents?client_id=rauthy", user.user.id);
+    let session_status = async |headers: &HeaderMap| {
+        client
+            .get(&url_session)
+            .headers(headers.clone())
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
+    let other_session = session_headers_with(&other.user.email, USER_PASSWORD).await;
+
+    for revoker in ["user", "admin"] {
+        let sessions = [
+            session_headers_with(email, USER_PASSWORD).await,
+            session_headers_with(email, USER_PASSWORD).await,
+        ];
+        for session in &sessions {
+            assert_eq!(session_status(session).await, StatusCode::OK, "{revoker}");
+        }
+
+        let headers = if revoker == "user" {
+            &sessions[0]
+        } else {
+            &admin
+        };
+        let res = client
+            .delete(&url_delete)
+            .headers(headers.clone())
+            .send()
+            .await?;
+        let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
+        assert!(deleted.consent_deleted, "{revoker}");
+
+        for session in &sessions {
+            assert_eq!(
+                session_status(session).await,
+                StatusCode::UNAUTHORIZED,
+                "{revoker}"
+            );
+        }
+        assert_eq!(session_status(&admin).await, StatusCode::OK, "{revoker}");
+        assert_eq!(
+            session_status(&other_session).await,
+            StatusCode::OK,
+            "{revoker}"
+        );
+    }
+
+    for user in [&user, &other] {
+        user.delete().await?;
+    }
+    Ok(())
 }
 
 /// An API key with `Users` access reads and revokes the consents of any user, each with its

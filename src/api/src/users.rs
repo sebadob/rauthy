@@ -1195,9 +1195,11 @@ pub async fn get_user_consents(
     Ok(HttpResponse::Ok().json(resp))
 }
 
-/// DELETE a consent and all refresh tokens of this user for the client
+/// DELETE a consent, the refresh tokens of this user for the client, and all its sessions
 ///
-/// `resource` is left out for a consent without a resource. Refresh tokens are revoked
+/// `resource` is left out for a consent without a resource. All sessions of the user are deleted,
+/// with a backchannel logout, whoever revokes and whether or not there was anything to revoke, so
+/// the user signs in again everywhere. Refresh tokens are revoked
 /// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
 /// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
 /// kept. Only the access token of each deleted refresh token, the one issued with its latest
@@ -1271,6 +1273,9 @@ pub async fn delete_user_consent(
     {
         error!(?err, "Cannot send the consent revoked event");
     }
+
+    Session::invalidate_for_user(&user.id).await?;
+    logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Ok(HttpResponse::Ok().json(UserConsentDeleteResponse {
         consent_deleted,

@@ -95,6 +95,9 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 - Remote consent sources may resolve to non-public addresses: only an admin configures them. The
   `consent.danger_allow_private_addresses` switch is gone. Ephemeral client documents keep their
   address checks and `ephemeral_clients.danger_allow_private_addresses`.
+- A consent revoke deletes all sessions of the user, with a backchannel logout, whoever revokes it:
+  the user itself on the account page, an admin, a group admin or an API key. The user has to sign
+  in again.
 
 #### Credential Stuffing Detection Can Be Disabled
 

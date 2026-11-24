@@ -397,6 +397,14 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 200);
+    // a revoke deletes all sessions of the user, here the one of the group admin itself
+    let res = client
+        .get(format!("{backend}/users/{}/consents", ga.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 401);
+    let ga_headers = session_headers_with(&setup.ga, PWD).await;
 
     // an API key of another access group is checked first and rejected, even with the group
     // admin session
