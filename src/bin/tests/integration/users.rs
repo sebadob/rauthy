@@ -1,9 +1,9 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, PASSWORD, STALE_HASH, TestUser, USER_PASSWORD, USERNAME, accept_all,
-    authorization_response_params, code_state_from_headers, consent_required, consent_template,
-    cookie_csrf_headers_from_res, decode_claims, get_auth_headers, get_backend_url, get_solved_pow,
-    get_token_set, get_token_set_init_client, password_grant, password_token_set, prepare_login,
-    refresh, session_headers_with,
+    CLIENT_ID, CLIENT_SECRET, LoginTarget, PASSWORD, STALE_HASH, TestUser, USER_PASSWORD, USERNAME,
+    accept_all, authorization_response_params, code_state_from_headers, consent_required,
+    consent_template, cookie_csrf_headers_from_res, decode_claims, get_auth_headers,
+    get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client, login_session,
+    password_grant, password_token_set, prepare_login, refresh, session_headers_with,
 };
 use crate::{expect_status, expect_status_json};
 use futures::{StreamExt, stream};
@@ -16,7 +16,7 @@ use rauthy_api_types::oidc::{
 };
 use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UpdateUserRequest, UserConsentDeleteResponse,
-    UserConsentResponse, UserResponse, UserResponseSimple, Userinfo,
+    UserConsentResponse, UserConsentsDeleteResponse, UserResponse, UserResponseSimple, Userinfo,
 };
 use rauthy_common::utils::new_store_id;
 use rauthy_data::entity::consent_sources::ConsentSourceType;
@@ -1884,6 +1884,184 @@ async fn test_user_consent_revoke_deletes_sessions() -> Result<(), Box<dyn Error
         user.delete().await?;
     }
     Ok(())
+}
+
+/// The consents of a user are listed for the user itself and for an admin, with their client,
+/// resource, scopes and timestamps, and never for another user or without a session.
+#[tokio::test]
+async fn test_user_consents_admin_listing() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = TestUser::new("Consent Listing", USER_PASSWORD).await?;
+    let other = TestUser::new("Consent Listing other", USER_PASSWORD).await?;
+    let email = user.user.email.as_str();
+    let url = format!("{backend}/users/{}/consents", user.user.id);
+
+    let before = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
+    let user_session = session_headers_with(email, USER_PASSWORD).await;
+    login_session(&LoginTarget {
+        email: email.to_string(),
+        password: USER_PASSWORD.to_string(),
+        client_id: CLIENT_ID.to_string(),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        redirect_uri: "http://localhost:3000/oidc/callback".to_string(),
+    })
+    .await;
+
+    let list = async |headers: &HeaderMap| {
+        let res = client
+            .get(&url)
+            .headers(headers.clone())
+            .send()
+            .await
+            .unwrap();
+        let res = expect_status!(res, 200);
+        let mut consents = res.json::<Vec<UserConsentResponse>>().await.unwrap();
+        consents.sort_by(|a, b| a.client_id.cmp(&b.client_id));
+        consents
+    };
+    let consents = list(&admin).await;
+    assert_eq!(
+        consents
+            .iter()
+            .map(|c| c.client_id.as_str())
+            .collect::<Vec<_>>(),
+        [CLIENT_ID, "rauthy"]
+    );
+    for consent in &consents {
+        assert_eq!(consent.resource, None);
+        assert!(!consent.scopes.is_empty());
+        assert!(consent.created >= before, "{}", consent.client_id);
+        assert!(consent.updated >= consent.created, "{}", consent.client_id);
+    }
+    assert!(consents[1].client_name.is_some());
+    // the user itself sees the same
+    let own = list(&user_session).await;
+    assert_eq!(
+        own.iter().map(|c| &c.client_id).collect::<Vec<_>>(),
+        consents.iter().map(|c| &c.client_id).collect::<Vec<_>>()
+    );
+
+    // --- another user, and no session at all
+    let other_session = session_headers_with(&other.user.email, USER_PASSWORD).await;
+    let res = client
+        .get(&url)
+        .headers(other_session.clone())
+        .send()
+        .await?;
+    expect_status!(res, 403);
+    let res = client
+        .delete(format!("{url}/all"))
+        .headers(other_session)
+        .send()
+        .await?;
+    expect_status!(res, 403);
+    let res = client.get(&url).send().await?;
+    expect_status!(res, 401);
+    assert_eq!(list(&admin).await.len(), 2);
+
+    for user in [&user, &other] {
+        user.delete().await?;
+    }
+    Ok(())
+}
+
+/// A revoke of all consents revokes each of them with its refresh tokens and event, and deletes
+/// all sessions of the user, by the user itself and by an admin.
+#[tokio::test]
+async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = TestUser::new("Consent Revoke All", USER_PASSWORD).await?;
+    let email = user.user.email.as_str();
+    let url = format!("{backend}/users/{}/consents", user.user.id);
+    let url_all = format!("{url}/all");
+    let url_session = format!("{backend}/oidc/sessioninfo");
+    let session_status = async |headers: &HeaderMap| {
+        client
+            .get(&url_session)
+            .headers(headers.clone())
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
+
+    let res = client.delete(&url_all).send().await?;
+    expect_status!(res, 401);
+
+    // --- the user itself: the consents of the `rauthy` login and of `init_client`
+    let session = session_headers_with(email, USER_PASSWORD).await;
+    let (client_session, ts) = login_session(&LoginTarget {
+        email: email.to_string(),
+        password: USER_PASSWORD.to_string(),
+        client_id: CLIENT_ID.to_string(),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        redirect_uri: "http://localhost:3000/oidc/callback".to_string(),
+    })
+    .await;
+    let other = password_token_set(&client, USERNAME, PASSWORD).await;
+
+    let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
+    let res = client
+        .delete(&url_all)
+        .headers(session.clone())
+        .send()
+        .await?;
+    let deleted = expect_status_json!(res, 200, UserConsentsDeleteResponse);
+    assert_eq!(deleted.consents_deleted, 2);
+    assert!(deleted.refresh_tokens_deleted >= 1);
+
+    let res = client.get(&url).headers(admin.clone()).send().await?;
+    assert!(expect_status_json!(res, 200, Vec<UserConsentResponse>).is_empty());
+    for headers in [&session, &client_session] {
+        assert_eq!(session_status(headers).await, StatusCode::UNAUTHORIZED);
+    }
+    assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
+    // the admin keeps its session and refresh token
+    assert_eq!(session_status(&admin).await, StatusCode::OK);
+    let res = refresh(&client, other.refresh_token.unwrap()).await;
+    expect_status!(res, 200);
+    assert_eq!(
+        consent_events(&client, &admin, "ConsentRevoked", events_from, email).await,
+        [
+            format!("Consent of `{email}` for client `{CLIENT_ID}` revoked by the user"),
+            format!("Consent of `{email}` for client `rauthy` revoked by the user"),
+        ]
+    );
+
+    // --- an admin, then idempotent
+    let session = session_headers_with(email, USER_PASSWORD).await;
+    let res = client
+        .delete(&url_all)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let deleted = expect_status_json!(res, 200, UserConsentsDeleteResponse);
+    // the consent of the session login
+    assert_eq!(deleted.consents_deleted, 1);
+    assert_eq!(session_status(&session).await, StatusCode::UNAUTHORIZED);
+    assert_eq!(session_status(&admin).await, StatusCode::OK);
+    let res = client
+        .delete(&url_all)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let deleted = expect_status_json!(res, 200, UserConsentsDeleteResponse);
+    assert_eq!(deleted.consents_deleted, 0);
+    assert_eq!(deleted.refresh_tokens_deleted, 0);
+
+    // --- an unknown user
+    let res = client
+        .delete(format!("{backend}/users/UnknownUserId1234/consents/all"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    expect_status!(res, 404);
+
+    user.delete().await
 }
 
 /// An API key with `Users` access reads and revokes the consents of any user, each with its

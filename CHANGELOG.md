@@ -98,6 +98,9 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 - A consent revoke deletes all sessions of the user, with a backchannel logout, whoever revokes it:
   the user itself on the account page, an admin, a group admin or an API key. The user has to sign
   in again.
+- `DELETE /users/{id}/consents/all` revokes all consents of a user at once, each like a single
+  revoke with its refresh tokens and event, and deletes all sessions of the user. The same users,
+  admins, group admins and API keys as for a single revoke are allowed.
 
 #### Credential Stuffing Detection Can Be Disabled
 

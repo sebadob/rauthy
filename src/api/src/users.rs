@@ -1239,40 +1239,21 @@ pub async fn delete_user_consent(
     params.validate()?;
 
     let user = User::find(user_id).await?;
-    // an API key authorized the request even with a session, see `validate_consent_access`
-    let admin_email = match (&principal.api_key, principal.user_id()) {
-        (None, Ok(id)) if id != user.id => Some(User::find(id.to_string()).await?.email),
-        _ => None,
-    };
+    let admin_email = consent_revoker_email(&principal, &user).await?;
     let revoked_by = match (&principal.api_key, &admin_email) {
         (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
         (None, Some(email)) => ConsentRevokedBy::Admin(email),
         (None, None) => ConsentRevokedBy::User,
     };
 
-    let ip = real_ip_from_req(&req)?;
-    let resource = params.resource.as_deref();
+    let target = ConsentTarget {
+        client_id: &params.client_id,
+        resource: params.resource.as_deref(),
+    };
     let ConsentRevoked {
         consent_deleted,
         refresh_tokens_deleted,
-    } = UserConsent::revoke(&user.id, &params.client_id, resource).await?;
-
-    // the revoke is committed at this point, a failing event must not turn it into an error
-    if (consent_deleted || refresh_tokens_deleted > 0)
-        && let Err(err) = Event::consent_revoked(
-            &user.email,
-            ConsentTarget {
-                client_id: &params.client_id,
-                resource,
-            },
-            revoked_by,
-            ip,
-        )
-        .send()
-        .await
-    {
-        error!(?err, "Cannot send the consent revoked event");
-    }
+    } = revoke_consent(&user, target, revoked_by, real_ip_from_req(&req)?).await?;
 
     Session::invalidate_for_user(&user.id).await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
@@ -1281,6 +1262,99 @@ pub async fn delete_user_consent(
         consent_deleted,
         refresh_tokens_deleted,
     }))
+}
+
+/// DELETE all consents of this user, the refresh tokens of the user for each of their clients, and
+/// all sessions of the user
+///
+/// Each consent is revoked like with `DELETE /users/{id}/consents`, with its own event. All
+/// sessions of the user are deleted, with a backchannel logout, also when the user has no consent.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - a group admin, for a user it manages
+/// - the user itself
+/// - an API key with `users: delete`
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/consents/all",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserConsentsDeleteResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/consents/all")]
+pub async fn delete_user_consents_all(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    validate_consent_access(&principal, &user_id, AccessRights::Delete).await?;
+
+    let user = User::find(user_id).await?;
+    let admin_email = consent_revoker_email(&principal, &user).await?;
+    let revoked_by = match (&principal.api_key, &admin_email) {
+        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
+        (None, Some(email)) => ConsentRevokedBy::Admin(email),
+        (None, None) => ConsentRevokedBy::User,
+    };
+
+    let ip = real_ip_from_req(&req)?;
+    let mut resp = UserConsentsDeleteResponse {
+        consents_deleted: 0,
+        refresh_tokens_deleted: 0,
+    };
+    for consent in UserConsent::find_for_user(&user.id, None).await? {
+        let target = ConsentTarget {
+            client_id: &consent.client_id,
+            resource: (!consent.resource.is_empty()).then_some(consent.resource.as_str()),
+        };
+        let revoked = revoke_consent(&user, target, revoked_by, ip).await?;
+        resp.consents_deleted += usize::from(revoked.consent_deleted);
+        resp.refresh_tokens_deleted += revoked.refresh_tokens_deleted;
+    }
+
+    Session::invalidate_for_user(&user.id).await?;
+    logout::execute_backchannel_logout(None, Some(user.id)).await?;
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// The email of the admin or group admin session that revokes the consents of `user`, `None` for
+/// the user itself and for an API key, which authorized the request even with a session, see
+/// `validate_consent_access`.
+async fn consent_revoker_email(
+    principal: &Principal,
+    user: &User,
+) -> Result<Option<String>, ErrorResponse> {
+    match (&principal.api_key, principal.user_id()) {
+        (None, Ok(id)) if id != user.id => Ok(Some(User::find(id.to_string()).await?.email)),
+        _ => Ok(None),
+    }
+}
+
+/// Revokes a consent with [`UserConsent::revoke`] and sends the event when it deleted anything.
+async fn revoke_consent(
+    user: &User,
+    target: ConsentTarget<'_>,
+    revoked_by: ConsentRevokedBy<'_>,
+    ip: IpAddr,
+) -> Result<ConsentRevoked, ErrorResponse> {
+    let revoked = UserConsent::revoke(&user.id, target.client_id, target.resource).await?;
+
+    // the revoke is committed at this point, a failing event must not turn it into an error
+    if (revoked.consent_deleted || revoked.refresh_tokens_deleted > 0)
+        && let Err(err) = Event::consent_revoked(&user.email, target, revoked_by, ip)
+            .send()
+            .await
+    {
+        error!(?err, "Cannot send the consent revoked event");
+    }
+    Ok(revoked)
 }
 
 /// An API key with `rights` on users, else the user itself, an admin session or a group admin
