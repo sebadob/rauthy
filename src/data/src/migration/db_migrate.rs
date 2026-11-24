@@ -92,7 +92,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .await?;
     let bytes: Vec<u8> = res.get("data");
     let version = deserialize::<DbVersion>(&bytes)?.version;
-    check_feature_version_migrate(version);
+    check_feature_version_migrate(&version);
 
     // CONFIG
     debug!("Migrating table: config");
@@ -666,7 +666,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     }
     let bytes = rows.swap_remove(0).data;
     let version = deserialize::<DbVersion>(&bytes)?.version;
-    check_feature_version_migrate(version);
+    check_feature_version_migrate(&version);
 
     // CONFIG
     debug!("Migrating table: config");
@@ -1027,7 +1027,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
 /// Makes sure that the given version matches the current app version in major and feature level.
 /// Will panic if they don't match.
-fn check_feature_version_migrate(version: semver::Version) {
+fn check_feature_version_migrate(version: &semver::Version) {
     let rauthy_version = Version::from_str(RAUTHY_VERSION).unwrap();
 
     if version.major != rauthy_version.major || version.minor != rauthy_version.minor {

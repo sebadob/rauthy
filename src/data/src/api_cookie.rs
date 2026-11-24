@@ -6,38 +6,35 @@ use cryptr::EncValue;
 use rauthy_common::constants::CookieMode;
 use rauthy_common::utils::{base64_decode, base64_encode};
 use std::borrow::Cow;
-use std::fmt::Display;
 use tracing::warn;
 
 pub struct ApiCookie;
 
 impl ApiCookie {
-    pub fn build<'c, 'b, N, V>(name: N, value: V, max_age: i64) -> Cookie<'c>
+    pub fn build<'c, 'b, V>(name: &'c str, value: V, max_age: i64) -> Cookie<'c>
     where
-        N: Into<Cow<'c, str>> + Display,
-        V: Into<Cow<'b, str>> + Display,
+        V: Into<Cow<'b, str>>,
     {
         Self::build_with_same_site(name, value, max_age, SameSite::Lax)
     }
 
-    pub fn build_with_same_site<'c, 'b, N, V>(
-        name: N,
+    pub fn build_with_same_site<'c, 'b, V>(
+        name: &'c str,
         value: V,
         max_age: i64,
         same_site: SameSite,
     ) -> Cookie<'c>
     where
-        N: Into<Cow<'c, str>> + Display,
-        V: Into<Cow<'b, str>> + Display,
+        V: Into<Cow<'b, str>>,
     {
         let access = &RauthyConfig::get().vars.access;
         let path = if access.cookie_set_path { "/auth" } else { "/" };
         let (name, secure, path) = match access.cookie_mode {
-            CookieMode::Host => (format!("__Host-{name}"), true, "/"),
-            CookieMode::Secure => (format!("__Secure-{name}"), true, path),
+            CookieMode::Host => (Cow::Owned(format!("__Host-{name}")), true, "/"),
+            CookieMode::Secure => (Cow::Owned(format!("__Secure-{name}")), true, path),
             CookieMode::DangerInsecure => {
                 warn!("Building INSECURE cookie - you MUST NEVER use this in production");
-                (name.to_string(), false, path)
+                (Cow::Borrowed(name), false, path)
             }
         };
         let max_age = if max_age < 1 {
@@ -60,27 +57,21 @@ impl ApiCookie {
             .finish()
     }
 
-    pub fn from_req<'c, N>(req: &HttpRequest, cookie_name: N) -> Option<String>
-    where
-        N: Into<Cow<'c, str>> + Display,
-    {
+    pub fn from_req(req: &HttpRequest, cookie_name: &str) -> Option<String> {
         let name = match RauthyConfig::get().vars.access.cookie_mode {
-            CookieMode::Host => format!("__Host-{cookie_name}"),
-            CookieMode::Secure => format!("__Secure-{cookie_name}"),
-            CookieMode::DangerInsecure => cookie_name.to_string(),
+            CookieMode::Host => Cow::Owned(format!("__Host-{cookie_name}")),
+            CookieMode::Secure => Cow::Owned(format!("__Secure-{cookie_name}")),
+            CookieMode::DangerInsecure => Cow::Borrowed(cookie_name),
         };
         // req.cookie(&name)
         Self::cookie_into_value(req.cookie(&name))
     }
 
-    pub fn from_svc_req<'c, N>(req: &ServiceRequest, cookie_name: N) -> Option<String>
-    where
-        N: Into<Cow<'c, str>> + Display,
-    {
+    pub fn from_svc_req(req: &ServiceRequest, cookie_name: &str) -> Option<String> {
         let name = match RauthyConfig::get().vars.access.cookie_mode {
-            CookieMode::Host => format!("__Host-{cookie_name}"),
-            CookieMode::Secure => format!("__Secure-{cookie_name}"),
-            CookieMode::DangerInsecure => cookie_name.to_string(),
+            CookieMode::Host => Cow::Owned(format!("__Host-{cookie_name}")),
+            CookieMode::Secure => Cow::Owned(format!("__Secure-{cookie_name}")),
+            CookieMode::DangerInsecure => Cow::Borrowed(cookie_name),
         };
         Self::cookie_into_value(req.cookie(&name))
     }

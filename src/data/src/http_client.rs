@@ -711,11 +711,11 @@ mod tests {
 
     fn assert_err(
         res: Result<Vec<u8>, ErrorResponse>,
-        expected: ErrorResponseType,
+        expected: &ErrorResponseType,
     ) -> ErrorResponse {
         match res {
             Err(err) => {
-                assert_eq!(err.error, expected, "{err:?}");
+                assert_eq!(&err.error, expected, "{err:?}");
                 err
             }
             Ok(body) => panic!("expected {expected:?}, got {} bytes", body.len()),
@@ -723,7 +723,7 @@ mod tests {
     }
 
     fn assert_bad_request(res: Result<Vec<u8>, ErrorResponse>) -> ErrorResponse {
-        assert_err(res, ErrorResponseType::BadRequest)
+        assert_err(res, &ErrorResponseType::BadRequest)
     }
 
     #[test]
@@ -1075,7 +1075,7 @@ mod tests {
         assert_eq!(err.message, "consent source document not available");
         let err = assert_err(
             fetcher.fetch_bounded(url("/server-error"), max).await,
-            ErrorResponseType::Connection,
+            &ErrorResponseType::Connection,
         );
         assert_eq!(err.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
 

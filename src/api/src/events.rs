@@ -164,7 +164,7 @@ pub async fn post_event_test(
         Event::user_login_revoke(
             "alfred@batcave.io",
             "123.123.123.123".parse().unwrap(),
-            Some("Gotham City".to_string()),
+            Some("Gotham City"),
         )
         .send()
         .await?;
@@ -179,7 +179,7 @@ pub async fn post_event_test(
         Event::suspicious_request(
             "/.git/config",
             "123.123.123.123".parse().unwrap(),
-            Some("Gotham City".to_string()),
+            Some("Gotham City"),
         )
         .send()
         .await?;

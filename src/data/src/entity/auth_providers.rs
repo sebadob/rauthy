@@ -731,7 +731,7 @@ impl AuthProvider {
                 ));
             }
             if let (Some(path), Some(value)) = (path, value) {
-                ClaimRule::compile(path, value).map_err(|err| Self::claim_rule_err(name, err))?;
+                ClaimRule::compile(path, value).map_err(|err| Self::claim_rule_err(name, &err))?;
             }
         }
 
@@ -801,7 +801,7 @@ impl AuthProvider {
             // The path is parsed and the matcher compiled here, exactly as on the login path, so
             // neither can fail there.
             ClaimRule::compile(&mapping.claim_path, &mapping.claim_value)
-                .map_err(|err| Self::claim_rule_err(&mapping.target, err))?;
+                .map_err(|err| Self::claim_rule_err(&mapping.target, &err))?;
         }
 
         if mappings.is_empty() {
@@ -815,7 +815,7 @@ impl AuthProvider {
         })
     }
 
-    fn claim_rule_err(target: &str, err: ErrorResponse) -> ErrorResponse {
+    fn claim_rule_err(target: &str, err: &ErrorResponse) -> ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Claim mapping for `{target}`: {}", err.message),

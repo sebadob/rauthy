@@ -179,7 +179,7 @@ async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum AccountType {
     // New -> neither password nor a passkey has been set yet
     New,

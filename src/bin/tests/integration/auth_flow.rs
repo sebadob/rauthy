@@ -582,7 +582,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
             .iter()
             .any(|(k, v)| k == "state" && v == INJECTING_STATE)
     );
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     println!("Extracted code: {:?}", code);
 
     // Step 4: POST /token with extracted values + CSRF cookie
@@ -612,7 +612,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let res = expect_status!(res, 202);
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     req_token.code = Some(code);
 
     req_token.code_verifier = Some("IAmSoWrong1337".to_string());
@@ -633,7 +633,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let res = expect_status!(res, 202);
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     req_token.code = Some(code);
 
     req_token.code_verifier = Some(challenge_plain.to_string());
@@ -731,7 +731,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     res = expect_status!(res, 202);
-    let (code, state) = code_state_from_headers(res)?;
+    let (code, state) = code_state_from_headers(&res)?;
     assert!(state.is_none());
 
     let res = reqwest::Client::new()
@@ -835,7 +835,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     res = expect_status!(res, 202);
-    let (code, state_check) = code_state_from_headers(res)?;
+    let (code, state_check) = code_state_from_headers(&res)?;
     println!("1");
     assert_eq!(state, state_check.unwrap());
 
@@ -1299,7 +1299,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert!(res.status().is_success());
-    let (code, state) = code_state_from_headers(res)?;
+    let (code, state) = code_state_from_headers(&res)?;
     assert!(state.is_none());
     println!("Extracted code: {:?}", code);
 

@@ -350,7 +350,7 @@ impl ApiKeyEntity {
 
 // NOTE: If you expand this list in the future, make sure to only add new types at the end to never
 // run into deserialization issues!
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AccessGroup {
     Blacklist,
     Clients,
@@ -368,7 +368,7 @@ pub enum AccessGroup {
     ApiKeys,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessRights {
     Read,
