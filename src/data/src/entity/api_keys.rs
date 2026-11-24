@@ -35,10 +35,10 @@ impl Debug for ApiKeyEntity {
 
 impl ApiKeyEntity {
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         if is_hiqlite() {
             DB::hql()
@@ -197,10 +197,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
-        let sql = r#"
+        let sql = r"
 UPDATE api_keys
 SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-WHERE name = $5"#;
+WHERE name = $5";
 
         if is_hiqlite() {
             DB::hql()
@@ -231,10 +231,10 @@ WHERE name = $5"#;
     pub async fn save(self) -> Result<(), ErrorResponse> {
         let name = self.name.clone();
 
-        let sql = r#"
+        let sql = r"
 UPDATE api_keys
 SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-WHERE name = $5"#;
+WHERE name = $5";
 
         if is_hiqlite() {
             DB::hql()

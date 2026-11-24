@@ -19,7 +19,7 @@ pub async fn hash(args: ArgsPasswordHash) -> Result<(), StdError> {
 
     println!("\nInput your password:");
 
-    let msg = r#"
+    let msg = r"
 
 To be as secure as possible, Rauthy comes with a default
 password policy you must match. At least:
@@ -27,7 +27,7 @@ password policy you must match. At least:
 - 1 lowercase char
 - 1 uppercase char
 - 1 digit
-"#
+"
     .to_string();
 
     let policy = PromptPassword::default();
@@ -62,11 +62,11 @@ password policy you must match. At least:
     let elapsed = start.elapsed().as_millis();
     if elapsed < 500 {
         println!(
-            r#"
+            r"
 WARNING: The time taken to hash the password was {elapsed} ms, which is below the
 recommended minimum of 500 ms. If this was done on your final deployment hardware,
 consider bumping up the m_cost or t_cost.
-"#,
+",
         );
     }
 

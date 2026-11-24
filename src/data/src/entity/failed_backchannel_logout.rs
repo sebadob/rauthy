@@ -24,11 +24,11 @@ impl FailedBackchannelLogout {
         let sub = sub.unwrap_or_default();
         let sid = sid.unwrap_or_default();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO failed_backchannel_logouts AS f (client_id, sub, sid, retry_count)
 VALUES ($1, $2, $3, 0)
 ON CONFLICT (client_id, sub, sid)
-DO UPDATE SET retry_count = f.retry_count + 1"#;
+DO UPDATE SET retry_count = f.retry_count + 1";
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(client_id, sub, sid)).await?;
@@ -51,9 +51,9 @@ DO UPDATE SET retry_count = f.retry_count + 1"#;
     }
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 DELETE FROM failed_backchannel_logouts
-WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
+WHERE client_id = $1 AND sub = $2 AND sid = $3";
 
         if is_hiqlite() {
             DB::hql()
@@ -74,9 +74,9 @@ WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
         let sub = sub.unwrap_or_default();
         let sid = sid.unwrap_or_default();
 
-        let sql = r#"
+        let sql = r"
 DELETE FROM failed_backchannel_logouts
-WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
+WHERE client_id = $1 AND sub = $2 AND sid = $3";
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(client_id, sub, sid)).await?;

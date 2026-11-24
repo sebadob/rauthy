@@ -75,12 +75,12 @@ impl SelfSignedCA {
         };
         let slf_bytes = serialize(&slf)?;
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO config (id, data)
 VALUES ($1, $2)
 ON CONFLICT (id) DO UPDATE
 SET data = $2
-"#;
+";
         if is_hiqlite() {
             DB::hql().execute(sql, params!("ca", slf_bytes)).await?;
         } else {

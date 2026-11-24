@@ -47,10 +47,10 @@ async fn execute() -> Result<(), ErrorResponse> {
 
     // This query also needs to look into the past just in case we missed
     // a cleanup for `pwd_exp_mails` somewhere.
-    let sql = r#"SELECT * FROM users
+    let sql = r"SELECT * FROM users
 WHERE password_expires <= $1 AND NOT EXISTS (
     SELECT 1 FROM pwd_exp_mails WHERE user_id = id AND mail_sent_ts > $2
-)"#;
+)";
 
     let expiring_users: Result<Vec<User>, ErrorResponse> = if is_hiqlite() {
         DB::hql()

@@ -47,15 +47,15 @@ impl PamUser {
     pub async fn insert(username: String, email: String) -> Result<Self, ErrorResponse> {
         let group = PamGroup::insert(username, PamGroupType::User).await?;
 
-        let sql_user = r#"
+        let sql_user = r"
 INSERT INTO pam_users (name, gid, email, shell)
 VALUES ($1, $2, $3, '/bin/bash')
 RETURNING *
-"#;
-        let sql_rel = r#"
+";
+        let sql_rel = r"
 INSERT INTO pam_rel_groups_users (gid, uid, wheel)
 VALUES ($1, $2, false)
-"#;
+";
 
         let slf = if is_hiqlite() {
             let slf: Self = DB::hql()
@@ -103,11 +103,11 @@ VALUES ($1, $2, false)
     }
 
     pub async fn find_by_user_id(user_id: String) -> Result<Self, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM pam_users WHERE email = (
     SELECT email FROM users WHERE id = $1
 )
-"#;
+";
 
         let slf = if is_hiqlite() {
             DB::hql().query_map_one(sql, params!(user_id)).await?
@@ -131,11 +131,11 @@ SELECT * FROM pam_users WHERE email = (
     }
 
     pub async fn find_emails_unlinked() -> Result<Vec<String>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT u.email AS email FROM users u
 LEFT JOIN pam_users pu ON u.email = pu.email
 WHERE pu.id IS NULL
-"#;
+";
 
         let emails: Vec<String> = if is_hiqlite() {
             DB::hql()
@@ -178,10 +178,10 @@ WHERE pu.id IS NULL
         groups: Vec<PamGroupUserLink>,
     ) -> Result<(), ErrorResponse> {
         let sql_remove = "DELETE FROM pam_rel_groups_users WHERE uid = $1";
-        let sql_insert = r#"
+        let sql_insert = r"
 INSERT INTO pam_rel_groups_users (gid, uid, wheel)
 VALUES ($1, $2, $3)
-"#;
+";
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(1 + groups.len());

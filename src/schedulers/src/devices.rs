@@ -23,10 +23,10 @@ pub async fn devices_cleanup() {
         debug!("Running devices_cleanup scheduler");
 
         let threshold = Utc::now().sub(chrono::Duration::days(1)).timestamp();
-        let sql = r#"
+        let sql = r"
 DELETE FROM devices
 WHERE access_exp < $1
-AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
+AND (refresh_exp IS NULL OR refresh_exp < $1)";
 
         if is_hiqlite() {
             let res = DB::hql().execute(sql, params!(threshold)).await;

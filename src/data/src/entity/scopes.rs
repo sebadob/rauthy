@@ -76,9 +76,9 @@ impl Scope {
             claims_at_root,
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()
@@ -296,10 +296,10 @@ VALUES ($1, $2, $3, $4, $5)"#;
                 }
             }
             txn.push((
-                r#"
+                r"
 UPDATE scopes
 SET name = $1, attr_include_access = $2, attr_include_id = $3, claims_at_root = $4
-WHERE id = $5"#,
+WHERE id = $5",
                 params!(
                     &new_scope.name,
                     &new_scope.attr_include_access,
@@ -324,10 +324,10 @@ WHERE id = $5"#,
             }
             DB::pg_txn_append(
                 &txn,
-                r#"
+                r"
 UPDATE scopes
 SET name = $1, attr_include_access = $2, attr_include_id = $3, claims_at_root = $4
-WHERE id = $5"#,
+WHERE id = $5",
                 &[
                     &new_scope.name,
                     &new_scope.attr_include_access,
@@ -390,10 +390,10 @@ WHERE id = $5"#,
     ) -> Result<(), ErrorResponse> {
         DB::pg_txn_append(
             txn,
-            r#"
+            r"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
-    WHERE id = $3"#,
+    WHERE id = $3",
             &[&attr_include_access, &attr_include_id, &id],
         )
         .await?;
@@ -408,10 +408,10 @@ WHERE id = $5"#,
         txn: &mut Vec<(&str, Params)>,
     ) {
         txn.push((
-            r#"
+            r"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
-    WHERE id = $3"#,
+    WHERE id = $3",
             params!(attr_include_access, attr_include_id, id),
         ));
     }

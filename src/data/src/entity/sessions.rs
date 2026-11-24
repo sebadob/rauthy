@@ -244,13 +244,13 @@ impl Session {
 
         if let Some(token) = continuation_token {
             if backwards {
-                let sql = r#"
+                let sql = r"
 SELECT *
 FROM sessions
 WHERE exp >= $1 AND id != $2 AND state = $3
 ORDER BY exp ASC
 LIMIT $4
-OFFSET $5"#;
+OFFSET $5";
 
                 let mut rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
@@ -271,13 +271,13 @@ OFFSET $5"#;
                 }
                 res = Some(rows);
             } else {
-                let sql = r#"
+                let sql = r"
 SELECT *
 FROM sessions
 WHERE exp <= $1 AND id != $2 AND state = $3
 ORDER BY exp DESC
 LIMIT $4
-OFFSET $5"#;
+OFFSET $5";
 
                 let rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
@@ -300,13 +300,13 @@ OFFSET $5"#;
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let sql = r#"
+            let sql = r"
 SELECT *
 FROM sessions
 WHERE state = $1
 ORDER BY exp ASC
 LIMIT $2
-OFFSET $3"#;
+OFFSET $3";
 
             let mut rows: Vec<Self> = if is_hiqlite() {
                 DB::hql()
@@ -322,13 +322,13 @@ OFFSET $3"#;
             }
             res = Some(rows);
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT *
 FROM sessions
 WHERE state = $1
 ORDER BY exp DESC
 LIMIT $2
-OFFSET $3"#;
+OFFSET $3";
 
             let rows: Vec<Self> = if is_hiqlite() {
                 DB::hql()
@@ -415,14 +415,14 @@ OFFSET $3"#;
             ));
         }
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
     remote_ip = $10
-WHERE sessions.exp > $11"#;
+WHERE sessions.exp > $11";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -570,10 +570,10 @@ WHERE sessions.exp > $11"#;
 
         // This function MUST NOT use `self.upsert()`, because it might insert
         // a new session during a race-condition.
-        let sql = r#"
+        let sql = r"
 UPDATE sessions
 SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5, is_mfa = $6
-WHERE id = $7 AND exp > $8 AND (state = $9 OR state = $10)"#;
+WHERE id = $7 AND exp > $8 AND (state = $9 OR state = $10)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
