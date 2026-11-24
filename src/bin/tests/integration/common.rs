@@ -15,7 +15,7 @@ use rauthy_data::entity::consent_sources::LoginConsentContent;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
-use reqwest::{Response, header};
+use reqwest::{Response, StatusCode, header};
 use serde_json::json;
 use spow::pow::Pow;
 use std::error::Error;
@@ -435,6 +435,30 @@ pub async fn session_headers_for_client(
         redirect_uri: redirect_uri.to_string(),
     })
     .await
+}
+
+/// A full login of `email` on [`CLIENT_ID`], whose backchannel logout stores the logout token
+/// for the tests, returning the session headers and the issued tokens.
+pub async fn login_session_init_client(email: &str, password: &str) -> (HeaderMap, TokenSet) {
+    login_session(&LoginTarget {
+        email: email.to_string(),
+        password: password.to_string(),
+        client_id: CLIENT_ID.to_string(),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        redirect_uri: "http://localhost:3000/oidc/callback".to_string(),
+    })
+    .await
+}
+
+/// The status of `GET /oidc/sessioninfo` with the session `headers`, `401` once it is deleted.
+pub async fn session_status(headers: &HeaderMap) -> StatusCode {
+    reqwest::Client::new()
+        .get(format!("{}/oidc/sessioninfo", get_backend_url()))
+        .headers(headers.clone())
+        .send()
+        .await
+        .unwrap()
+        .status()
 }
 
 /// Who logs in, and on which client: the credentials of the user, and the client with the

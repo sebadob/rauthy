@@ -1,10 +1,10 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, LoginTarget, PASSWORD, STALE_HASH, TestUser, USER_PASSWORD, USERNAME,
-    accept_all, authorization_response_params, code_state_from_headers, consent_required,
-    consent_template, cookie_csrf_headers_from_res, create_client, decode_claims, delete_client,
-    get_auth_headers, get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client,
-    login_session, password_grant, password_token_set, prepare_login, put_client, refresh,
-    session_headers_with, update_request,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, STALE_HASH, TestUser, USER_PASSWORD, USERNAME, accept_all,
+    authorization_response_params, code_state_from_headers, consent_required, consent_template,
+    cookie_csrf_headers_from_res, create_client, decode_claims, delete_client, get_auth_headers,
+    get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client,
+    login_session_init_client, password_grant, password_token_set, prepare_login, put_client,
+    refresh, session_headers_with, session_status, update_request,
 };
 use crate::{expect_status, expect_status_json};
 use futures::{StreamExt, stream};
@@ -21,6 +21,7 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::utils::new_store_id;
 use rauthy_data::entity::consent_sources::{ConsentContent, ConsentSourceType};
+use rauthy_service::oidc::bcl_logout_token::LogoutToken;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, HeaderMap, LOCATION, USER_AGENT};
 use reqwest::multipart::{Form, Part};
@@ -29,6 +30,7 @@ use serde_json::{Value, json};
 use std::error::Error;
 use std::io;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::fs;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
 use tokio::time;
@@ -1820,8 +1822,9 @@ async fn test_user_consent_resource() -> Result<(), Box<dyn Error>> {
     user.delete().await
 }
 
-/// A consent revoke deletes all sessions of the user, by the user itself and by an admin, and
-/// the sessions of the admin and of other users stay.
+/// A consent revoke deletes all sessions of the user, with a backchannel logout, by the user
+/// itself and by an admin, also when there was no consent to revoke, and the sessions of the admin
+/// and of other users stay.
 #[tokio::test]
 async fn test_user_consent_revoke_deletes_sessions() -> Result<(), Box<dyn Error>> {
     let admin = get_auth_headers().await?;
@@ -1830,24 +1833,14 @@ async fn test_user_consent_revoke_deletes_sessions() -> Result<(), Box<dyn Error
     let user = TestUser::new("Consent Sessions", USER_PASSWORD).await?;
     let other = TestUser::new("Consent Sessions other", USER_PASSWORD).await?;
     let email = user.user.email.as_str();
-    let url_session = format!("{backend}/oidc/sessioninfo");
     // the session logins consent to the `rauthy` client
     let url_delete = format!("{backend}/users/{}/consents?client_id=rauthy", user.user.id);
-    let session_status = async |headers: &HeaderMap| {
-        client
-            .get(&url_session)
-            .headers(headers.clone())
-            .send()
-            .await
-            .unwrap()
-            .status()
-    };
     let other_session = session_headers_with(&other.user.email, USER_PASSWORD).await;
 
     for revoker in ["user", "admin"] {
         let sessions = [
             session_headers_with(email, USER_PASSWORD).await,
-            session_headers_with(email, USER_PASSWORD).await,
+            login_session_init_client(email, USER_PASSWORD).await.0,
         ];
         for session in &sessions {
             assert_eq!(session_status(session).await, StatusCode::OK, "{revoker}");
@@ -1865,6 +1858,11 @@ async fn test_user_consent_revoke_deletes_sessions() -> Result<(), Box<dyn Error
             .await?;
         let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
         assert!(deleted.consent_deleted, "{revoker}");
+        assert_eq!(
+            logout_token_sub().await.as_deref(),
+            Some(user.user.id.as_str()),
+            "{revoker}"
+        );
 
         for session in &sessions {
             assert_eq!(
@@ -1880,6 +1878,27 @@ async fn test_user_consent_revoke_deletes_sessions() -> Result<(), Box<dyn Error
             "{revoker}"
         );
     }
+
+    // --- a revoke without a consent to revoke deletes the sessions as well, without an event
+    let session = session_headers_with(email, USER_PASSWORD).await;
+    let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
+    let res = client
+        .delete(format!(
+            "{backend}/users/{}/consents?client_id=never_consented",
+            user.user.id
+        ))
+        .headers(session.clone())
+        .send()
+        .await?;
+    let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
+    assert!(!deleted.consent_deleted);
+    assert_eq!(session_status(&session).await, StatusCode::UNAUTHORIZED);
+    assert_eq!(session_status(&admin).await, StatusCode::OK);
+    let events = consent_events(&client, &admin, "ConsentRevoked", events_from, email).await;
+    assert!(
+        events.iter().all(|text| !text.contains("never_consented")),
+        "{events:?}"
+    );
 
     for user in [&user, &other] {
         user.delete().await?;
@@ -1901,14 +1920,7 @@ async fn test_user_consents_admin_listing() -> Result<(), Box<dyn Error>> {
 
     let before = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
     let user_session = session_headers_with(email, USER_PASSWORD).await;
-    login_session(&LoginTarget {
-        email: email.to_string(),
-        password: USER_PASSWORD.to_string(),
-        client_id: CLIENT_ID.to_string(),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        redirect_uri: "http://localhost:3000/oidc/callback".to_string(),
-    })
-    .await;
+    login_session_init_client(email, USER_PASSWORD).await;
 
     let list = async |headers: &HeaderMap| {
         let res = client
@@ -1968,8 +1980,9 @@ async fn test_user_consents_admin_listing() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// A revoke of all consents revokes each of them with its refresh tokens and event, and deletes
-/// all sessions of the user, by the user itself and by an admin.
+/// A revoke of all consents revokes each of them, also one for a `resource`, with its refresh
+/// tokens and event, and deletes all sessions of the user with a backchannel logout, by the user
+/// itself and by an admin.
 #[tokio::test]
 async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
     let admin = get_auth_headers().await?;
@@ -1979,30 +1992,70 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
     let email = user.user.email.as_str();
     let url = format!("{backend}/users/{}/consents", user.user.id);
     let url_all = format!("{url}/all");
-    let url_session = format!("{backend}/oidc/sessioninfo");
-    let session_status = async |headers: &HeaderMap| {
-        client
-            .get(&url_session)
-            .headers(headers.clone())
-            .send()
-            .await
-            .unwrap()
-            .status()
-    };
 
     let res = client.delete(&url_all).send().await?;
     expect_status!(res, 401);
 
-    // --- the user itself: the consents of the `rauthy` login and of `init_client`
+    // a client with a `resource`, whose consent is for that `resource`
+    let resource_client = format!("consent-revoke-all-{}", new_store_id().to_lowercase());
+    let resource = "https://api.revoke-all.consenttest.io";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let created = create_client(
+        &client,
+        &admin,
+        &NewClientRequest {
+            id: resource_client.clone(),
+            secret: None,
+            name: Some("Consent Revoke All".to_string()),
+            confidential: false,
+            redirect_uris: vec![redirect_uri.to_string()],
+            post_logout_redirect_uris: None,
+            consent: None,
+        },
+    )
+    .await?;
+    let mut upd = update_request(created);
+    upd.allowed_resources = Some(vec![resource.to_string()]);
+    upd.challenges = Some(vec!["plain".to_string()]);
+    put_client(&client, &admin, &resource_client, &upd).await?;
+
+    // --- the user itself: the consents of the `rauthy` login, of `init_client`, and for the
+    // `resource`
     let session = session_headers_with(email, USER_PASSWORD).await;
-    let (client_session, ts) = login_session(&LoginTarget {
-        email: email.to_string(),
-        password: USER_PASSWORD.to_string(),
-        client_id: CLIENT_ID.to_string(),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        redirect_uri: "http://localhost:3000/oidc/callback".to_string(),
-    })
-    .await;
+    let (client_session, ts) = login_session_init_client(email, USER_PASSWORD).await;
+    let challenge = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+    let url_authorize = format!(
+        "{backend}/oidc/authorize?client_id={resource_client}&redirect_uri={redirect_uri}\
+        &response_type=code&code_challenge={challenge}&code_challenge_method=plain"
+    );
+    let res = client.get(&url_authorize).send().await?;
+    let resource_session = cookie_csrf_headers_from_res(expect_status!(res, 200)).await?;
+    let login = async |consent: Option<LoginConsent>| {
+        client
+            .post(&url_authorize)
+            .headers(resource_session.clone())
+            .json(&LoginRequest {
+                email: Some(email.to_string()),
+                password: Some(USER_PASSWORD.to_string()),
+                pow: get_solved_pow().await,
+                client_id: resource_client.clone(),
+                redirect_uri: redirect_uri.to_string(),
+                scopes: Some(vec!["openid".to_string()]),
+                state: None,
+                nonce: None,
+                code_challenge: Some(challenge.to_string()),
+                code_challenge_method: Some("plain".to_string()),
+                resource: Some(resource.to_string()),
+                resident_key_token: None,
+                fwda: None,
+                consent,
+            })
+            .send()
+            .await
+            .unwrap()
+    };
+    let asked = consent_required(login(None).await).await;
+    expect_status!(login(Some(accept_all(&asked))).await, 202);
     let other = password_token_set(&client, USERNAME, PASSWORD).await;
 
     let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
@@ -2012,12 +2065,16 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let deleted = expect_status_json!(res, 200, UserConsentsDeleteResponse);
-    assert_eq!(deleted.consents_deleted, 2);
+    assert_eq!(deleted.consents_deleted, 3);
     assert!(deleted.refresh_tokens_deleted >= 1);
+    assert_eq!(
+        logout_token_sub().await.as_deref(),
+        Some(user.user.id.as_str())
+    );
 
     let res = client.get(&url).headers(admin.clone()).send().await?;
     assert!(expect_status_json!(res, 200, Vec<UserConsentResponse>).is_empty());
-    for headers in [&session, &client_session] {
+    for headers in [&session, &client_session, &resource_session] {
         assert_eq!(session_status(headers).await, StatusCode::UNAUTHORIZED);
     }
     assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
@@ -2028,6 +2085,10 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         consent_events(&client, &admin, "ConsentRevoked", events_from, email).await,
         [
+            format!(
+                "Consent of `{email}` for client `{resource_client}` / `{resource}` revoked by \
+                the user"
+            ),
             format!("Consent of `{email}` for client `{CLIENT_ID}` revoked by the user"),
             format!("Consent of `{email}` for client `rauthy` revoked by the user"),
         ]
@@ -2035,6 +2096,7 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
 
     // --- an admin, then idempotent
     let session = session_headers_with(email, USER_PASSWORD).await;
+    let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
     let res = client
         .delete(&url_all)
         .headers(admin.clone())
@@ -2045,6 +2107,13 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
     assert_eq!(deleted.consents_deleted, 1);
     assert_eq!(session_status(&session).await, StatusCode::UNAUTHORIZED);
     assert_eq!(session_status(&admin).await, StatusCode::OK);
+    let admin_events = [format!(
+        "Consent of `{email}` for client `rauthy` revoked by admin `{USERNAME}`"
+    )];
+    assert_eq!(
+        consent_events(&client, &admin, "ConsentRevoked", events_from, email).await,
+        admin_events
+    );
     let res = client
         .delete(&url_all)
         .headers(admin.clone())
@@ -2053,6 +2122,10 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
     let deleted = expect_status_json!(res, 200, UserConsentsDeleteResponse);
     assert_eq!(deleted.consents_deleted, 0);
     assert_eq!(deleted.refresh_tokens_deleted, 0);
+    assert_eq!(
+        consent_events(&client, &admin, "ConsentRevoked", events_from, email).await,
+        admin_events
+    );
 
     // --- an unknown user
     let res = client
@@ -2062,6 +2135,7 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
         .await?;
     expect_status!(res, 404);
 
+    delete_client(&admin, &resource_client).await?;
     user.delete().await
 }
 
@@ -2219,6 +2293,15 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
             .unwrap()
             .status()
     };
+    let delete_all = async || {
+        client
+            .delete(format!("{url}/all"))
+            .header(AUTHORIZATION, &key_header)
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
     let mut set_rights = async |rights: Vec<AccessRights>| {
         key.access = vec![ApiKeyAccess {
             group: AccessGroup::Users,
@@ -2262,16 +2345,19 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
     // another access group, rejected even with an admin session
     assert_eq!(get().await, StatusCode::FORBIDDEN);
     assert_eq!(delete().await, StatusCode::FORBIDDEN);
+    assert_eq!(delete_all().await, StatusCode::FORBIDDEN);
     assert_eq!(get_with_session().await, StatusCode::FORBIDDEN);
     assert_eq!(delete_with_session().await.0, StatusCode::FORBIDDEN);
 
     set_rights(vec![AccessRights::Read]).await;
     assert_eq!(get().await, StatusCode::OK);
     assert_eq!(delete().await, StatusCode::FORBIDDEN);
+    assert_eq!(delete_all().await, StatusCode::FORBIDDEN);
 
     set_rights(vec![AccessRights::Delete]).await;
     assert_eq!(get().await, StatusCode::FORBIDDEN);
     assert_eq!(delete().await, StatusCode::OK);
+    assert_eq!(delete_all().await, StatusCode::OK);
 
     // with an admin session as well, the revoke is the key's
     let ts = password_token_set(&client, &user.user.email, USER_PASSWORD).await;
@@ -2564,4 +2650,14 @@ async fn consent_events(
         .collect::<Vec<_>>();
     texts.sort();
     texts
+}
+
+/// The `sub` of the logout token the dev backchannel logout endpoint received last.
+async fn logout_token_sub() -> Option<String> {
+    let token = fs::read_to_string("tests/test_data/logout_token")
+        .await
+        .unwrap();
+    let mut buf = Vec::with_capacity(256);
+    let (_, token) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
+    token.sub.map(String::from)
 }
