@@ -51,9 +51,9 @@ pub async fn get_template(
     let (tpl, cookie) = HtmlTemplate::build_from_str(id.as_str(), session, client_id).await?;
 
     if let Some(cookie) = cookie {
-        Ok(HttpResponse::Ok().cookie(cookie).body(tpl.inner().clone()))
+        Ok(HttpResponse::Ok().cookie(cookie).body(tpl.inner()))
     } else {
-        Ok(HttpResponse::Ok().body(tpl.inner().clone()))
+        Ok(HttpResponse::Ok().body(tpl.inner()))
     }
 }
 

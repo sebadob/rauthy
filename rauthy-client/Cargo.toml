@@ -78,6 +78,7 @@ unsafe_code = "forbid"
 [lints.clippy]
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
+redundant_clone = "deny"
 
 # Permanently allowed (intentional disagreement with pedantic)
 assert_is_empty = "allow"

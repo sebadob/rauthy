@@ -133,5 +133,5 @@ pub async fn trigger() {
 
     let json = serde_json::to_string(&zones).unwrap();
     let data = compress_br(json.as_bytes()).await.unwrap();
-    TIMEZONES_BR.set(data.clone()).unwrap();
+    TIMEZONES_BR.set(data).unwrap();
 }
