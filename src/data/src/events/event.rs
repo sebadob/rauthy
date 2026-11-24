@@ -691,7 +691,7 @@ impl Event {
             _ => events.level_failed_login.clone(),
         };
         Self::new(
-            level.clone(),
+            level,
             EventType::InvalidLogins,
             Some(ip),
             Some(i64::from(failed_logins)),

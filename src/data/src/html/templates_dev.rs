@@ -130,7 +130,6 @@ impl HtmlTemplate {
                     you need to be logged in",
                     )
                     .user_id
-                    .clone()
                     .expect(
                         "To make the tpl_password_reset work automatically in local dev, \
                     you need to be logged in",

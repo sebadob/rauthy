@@ -118,7 +118,7 @@ impl Client {
                 }),
                 handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
                     dns_txt_resolver: DnsTxtResolver::default(),
-                    http_client: http_client.clone(),
+                    http_client,
                 }),
                 authorization_server_metadata: Default::default(),
                 protected_resource_metadata: Default::default(),
