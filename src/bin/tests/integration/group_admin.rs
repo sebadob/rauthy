@@ -380,6 +380,12 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 200);
+    let res = client
+        .delete(format!("{backend}/users/{}/consents/all", member.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 200);
 
     // its own consents, before the group admin check that would refuse an admin target
     let res = client
@@ -465,6 +471,12 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     expect_status!(res, 403);
     let res = client
+        .delete(format!("{backend}/users/{}/consents/all", coadmin.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 403);
+    let res = client
         .get(format!("{backend}/users/{}/consents", outsider.id))
         .headers(ga_headers.clone())
         .send()
@@ -475,6 +487,12 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
             "{backend}/users/{}/consents?client_id=init_client",
             outsider.id
         ))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 403);
+    let res = client
+        .delete(format!("{backend}/users/{}/consents/all", outsider.id))
         .headers(ga_headers.clone())
         .send()
         .await?;
