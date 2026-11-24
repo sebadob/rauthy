@@ -156,10 +156,15 @@ export const I18nNl: I18n = {
             connectedAppsDesc:
                 'Applicaties die u toestemming heeft gegeven om uw account te gebruiken.',
             granted: 'Verleend',
+            logoutWarning:
+                'Hiermee wordt u ook afgemeld bij al uw sessies op alle apparaten. U moet opnieuw inloggen.',
             noConnectedApps: 'Er heeft nog geen applicatie toegang gekregen.',
             privacy: 'Privacy',
             resource: 'Resource',
             revoke: 'Toegang intrekken',
+            revokeAll: 'Alle toegang intrekken',
+            revokeAllDesc:
+                'Trekt uw toestemming in voor alle hier vermelde applicaties. Elke applicatie moet opnieuw om uw toestemming vragen.',
             revokeDesc:
                 'Intrekken verwijdert de toestemming en de applicatie kan haar toegang niet meer vernieuwen. Access tokens die met de verwijderde refresh tokens zijn uitgegeven, worden ingetrokken bij userinfo en introspectie. Applicaties die hun tokens zelf valideren, kunnen ze nog accepteren tot ze verlopen. De applicatie moet opnieuw om uw toestemming vragen.',
             scopes: 'Scopes',

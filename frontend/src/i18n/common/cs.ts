@@ -152,10 +152,15 @@ export const I18nCs: I18n = {
             connectedApps: 'Propojené aplikace',
             connectedAppsDesc: 'Aplikace, kterým jste povolili přístup ke svému účtu.',
             granted: 'Povoleno',
+            logoutWarning:
+                'Tím se zároveň odhlásíte ze všech relací na všech zařízeních. Budete se muset znovu přihlásit.',
             noConnectedApps: 'Zatím jste žádné aplikaci přístup nepovolili.',
             privacy: 'Soukromí',
             resource: 'Zdroj',
             revoke: 'Odebrat přístup',
+            revokeAll: 'Odebrat veškerý přístup',
+            revokeAllDesc:
+                'Odebere souhlas pro všechny zde uvedené aplikace. Každá aplikace vás bude muset požádat o souhlas znovu.',
             revokeDesc:
                 'Odebráním zrušíte souhlas a aplikace si už nebude moci přístup obnovit. Přístupové tokeny vydané se smazanými obnovovacími tokeny jsou zneplatněné v userinfo a introspekci. Aplikace, které si tokeny ověřují samy, je ale mohou přijímat až do jejich vypršení. Aplikace vás bude muset požádat o souhlas znovu.',
             scopes: 'Rozsahy',

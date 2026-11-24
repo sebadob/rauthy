@@ -144,10 +144,13 @@ export const I18nZh: I18n = {
             connectedApps: '已连接的应用',
             connectedAppsDesc: '您已同意访问您账户的应用。',
             granted: '授权时间',
+            logoutWarning: '这也会使您在所有设备上的全部会话退出登录。您需要重新登录。',
             noConnectedApps: '尚未有应用获得访问权限。',
             privacy: '隐私',
             resource: '资源',
             revoke: '撤销访问',
+            revokeAll: '撤销全部访问',
+            revokeAllDesc: '撤销您对此处列出的所有应用的同意。每个应用都需要重新请求您的同意。',
             revokeDesc:
                 '撤销将删除该同意，应用将无法再续期其访问权限。随已删除的刷新令牌签发的访问令牌会在 userinfo 和令牌内省中被撤销。自行验证令牌的应用在令牌过期前仍可能接受它们。应用需要重新请求您的同意。',
             scopes: 'Scopes',

@@ -154,10 +154,15 @@ export const I18nPl: I18n = {
             connectedApps: 'Połączone aplikacje',
             connectedAppsDesc: 'Aplikacje, którym udzielono zgody na dostęp do Twojego konta.',
             granted: 'Udzielono',
+            logoutWarning:
+                'Spowoduje to również wylogowanie ze wszystkich sesji na wszystkich urządzeniach. Konieczne będzie ponowne zalogowanie.',
             noConnectedApps: 'Żadna aplikacja nie ma jeszcze dostępu.',
             privacy: 'Prywatność',
             resource: 'Zasób',
             revoke: 'Cofnij dostęp',
+            revokeAll: 'Cofnij cały dostęp',
+            revokeAllDesc:
+                'Cofa Twoją zgodę dla wszystkich wymienionych tu aplikacji. Każda aplikacja będzie musiała ponownie poprosić o Twoją zgodę.',
             revokeDesc:
                 'Cofnięcie usuwa zgodę, a aplikacja nie może już odnawiać swojego dostępu. Tokeny dostępu wydane na podstawie usuniętych tokenów odświeżania są unieważniane w punktach userinfo i introspection. Aplikacje, które same weryfikują swoje tokeny, mogą je nadal akceptować do czasu ich wygaśnięcia. Aplikacja musi ponownie poprosić o Twoją zgodę.',
             scopes: 'Zakresy',

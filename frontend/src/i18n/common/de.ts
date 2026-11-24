@@ -162,10 +162,15 @@ export const I18nDe: I18n = {
             connectedAppsDesc:
                 'Anwendungen, denen Sie den Zugriff auf Ihren Account erlaubt haben.',
             granted: 'Erteilt',
+            logoutWarning:
+                'Dadurch werden Sie außerdem aus allen Sitzungen auf allen Geräten abgemeldet. Sie müssen sich erneut anmelden.',
             noConnectedApps: 'Bisher wurde keiner Anwendung Zugriff gewährt.',
             privacy: 'Datenschutz',
             resource: 'Ressource',
             revoke: 'Zugriff widerrufen',
+            revokeAll: 'Alle Zugriffe widerrufen',
+            revokeAllDesc:
+                'Widerruft Ihre Zustimmung für alle hier aufgeführten Anwendungen. Jede Anwendung muss erneut um Ihre Zustimmung bitten.',
             revokeDesc:
                 'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff nicht mehr erneuern. Access Tokens, die mit den gelöschten Refresh Tokens ausgestellt wurden, werden bei Userinfo und Introspection widerrufen. Anwendungen, die ihre Tokens selbst validieren, können sie bis zu ihrem Ablauf weiterhin akzeptieren. Die Anwendung muss erneut um Ihre Zustimmung bitten.',
             scopes: 'Scopes',

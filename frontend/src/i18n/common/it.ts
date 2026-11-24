@@ -147,10 +147,15 @@ export const I18nIt: I18n = {
             connectedApps: 'Applicazioni collegate',
             connectedAppsDesc: 'Applicazioni che hai autorizzato ad accedere al tuo account.',
             granted: 'Autorizzato il',
+            logoutWarning:
+                'Questo ti disconnette anche da tutte le sessioni su ogni dispositivo. Dovrai accedere di nuovo.',
             noConnectedApps: 'Nessuna applicazione autorizzata.',
             privacy: 'Privacy',
             resource: 'Risorsa',
             revoke: 'Revoca accesso',
+            revokeAll: 'Revoca tutti gli accessi',
+            revokeAllDesc:
+                'Revoca il tuo consenso per tutte le applicazioni elencate qui. Ogni applicazione dovrà chiedere di nuovo il tuo consenso.',
             revokeDesc:
                 "La revoca ritira il consenso e impedisce all'applicazione di rinnovare l'accesso. UserInfo e introspezione respingono i token di accesso associati ai token di aggiornamento eliminati. Le applicazioni che verificano i token autonomamente possono accettarli fino alla scadenza. L'applicazione dovrà chiederti di nuovo il consenso.",
             scopes: 'Ambiti',

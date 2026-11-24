@@ -156,10 +156,15 @@ export const I18nNb: I18n = {
             connectedAppsDesc:
                 'Applikasjoner du har gitt samtykke til å få tilgang til kontoen din.',
             granted: 'Gitt',
+            logoutWarning:
+                'Dette logger deg også ut av alle øktene dine på alle enheter. Du må logge inn på nytt.',
             noConnectedApps: 'Ingen applikasjon har fått tilgang ennå.',
             privacy: 'Personvern',
             resource: 'Ressurs',
             revoke: 'Trekk tilbake tilgang',
+            revokeAll: 'Trekk tilbake all tilgang',
+            revokeAllDesc:
+                'Trekker tilbake samtykket ditt for alle applikasjonene som er oppført her. Hver applikasjon må be om samtykket ditt på nytt.',
             revokeDesc:
                 'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin. Tilgangstokener som ble utstedt med de slettede oppdateringstokenene, trekkes tilbake ved userinfo og introspeksjon. Applikasjoner som validerer tokenene sine selv, kan fortsatt godta dem til de utløper. Applikasjonen må be om samtykket ditt på nytt.',
             scopes: 'Scopes',

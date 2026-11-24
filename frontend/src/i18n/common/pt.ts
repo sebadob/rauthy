@@ -157,10 +157,15 @@ export const I18nPt: I18n = {
             connectedApps: 'Aplicações ligadas',
             connectedAppsDesc: 'Aplicações às quais deu consentimento para aceder à sua conta.',
             granted: 'Concedido',
+            logoutWarning:
+                'Isto também termina todas as suas sessões em todos os dispositivos. Terá de iniciar sessão novamente.',
             noConnectedApps: 'Ainda não foi concedido acesso a nenhuma aplicação.',
             privacy: 'Privacidade',
             resource: 'Recurso',
             revoke: 'Revogar acesso',
+            revokeAll: 'Revogar todos os acessos',
+            revokeAllDesc:
+                'Revoga o seu consentimento para todas as aplicações listadas aqui. Cada aplicação terá de pedir novamente o seu consentimento.',
             revokeDesc:
                 'A revogação remove o consentimento e a aplicação deixa de poder renovar o seu acesso. Os Access Tokens emitidos com os Refresh Tokens eliminados são revogados no userinfo e na introspection. As aplicações que validam os seus tokens por si próprias podem continuar a aceitá-los até expirarem. A aplicação terá de pedir novamente o seu consentimento.',
             scopes: 'Scopes',

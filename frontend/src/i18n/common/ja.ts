@@ -146,10 +146,15 @@ export const I18nJa: I18n = {
             connectedApps: '連携中のアプリ',
             connectedAppsDesc: 'アカウントへのアクセスに同意したアプリケーション。',
             granted: '許可日時',
+            logoutWarning:
+                'これにより、すべてのデバイスのすべてのセッションからもログアウトされます。再度ログインする必要があります。',
             noConnectedApps: 'まだどのアプリケーションにもアクセスを許可していません。',
             privacy: 'プライバシー',
             resource: 'リソース',
             revoke: 'アクセスを取り消す',
+            revokeAll: 'すべてのアクセスを取り消す',
+            revokeAllDesc:
+                'ここに表示されているすべてのアプリケーションへの同意を取り消します。各アプリケーションは再度同意を求める必要があります。',
             revokeDesc:
                 '取り消すと同意が削除され、アプリケーションはアクセスを更新できなくなります。削除された Refresh Token で発行された Access Token は、userinfo と introspection で無効になります。Token を自分で検証するアプリケーションは、有効期限が切れるまでそれを受け入れる場合があります。アプリケーションは改めて同意を求める必要があります。',
             scopes: 'Scope',

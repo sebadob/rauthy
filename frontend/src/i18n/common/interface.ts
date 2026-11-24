@@ -128,10 +128,13 @@ export interface I18n {
             connectedApps: string;
             connectedAppsDesc: string;
             granted: string;
+            logoutWarning: string;
             noConnectedApps: string;
             privacy: string;
             resource: string;
             revoke: string;
+            revokeAll: string;
+            revokeAllDesc: string;
             revokeDesc: string;
             scopes: string;
             updated: string;

@@ -157,10 +157,15 @@ export const I18nFr: I18n = {
             connectedApps: 'Applications connectées',
             connectedAppsDesc: 'Applications auxquelles vous avez autorisé l’accès à votre compte.',
             granted: 'Accordé',
+            logoutWarning:
+                'Cela vous déconnecte également de toutes vos sessions sur tous vos appareils. Vous devrez vous reconnecter.',
             noConnectedApps: 'Aucune application n’a encore reçu d’accès.',
             privacy: 'Confidentialité',
             resource: 'Ressource',
             revoke: 'Révoquer l’accès',
+            revokeAll: 'Révoquer tous les accès',
+            revokeAllDesc:
+                'Révoque votre consentement pour toutes les applications listées ici. Chaque application devra de nouveau demander votre consentement.',
             revokeDesc:
                 'La révocation supprime le consentement et l’application ne peut plus renouveler son accès. Les jetons d’accès émis avec les jetons de rafraîchissement supprimés sont révoqués pour userinfo et l’introspection. Les applications qui valident elles-mêmes leurs jetons peuvent encore les accepter jusqu’à leur expiration. L’application devra de nouveau demander votre consentement.',
             scopes: 'Scopes',
