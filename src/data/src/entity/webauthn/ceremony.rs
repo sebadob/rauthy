@@ -274,7 +274,7 @@ mod tests {
     #[case(AccountType::Federated, true)]
     #[case(AccountType::FederatedPasskey, true)]
     fn account_policy(#[case] account_type: AccountType, #[case] expected: bool) {
-        assert_eq!(requires_uv(account_type.clone(), false), expected);
+        assert_eq!(requires_uv(account_type, false), expected);
         assert!(requires_uv(account_type, true));
     }
 

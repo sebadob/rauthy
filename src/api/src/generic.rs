@@ -339,7 +339,7 @@ pub async fn put_password_policy(
     payload.validate()?;
 
     let mut rules = PasswordPolicy::find().await?;
-    rules.apply_req(payload);
+    rules.apply_req(&payload);
     rules.save().await?;
 
     if RauthyConfig::get()
@@ -579,8 +579,12 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
             );
         }
 
-        let location = ipgeo::get_location_from_db(ip)?;
-        Event::suspicious_request(path, ip, location).send().await?;
+        {
+            let location = ipgeo::get_location_from_db(ip)?;
+            Event::suspicious_request(path, ip, location.as_deref())
+        }
+        .send()
+        .await?;
 
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,

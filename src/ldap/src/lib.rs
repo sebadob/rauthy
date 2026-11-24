@@ -142,7 +142,7 @@ async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
             )],
             Ok(ServerOps::Unbind(_)) => break,
             Ok(ServerOps::Abandon { .. }) => vec![],
-            Err(()) => match unsupported(msg) {
+            Err(()) => match unsupported(&msg) {
                 Some(res) => vec![res],
                 None => break,
             },
@@ -159,7 +159,7 @@ async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
 
 /// Answers every operation outside the supported subset with the matching response type.
 /// Returns `None` for messages a client must never send, which closes the connection.
-fn unsupported(msg: LdapMsg) -> Option<LdapMsg> {
+fn unsupported(msg: &LdapMsg) -> Option<LdapMsg> {
     let res = |code, message: &str| LdapResult {
         code,
         matcheddn: String::new(),
@@ -411,7 +411,7 @@ async fn search_client(
 
     let entries = directory::build(client_id, &client_base, users, groups);
     Ok(
-        visible(entries, &search_base, req.scope, user_id, &req.filter)?
+        visible(entries, &search_base, &req.scope, user_id, &req.filter)?
             .into_iter()
             .map(|e| {
                 LdapMsg::new(
@@ -505,7 +505,7 @@ fn search_base(base: &str, client_base: &str) -> Result<String, (LdapResultCode,
 fn visible(
     entries: Vec<Entry>,
     search_base: &str,
-    scope: LdapSearchScope,
+    scope: &LdapSearchScope,
     user_id: Option<&str>,
     filter: &LdapFilter,
 ) -> Result<Vec<Entry>, (LdapResultCode, String)> {
@@ -564,7 +564,7 @@ mod tests {
 
     fn dns(
         base: &str,
-        scope: LdapSearchScope,
+        scope: &LdapSearchScope,
         user_id: Option<&str>,
     ) -> Result<Vec<String>, LdapResultCode> {
         let search_base = search_base(base, BASE).map_err(|(c, _)| c)?;
@@ -580,26 +580,32 @@ mod tests {
         let bob = "uid=bob,ou=people,cn=app,ou=clients,dc=x";
 
         // service sessions see the whole subtree
-        assert_eq!(dns(BASE, LdapSearchScope::Subtree, None).unwrap().len(), 6);
+        assert_eq!(dns(BASE, &LdapSearchScope::Subtree, None).unwrap().len(), 6);
         assert_eq!(
-            dns(BASE, LdapSearchScope::Base, None).unwrap(),
+            dns(BASE, &LdapSearchScope::Base, None).unwrap(),
             vec![BASE.to_string()]
         );
         assert_eq!(
             dns(
                 "ou=people,cn=app,ou=clients,dc=x",
-                LdapSearchScope::OneLevel,
+                &LdapSearchScope::OneLevel,
                 None
             )
             .unwrap(),
             vec![alice, bob]
         );
-        assert_eq!(dns(BASE, LdapSearchScope::OneLevel, None).unwrap().len(), 2);
-        assert_eq!(dns(BASE, LdapSearchScope::Children, None).unwrap().len(), 5);
+        assert_eq!(
+            dns(BASE, &LdapSearchScope::OneLevel, None).unwrap().len(),
+            2
+        );
+        assert_eq!(
+            dns(BASE, &LdapSearchScope::Children, None).unwrap().len(),
+            5
+        );
         assert_eq!(
             dns(
                 "uid=nobody,ou=people,cn=app,ou=clients,dc=x",
-                LdapSearchScope::Base,
+                &LdapSearchScope::Base,
                 None
             ),
             Err(LdapResultCode::NoSuchObject)
@@ -607,18 +613,18 @@ mod tests {
 
         // user sessions only ever see their own entry
         assert_eq!(
-            dns(BASE, LdapSearchScope::Subtree, Some("id1")).unwrap(),
+            dns(BASE, &LdapSearchScope::Subtree, Some("id1")).unwrap(),
             vec![alice]
         );
         assert!(
-            dns(bob, LdapSearchScope::Base, Some("id1"))
+            dns(bob, &LdapSearchScope::Base, Some("id1"))
                 .unwrap()
                 .is_empty()
         );
         assert!(
             dns(
                 "uid=nobody,ou=people,cn=app,ou=clients,dc=x",
-                LdapSearchScope::Base,
+                &LdapSearchScope::Base,
                 Some("id1")
             )
             .unwrap()
@@ -628,12 +634,12 @@ mod tests {
         // nothing outside the client's subtree
         for base in ["ou=clients,dc=x", "cn=other,ou=clients,dc=x", "dc=x"] {
             assert_eq!(
-                dns(base, LdapSearchScope::Subtree, None),
+                dns(base, &LdapSearchScope::Subtree, None),
                 Err(LdapResultCode::InsufficentAccessRights)
             );
         }
         assert_eq!(
-            dns("not a dn", LdapSearchScope::Subtree, None),
+            dns("not a dn", &LdapSearchScope::Subtree, None),
             Err(LdapResultCode::InvalidDNSyntax)
         );
     }

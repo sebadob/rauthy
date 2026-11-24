@@ -860,12 +860,8 @@ impl Event {
         )
     }
 
-    pub fn user_login_revoke(
-        user_email: &str,
-        bad_ip: IpAddr,
-        bad_location: Option<String>,
-    ) -> Self {
-        let loc = bad_location.as_deref().unwrap_or("Unknown Location");
+    pub fn user_login_revoke(user_email: &str, bad_ip: IpAddr, bad_location: Option<&str>) -> Self {
+        let loc = bad_location.unwrap_or("Unknown Location");
         let text = format!("User `{user_email}` revoked illegal login from {bad_ip} ({loc})");
 
         Self::new(
@@ -963,8 +959,8 @@ impl Event {
         )
     }
 
-    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<String>) -> Self {
-        let loc = location.as_deref().unwrap_or("Unknown Location");
+    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<&str>) -> Self {
+        let loc = location.unwrap_or("Unknown Location");
         let text = format!("Suspicious request to '{path}' from {ip} ({loc})");
 
         Self::new(

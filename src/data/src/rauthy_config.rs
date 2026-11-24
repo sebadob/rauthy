@@ -1714,7 +1714,7 @@ impl Vars {
         let node_config = slf.parse_hiqlite_config(&mut table, secrets).await;
         slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
-        check_table_empty(table, "<root>");
+        check_table_empty(&table, "<root>");
 
         (slf, node_config)
     }
@@ -1752,7 +1752,7 @@ impl Vars {
             self.dev.provider_callback_url = Some(v);
         }
 
-        check_table_empty(table, "dev");
+        check_table_empty(&table, "dev");
     }
 
     fn parse_atproto(&mut self, table: &mut toml::Table) {
@@ -1762,7 +1762,7 @@ impl Vars {
             self.atproto.enable = v;
         }
 
-        check_table_empty(table, "atproto");
+        check_table_empty(&table, "atproto");
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
@@ -1878,7 +1878,7 @@ impl Vars {
             self.access.redirect_root_to_account = v;
         }
 
-        check_table_empty(table, "access");
+        check_table_empty(&table, "access");
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
@@ -1953,7 +1953,7 @@ impl Vars {
             self.auth_headers.preferred_username = v.into();
         }
 
-        check_table_empty(table, "auth_headers");
+        check_table_empty(&table, "auth_headers");
     }
 
     fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
@@ -2008,7 +2008,7 @@ impl Vars {
             self.backchannel_logout.allowed_token_lifetime = v;
         }
 
-        check_table_empty(table, "backchannel_logout");
+        check_table_empty(&table, "backchannel_logout");
     }
 
     fn parse_bootstrap(&mut self, table: &mut toml::Table) {
@@ -2072,7 +2072,7 @@ impl Vars {
             self.bootstrap.reconcile = v;
         }
 
-        check_table_empty(table, "bootstrap");
+        check_table_empty(&table, "bootstrap");
     }
 
     fn resolve_bootstrap_generated_secrets_file(&mut self, node_config: &NodeConfig) {
@@ -2123,7 +2123,7 @@ impl Vars {
                     .expect("`source` is mandatory for `[[consent.sources]]`");
                 let name = t_str(&mut table, "consent.sources", "name", "")
                     .expect("`name` is mandatory for `[[consent.sources]]`");
-                check_table_empty(table, "consent.sources");
+                check_table_empty(&table, "consent.sources");
 
                 let entry = match VarsConsentSource::new(resource, &source, name) {
                     Ok(entry) => entry,
@@ -2141,7 +2141,7 @@ impl Vars {
             }
         }
 
-        check_table_empty(table, "consent");
+        check_table_empty(&table, "consent");
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -2180,7 +2180,7 @@ impl Vars {
             self.cred_stuff_detect.scan_window = v;
         }
 
-        check_table_empty(table, "cred_stuff_detection");
+        check_table_empty(&table, "cred_stuff_detection");
     }
 
     fn parse_database(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2291,7 +2291,7 @@ impl Vars {
             self.database.sched_user_exp_delete = Some(v);
         }
 
-        check_table_empty(table, "database");
+        check_table_empty(&table, "database");
     }
 
     fn parse_device_grant(&mut self, table: &mut toml::Table) {
@@ -2338,7 +2338,7 @@ impl Vars {
             self.device_grant.refresh_token_lifetime = v;
         }
 
-        check_table_empty(table, "device_grant");
+        check_table_empty(&table, "device_grant");
     }
 
     fn parse_dpop(&mut self, table: &mut toml::Table) {
@@ -2351,7 +2351,7 @@ impl Vars {
             self.dpop.nonce_exp = v;
         }
 
-        check_table_empty(table, "dpop");
+        check_table_empty(&table, "dpop");
     }
 
     fn parse_dynamic_clients(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2449,7 +2449,7 @@ impl Vars {
             self.dynamic_clients.allowed_resources = v;
         }
 
-        check_table_empty(table, "dynamic_clients");
+        check_table_empty(&table, "dynamic_clients");
     }
 
     fn parse_email(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2591,7 +2591,7 @@ impl Vars {
         ) {
             self.email.jobs.batch_delay = v;
         }
-        check_table_empty(jobs, "email.jobs");
+        check_table_empty(&jobs, "email.jobs");
 
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
@@ -2645,9 +2645,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
             self.email.tz_fmt.tz_fallback = v.into();
         }
-        check_table_empty(tz_fmt, "email.tz_fmt");
+        check_table_empty(&tz_fmt, "email.tz_fmt");
 
-        check_table_empty(table, "email");
+        check_table_empty(&table, "email");
     }
 
     fn parse_encryption(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2668,7 +2668,7 @@ impl Vars {
             }
         }
 
-        check_table_empty(table, "encryption");
+        check_table_empty(&table, "encryption");
     }
 
     fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
@@ -2789,7 +2789,7 @@ impl Vars {
             self.ephemeral_clients.danger_allow_private_addresses = v;
         }
 
-        check_table_empty(table, "ephemeral_clients");
+        check_table_empty(&table, "ephemeral_clients");
     }
 
     fn parse_events(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -3198,7 +3198,7 @@ impl Vars {
             self.events.disable_app_version_check = v;
         }
 
-        check_table_empty(table, "events");
+        check_table_empty(&table, "events");
     }
 
     fn parse_fedcm(&mut self, table: &mut toml::Table) {
@@ -3229,7 +3229,7 @@ impl Vars {
             self.fedcm.session_timeout = v;
         }
 
-        check_table_empty(table, "fedcm");
+        check_table_empty(&table, "fedcm");
     }
 
     fn parse_geo(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -3321,7 +3321,7 @@ impl Vars {
             self.geo.maxmind_update_cron = v.into();
         }
 
-        check_table_empty(table, "geolocation");
+        check_table_empty(&table, "geolocation");
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -3354,7 +3354,7 @@ impl Vars {
             self.hashing.hash_await_warn_time = v;
         }
 
-        check_table_empty(table, "hashing");
+        check_table_empty(&table, "hashing");
     }
 
     async fn parse_hiqlite_config(
@@ -3419,8 +3419,8 @@ impl Vars {
             self.otp.email.enable = v;
         }
 
-        check_table_empty(table, "otp");
-        check_table_empty(table_email, "otp.email");
+        check_table_empty(&table, "otp");
+        check_table_empty(&table_email, "otp.email");
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -3478,7 +3478,7 @@ impl Vars {
             self.http_client.root_ca_bundle = Some(v);
         }
 
-        check_table_empty(table, "http_client");
+        check_table_empty(&table, "http_client");
     }
 
     fn parse_i18n(&mut self, table: &mut toml::Table) {
@@ -3496,7 +3496,7 @@ impl Vars {
             self.i18n.filter_lang_admin = v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
 
-        check_table_empty(table, "i18n");
+        check_table_empty(&table, "i18n");
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
@@ -3567,7 +3567,7 @@ impl Vars {
             self.lifetimes.jwk_autorotate_cron = v.into();
         }
 
-        check_table_empty(table, "lifetimes");
+        check_table_empty(&table, "lifetimes");
     }
 
     fn parse_logging(&mut self, table: &mut toml::Table) {
@@ -3618,7 +3618,7 @@ impl Vars {
             self.logging.log_fmt = v.into();
         }
 
-        check_table_empty(table, "logging");
+        check_table_empty(&table, "logging");
     }
 
     fn parse_matrix(&mut self, table: &mut toml::Table) {
@@ -3633,7 +3633,7 @@ impl Vars {
             self.matrix.msc3861_enable = v;
         }
 
-        check_table_empty(table, "matrix");
+        check_table_empty(&table, "matrix");
     }
 
     fn parse_mfa(&mut self, table: &mut toml::Table) {
@@ -3643,7 +3643,7 @@ impl Vars {
             self.mfa.admin_force_mfa = v;
         }
 
-        check_table_empty(table, "mfa");
+        check_table_empty(&table, "mfa");
     }
 
     fn parse_ldap(&mut self, table: &mut toml::Table) {
@@ -3698,7 +3698,7 @@ impl Vars {
             self.ldap.max_connections = v;
         }
 
-        check_table_empty(table, "ldap");
+        check_table_empty(&table, "ldap");
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
@@ -3772,9 +3772,9 @@ impl Vars {
         ) {
             self.pam.authorized_keys.forced_key_expiry = v;
         }
-        check_table_empty(auth_keys, "pam.authorized_keys");
+        check_table_empty(&auth_keys, "pam.authorized_keys");
 
-        check_table_empty(table, "pam");
+        check_table_empty(&table, "pam");
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
@@ -3787,7 +3787,7 @@ impl Vars {
             self.pow.exp = v;
         }
 
-        check_table_empty(table, "pow");
+        check_table_empty(&table, "pow");
     }
 
     fn parse_scim(&mut self, table: &mut toml::Table) {
@@ -3813,7 +3813,7 @@ impl Vars {
             self.scim.retry_count = v;
         }
 
-        check_table_empty(table, "scim");
+        check_table_empty(&table, "scim");
     }
 
     fn parse_server(&mut self, table: &mut toml::Table) {
@@ -3890,7 +3890,7 @@ impl Vars {
             self.server.instance_label = Some(v);
         }
 
-        check_table_empty(table, "server");
+        check_table_empty(&table, "server");
     }
 
     fn parse_sponsor(&mut self, table: &mut toml::Table) {
@@ -3905,7 +3905,7 @@ impl Vars {
             self.sponsor.email_reminder_disable = v;
         }
 
-        check_table_empty(table, "sponsor");
+        check_table_empty(&table, "sponsor");
     }
 
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
@@ -3928,7 +3928,7 @@ impl Vars {
             self.suspicious_requests.log = v;
         }
 
-        check_table_empty(table, "suspicious_requests");
+        check_table_empty(&table, "suspicious_requests");
     }
 
     fn parse_templates(&mut self, table: &mut toml::Table) {
@@ -4206,7 +4206,7 @@ impl Vars {
                 }
             }
 
-            check_table_empty(table, "[[templates]]");
+            check_table_empty(&table, "[[templates]]");
         }
     }
 
@@ -4235,7 +4235,7 @@ impl Vars {
             "TLS_POLL_WATCH_INTERVAL",
         );
 
-        check_table_empty(table, "tls");
+        check_table_empty(&table, "tls");
     }
 
     fn parse_tos(&mut self, table: &mut toml::Table) {
@@ -4245,7 +4245,7 @@ impl Vars {
             self.tos.accept_timeout = v;
         }
 
-        check_table_empty(table, "tos");
+        check_table_empty(&table, "tos");
     }
 
     fn parse_user_delete(&mut self, table: &mut toml::Table) {
@@ -4260,7 +4260,7 @@ impl Vars {
             self.user_delete.enable_self_delete = v;
         }
 
-        check_table_empty(table, "user_delete");
+        check_table_empty(&table, "user_delete");
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -4325,7 +4325,7 @@ impl Vars {
             self.user_pictures.public = v;
         }
 
-        check_table_empty(table, "user_pictures");
+        check_table_empty(&table, "user_pictures");
     }
 
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
@@ -4394,7 +4394,7 @@ impl Vars {
             self.user_registration.danger_reg_acc_init_immediate = v;
         }
 
-        check_table_empty(table, "user_registration");
+        check_table_empty(&table, "user_registration");
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
@@ -4528,8 +4528,8 @@ impl Vars {
         // linux username regex as fallback
         let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
 
-        check_table_empty(pref_username, "user_values.preferred_username");
-        check_table_empty(table, "user_values");
+        check_table_empty(&pref_username, "user_values.preferred_username");
+        check_table_empty(&table, "user_values");
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
@@ -4625,7 +4625,7 @@ impl Vars {
             self.webauthn.passkey_reg_type = parse_passkey_reg_type(&v);
         }
 
-        check_table_empty(table, "webauthn");
+        check_table_empty(&table, "webauthn");
     }
 
     pub fn validate(&self) {
@@ -5749,7 +5749,7 @@ pub struct VarsAtproto {
     pub enable: bool,
 }
 
-pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
+pub fn check_table_empty(table: &toml::Table, tbl_name: &str) {
     if !table.is_empty() {
         panic!("Unknown data in section: '{tbl_name}': {table:#?}");
     }

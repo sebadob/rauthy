@@ -1548,10 +1548,12 @@ async fn user_revoke_handle(
     let user = User::find(revoke.user_id).await?;
     UserRevoke::delete(user.id).await?;
 
-    let location = ipgeo::get_location_from_db(bad_ip)?;
-    Event::user_login_revoke(&user.email, bad_ip, location)
-        .send()
-        .await?;
+    {
+        let location = ipgeo::get_location_from_db(bad_ip)?;
+        Event::user_login_revoke(&user.email, bad_ip, location.as_deref())
+    }
+    .send()
+    .await?;
 
     Ok(())
 }

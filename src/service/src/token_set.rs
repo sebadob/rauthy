@@ -31,6 +31,7 @@ use utoipa::ToSchema;
 
 pub struct AccessTokenJti(String);
 
+#[derive(Clone, Copy)]
 pub enum AtHashAlg {
     Sha256,
     Sha384,

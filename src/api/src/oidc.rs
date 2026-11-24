@@ -219,7 +219,7 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
-        build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
+        build_authorize_resp(&accept_encoding, body, None, origin_header, &browser_id)
     } else {
         // check if we can re-use a still valid session or need to create a new one
         let session = if principal.session.is_some() {
@@ -250,21 +250,21 @@ pub async fn get_authorize(
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
-            accept_encoding,
+            &accept_encoding,
             body,
             Some(&session),
             origin_header,
-            browser_id,
+            &browser_id,
         )
     }
 }
 
 fn build_authorize_resp(
-    accept_encoding: web::Header<header::AcceptEncoding>,
+    accept_encoding: &header::AcceptEncoding,
     body: String,
     session: Option<&Session>,
     origin_header: Option<(HeaderName, HeaderValue)>,
-    browser_id: BrowserId,
+    browser_id: &BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
     let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
         // for dynamic, fast compression, gzip wins over brotli
