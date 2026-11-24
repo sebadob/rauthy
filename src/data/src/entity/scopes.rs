@@ -287,7 +287,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
         };
 
         if is_hiqlite() {
-            let len = clients.as_ref().map(|c| c.len()).unwrap_or_default() + 1;
+            let len = clients.as_ref().map(Vec::len).unwrap_or_default() + 1;
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(len);
 
             if let Some(clients) = &clients {

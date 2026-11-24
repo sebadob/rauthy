@@ -45,7 +45,7 @@ impl UserAttrConfigEntity {
             ));
         }
 
-        let typ = new_attr.typ.as_ref().map(|t| t.as_str());
+        let typ = new_attr.typ.as_ref().map(UserAttrConfigTyp::as_str);
         let user_editable = new_attr.user_editable.unwrap_or(false);
         let default_value = if let Some(bytes) = &new_attr.default_value {
             Some(serde_json::to_vec(bytes)?)
@@ -336,7 +336,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
             Vec::default()
         };
 
-        let typ = &slf.typ.as_ref().map(|t| t.as_str());
+        let typ = &slf.typ.as_ref().map(UserAttrConfigTyp::as_str);
 
         // The entries this write invalidates. `name` is the previous and `slf.name` the new
         // name, both can have a cached entry, and the scope cache holds the attr mappings.

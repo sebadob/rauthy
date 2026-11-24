@@ -927,9 +927,9 @@ pub async fn post_session(
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -985,9 +985,9 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(
@@ -1034,9 +1034,9 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),

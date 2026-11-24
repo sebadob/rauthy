@@ -863,7 +863,7 @@ impl Session {
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|g| g.trim())
+            .map(str::trim)
             .for_each(|g| res.push(g));
         Ok(res)
     }
@@ -880,7 +880,7 @@ impl Session {
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|r| r.to_string())
+            .map(ToString::to_string)
             .collect())
     }
 

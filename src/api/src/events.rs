@@ -40,7 +40,7 @@ pub async fn post_events(
         payload.from,
         payload.until.unwrap_or_else(|| Utc::now().timestamp()),
         payload.level.into(),
-        payload.typ.map(|t| t.into()),
+        payload.typ.map(Into::into),
     )
     .await?
     .into_iter()
@@ -84,7 +84,7 @@ pub async fn sse_events(
     let params = params.into_inner();
     let (tx, rx) = mpsc::channel(10);
 
-    let level = params.level.map(|l| l.into()).unwrap_or_default();
+    let level = params.level.map(Into::into).unwrap_or_default();
     if let Err(err) = RauthyConfig::get()
         .tx_events_router
         .send_async(EventRouterMsg::ClientReg {
