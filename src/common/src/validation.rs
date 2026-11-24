@@ -104,6 +104,9 @@ pub fn validate_https_url(value: &str) -> Result<Url, String> {
 /// client API (through `Client::validate_consent`) and the runtime use: at most
 /// [`CONSENT_SOURCE_MAX_LEN`] bytes of [`RE_RESOURCE`] characters, an URL accepted by
 /// [`validate_https_url`], and no `lang` query key, which is appended on each fetch.
+///
+/// Debug builds accept a plain `http://localhost` URL as well, so that a local dev server can
+/// serve its own consent document from `GET /auth/v1/dev/consent`.
 pub fn validate_consent_source_url(value: &str) -> Result<Url, String> {
     if value.len() > CONSENT_SOURCE_MAX_LEN {
         return Err(format!(
@@ -116,7 +119,17 @@ pub fn validate_consent_source_url(value: &str) -> Result<Url, String> {
             RE_RESOURCE.as_str()
         ));
     }
+    #[cfg(not(debug_assertions))]
     let url = validate_https_url(value)?;
+    #[cfg(debug_assertions)]
+    let url = match value.strip_prefix("http://localhost") {
+        Some(rest) if rest.is_empty() || rest.starts_with([':', '/', '?']) => {
+            // the very same checks for the https variant of the URL
+            validate_https_url(&format!("https://localhost{rest}"))?;
+            Url::parse(value).map_err(|err| format!("invalid URL: {err}"))?
+        }
+        _ => validate_https_url(value)?,
+    };
     if url
         .query_pairs()
         .any(|(k, _)| reserved_query_key(&k, &["lang"]).is_some())
@@ -176,6 +189,28 @@ mod tests {
         );
         assert!(validate_consent_source_url(&max).is_ok());
         assert!(validate_consent_source_url(&format!("{max}a")).is_err());
+    }
+
+    /// Debug builds only, for the consent document of the local dev server.
+    #[test]
+    #[cfg(debug_assertions)]
+    fn test_consent_source_url_http_localhost() {
+        for v in [
+            "http://localhost",
+            "http://localhost:8080/auth/v1/dev/consent",
+            "http://localhost/consent?v=1",
+        ] {
+            assert!(validate_consent_source_url(v).is_ok(), "{v}");
+        }
+        for v in [
+            "http://localhost.example.com/consent",
+            "http://localhostx/consent",
+            "http://127.0.0.1:8080/consent",
+            "http://localhost:8080/consent#x",
+            "http://localhost:8080/consent?lang=en",
+        ] {
+            assert!(validate_consent_source_url(v).is_err(), "{v}");
+        }
     }
 
     #[test]

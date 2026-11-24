@@ -101,6 +101,9 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 - `DELETE /users/{id}/consents/all` revokes all consents of a user at once, each like a single
   revoke with its refresh tokens and event, and deletes all sessions of the user. The same users,
   admins, group admins and API keys as for a single revoke are allowed.
+- For local development, a debug build serves a custom consent document in `en` and `de` from
+  `GET /auth/v1/dev/consent`, which the dev `config.toml` uses as a `[[consent.sources]]` entry.
+  Debug builds accept a plain `http://localhost` consent source for it.
 
 #### Credential Stuffing Detection Can Be Disabled
 

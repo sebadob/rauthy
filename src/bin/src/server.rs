@@ -557,6 +557,7 @@ fn api_services() -> actix_web::Scope {
                 .service(events::sse_events)
                 .service(events::post_event_test)
                 .service(dev_only::get_template)
+                .service(dev_only::get_dev_consent)
                 .service(dev_only::post_dev_only_endpoints)
                 .service(html::get_index)
                 .service(html::get_account_html)

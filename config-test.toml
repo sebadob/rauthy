@@ -30,6 +30,12 @@ resource = 'https://consent-test.example.com'
 source = 'local'
 name = 'Consent Test API'
 
+# the custom consent document of the dev server itself
+[[consent.sources]]
+resource = 'https://consent-dev.example.com'
+source = 'http://localhost:8081/auth/v1/dev/consent'
+name = 'Consent Dev API'
+
 [database]
 pg_host = 'localhost'
 pg_user = 'rauthy'

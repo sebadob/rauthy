@@ -36,6 +36,91 @@ pub struct DevMagicLinkRequest {
     user_id: String,
 }
 
+/// Dev-only: the `lang` a remote consent source is fetched with.
+#[derive(serde::Deserialize)]
+pub struct DevConsentQuery {
+    lang: String,
+}
+
+/// A remote consent document, as `GET {url}?lang=<BCP47>` of a `[[consent.sources]]` entry
+/// returns it, in `en` and `de`. Any other language is `404`, for which Rauthy shows the `en` one.
+pub fn get_consent(query: web::Query<DevConsentQuery>) -> Result<HttpResponse, ErrorResponse> {
+    if !RauthyConfig::get().vars.dev.dev_mode {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    let doc = match query.lang.as_str() {
+        "en" => serde_json::json!({
+            "name": "Rauthy Dev API",
+            "intro": "This consent document is served by the local dev server from \
+                `GET /auth/v1/dev/consent` and configured in `[[consent.sources]]`.",
+            "terms_url": "https://sebadob.github.io/rauthy/",
+            "scopes": {
+                "openid": {
+                    "title": "Sign you in",
+                    "description": "Confirms to the app who you are.",
+                },
+                "email": {
+                    "title": "Read your E-Mail address",
+                    "description": "The app may send you E-Mails.",
+                },
+                "profile": {
+                    "title": "Read your profile",
+                    "description": "Your name, picture, language and time zone.",
+                },
+                "groups": {
+                    "title": "Read your groups",
+                    "description": "The app may grant you access based on them.",
+                    "warning": true,
+                },
+                "address": {
+                    "title": "Read your address",
+                    "description": "Your postal address.",
+                },
+                "phone": {
+                    "title": "Read your phone number",
+                    "description": "The app may call you.",
+                },
+            },
+        }),
+        "de" => serde_json::json!({
+            "name": "Rauthy Dev API",
+            "intro": "Dieses Einwilligungsdokument liefert der lokale Dev-Server über \
+                `GET /auth/v1/dev/consent`, eingetragen in `[[consent.sources]]`.",
+            "terms_url": "https://sebadob.github.io/rauthy/",
+            "scopes": {
+                "openid": {
+                    "title": "Dich anmelden",
+                    "description": "Bestätigt der App, wer du bist.",
+                },
+                "email": {
+                    "title": "Deine E-Mail-Adresse lesen",
+                    "description": "Die App kann dir E-Mails senden.",
+                },
+                "profile": {
+                    "title": "Dein Profil lesen",
+                    "description": "Dein Name, Bild, Sprache und Zeitzone.",
+                },
+                "groups": {
+                    "title": "Deine Gruppen lesen",
+                    "description": "Die App kann dir anhand dieser Zugriff gewähren.",
+                },
+                "address": {
+                    "title": "Deine Adresse lesen",
+                    "description": "Deine Postanschrift.",
+                },
+                "phone": {
+                    "title": "Deine Telefonnummer lesen",
+                    "description": "Die App kann dich anrufen.",
+                },
+            },
+        }),
+        _ => return Ok(HttpResponse::NotFound().finish()),
+    };
+
+    Ok(HttpResponse::Ok().json(doc))
+}
+
 pub async fn get_template(
     id: web::Path<String>,
     query: web::Query<TemplateQuery>,

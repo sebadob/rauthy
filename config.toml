@@ -943,7 +943,7 @@ rate_limit_db_burst = 200000
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
-#enable = false
+enable = true
 
 # Lifetime of cached consent content fetched from a remote consent
 # source (see `[[consent.sources]]` below and the per-client
@@ -1018,6 +1018,18 @@ rate_limit_db_burst = 200000
 # over the `name` of a remote consent document, which is only
 # used for a client's own consent source from the Admin UI.
 #name = 'Example API'
+
+# The local dev server serves a custom consent document in `en`
+# and `de` from `GET /auth/v1/dev/consent` (debug builds with
+# `dev_mode` only, which also accept this `http://localhost`
+# source). A login shows it for a client that has this
+# `resource` in its `allowed_resources` and requests it with
+# `resource=https://dev-api.localhost`. The same URL works as the
+# consent source of a client in the Admin UI.
+[[consent.sources]]
+resource = 'https://dev-api.localhost'
+source = 'http://localhost:8080/auth/v1/dev/consent'
+name = 'Rauthy Dev API'
 
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing

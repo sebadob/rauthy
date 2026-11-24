@@ -1,9 +1,10 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, LoginTarget, PASSWORD, STALE_HASH, TestUser, USER_PASSWORD, USERNAME,
     accept_all, authorization_response_params, code_state_from_headers, consent_required,
-    consent_template, cookie_csrf_headers_from_res, decode_claims, get_auth_headers,
-    get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client, login_session,
-    password_grant, password_token_set, prepare_login, refresh, session_headers_with,
+    consent_template, cookie_csrf_headers_from_res, create_client, decode_claims, delete_client,
+    get_auth_headers, get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client,
+    login_session, password_grant, password_token_set, prepare_login, put_client, refresh,
+    session_headers_with, update_request,
 };
 use crate::{expect_status, expect_status_json};
 use futures::{StreamExt, stream};
@@ -19,9 +20,9 @@ use rauthy_api_types::users::{
     UserConsentResponse, UserConsentsDeleteResponse, UserResponse, UserResponseSimple, Userinfo,
 };
 use rauthy_common::utils::new_store_id;
-use rauthy_data::entity::consent_sources::ConsentSourceType;
+use rauthy_data::entity::consent_sources::{ConsentContent, ConsentSourceType};
 use rauthy_service::token_set::TokenSet;
-use reqwest::header::{AUTHORIZATION, HeaderMap, LOCATION, USER_AGENT};
+use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, HeaderMap, LOCATION, USER_AGENT};
 use reqwest::multipart::{Form, Part};
 use reqwest::{Body, Client, StatusCode};
 use serde_json::{Value, json};
@@ -2062,6 +2063,121 @@ async fn test_user_consents_revoke_all() -> Result<(), Box<dyn Error>> {
     expect_status!(res, 404);
 
     user.delete().await
+}
+
+/// A `[[consent.sources]]` entry with the dev server's own consent document: the login page shows
+/// the remote content in the user's language, with the `en` warnings, and `en` for a language the
+/// source does not provide.
+#[tokio::test]
+async fn test_user_consent_remote_source() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let http = Client::new();
+    // `config-test.toml`
+    let resource = "https://consent-dev.example.com";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+
+    let id = format!("consent-remote-{}", new_store_id().to_lowercase());
+    let created = create_client(
+        &http,
+        &admin,
+        &NewClientRequest {
+            id: id.clone(),
+            secret: None,
+            name: Some("Consent Remote".to_string()),
+            confidential: false,
+            redirect_uris: vec![redirect_uri.to_string()],
+            post_logout_redirect_uris: None,
+            consent: None,
+        },
+    )
+    .await?;
+    let req = UpdateClientRequest {
+        scopes: vec![
+            "openid".to_string(),
+            "email".to_string(),
+            "groups".to_string(),
+        ],
+        default_scopes: vec!["openid".to_string()],
+        challenges: Some(vec!["plain".to_string()]),
+        allowed_resources: Some(vec![resource.to_string()]),
+        ..update_request(created)
+    };
+    put_client(&http, &admin, &id, &req).await?;
+
+    let page = async |lang: &str| {
+        let res = http
+            .get(format!(
+                "{backend}/oidc/authorize?client_id={id}&redirect_uri={redirect_uri}\
+                &response_type=code&code_challenge=oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys\
+                &code_challenge_method=plain&scope=openid%20email%20groups\
+                &resource=https%3A%2F%2Fconsent-dev.example.com"
+            ))
+            .header(ACCEPT_LANGUAGE, lang)
+            .send()
+            .await
+            .unwrap();
+        let res = expect_status!(res, 200);
+        let html = res.text().await.unwrap();
+        consent_template(&html).expect("consent template").content
+    };
+    let titles = |content: &ConsentContent| {
+        content
+            .scopes
+            .iter()
+            .map(|s| {
+                (
+                    s.name.clone(),
+                    s.title.clone().unwrap_or_default(),
+                    s.warning,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let en = page("en").await;
+    assert_eq!(en.source, ConsentSourceType::Remote);
+    // the registry `name` wins over the one of the document
+    assert_eq!(en.name.as_deref(), Some("Consent Dev API"));
+    assert!(en.intro.as_deref().unwrap().contains("dev server"));
+    assert_eq!(
+        titles(&en),
+        [
+            (
+                "email".to_string(),
+                "Read your E-Mail address".to_string(),
+                false
+            ),
+            ("groups".to_string(), "Read your groups".to_string(), true),
+            ("openid".to_string(), "Sign you in".to_string(), false),
+        ]
+    );
+
+    let de = page("de").await;
+    assert_eq!(de.source, ConsentSourceType::Remote);
+    assert_ne!(de.content_hash, en.content_hash);
+    assert_eq!(
+        titles(&de),
+        [
+            (
+                "email".to_string(),
+                "Deine E-Mail-Adresse lesen".to_string(),
+                false
+            ),
+            // the warning of the `en` document
+            (
+                "groups".to_string(),
+                "Deine Gruppen lesen".to_string(),
+                true
+            ),
+            ("openid".to_string(), "Dich anmelden".to_string(), false),
+        ]
+    );
+
+    // the source has no `fr` document
+    assert_eq!(page("fr").await, en);
+
+    delete_client(&admin, &id).await
 }
 
 /// An API key with `Users` access reads and revokes the consents of any user, each with its
