@@ -1199,8 +1199,8 @@ pub async fn get_user_consents(
 ///
 /// `resource` is left out for a consent without a resource. All sessions of the user are deleted,
 /// with a backchannel logout, whoever revokes and whether or not there was anything to revoke, so
-/// the user signs in again everywhere. Refresh tokens are revoked
-/// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
+/// the user signs in again everywhere. Refresh tokens are revoked for the client as a whole,
+/// independent of `resource`. With `consent.enable` on, the user's
 /// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
 /// kept. Only the access token of each deleted refresh token, the one issued with its latest
 /// rotation, is revoked. Access tokens from earlier rotations and access tokens issued without a
