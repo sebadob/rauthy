@@ -920,7 +920,9 @@ backup_keep_for_local = '3d'
 # Lifetime of cached consent content fetched from a remote consent
 # source (see `[[consent.sources]]` below and the per-client
 # consent source in the Admin UI). Accepts Durations like '60s',
-# '10m', '1h', or an Integer as seconds. Must be at least 1s.
+# '10m', '1h', or an Integer as seconds. Only the TOML value takes
+# a bare Integer, the env var needs a unit, e.g. `3600s`.
+# Must be at least 1s.
 # A failed fetch is cached as well, for `min(content_cache_ttl, 60s)`,
 # so an unavailable source is not requested on every lookup.
 #
