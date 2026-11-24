@@ -21,9 +21,9 @@ use utoipa::ToSchema;
 
 /// Max size of a remote consent document.
 const REMOTE_CONSENT_MAX_SIZE: usize = 64 * 1024;
-/// Max lifetime in seconds of a cached failed remote fetch, so an unavailable source is not
+/// Max lifetime of a cached failed remote fetch, so an unavailable source is not
 /// fetched again on every lookup. Capped by `consent.content_cache_ttl`.
-const REMOTE_CONSENT_NEGATIVE_TTL: u32 = 60;
+const REMOTE_CONSENT_NEGATIVE_TTL: Duration = Duration::from_secs(60);
 /// How long a lookup rejected by the fetcher's back pressure waits before it reads the cache
 /// once more, in case another node or lookup has cached the document meanwhile.
 const TOO_MANY_REQUESTS_RETRY_DELAY: Duration = Duration::from_millis(250);
@@ -402,7 +402,7 @@ impl RemoteConsent {
         in_flight: &InFlight,
         url: &Url,
         lang: Language,
-        ttl: u32,
+        ttl: Duration,
         fetch: F,
     ) -> Result<Self, ErrorResponse>
     where
@@ -468,7 +468,7 @@ impl RemoteConsent {
         idx: &str,
         url: &Url,
         res: &Result<Self, ErrorResponse>,
-        ttl: u32,
+        ttl: Duration,
     ) {
         let Some((value, ttl)) = cache_value(res, ttl) else {
             return;
@@ -519,8 +519,8 @@ impl RemoteConsent {
 /// the fetcher, which says nothing about the source.
 fn cache_value(
     res: &Result<RemoteConsent, ErrorResponse>,
-    ttl: u32,
-) -> Option<(Option<&RemoteConsent>, u32)> {
+    ttl: Duration,
+) -> Option<(Option<&RemoteConsent>, Duration)> {
     match res {
         Ok(slf) => Some((Some(slf), ttl)),
         Err(err) if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) => None,
@@ -544,7 +544,7 @@ trait ConsentCache {
         &self,
         idx: &str,
         value: Option<&RemoteConsent>,
-        ttl: u32,
+        ttl: Duration,
     ) -> Result<(), ErrorResponse>;
 }
 
@@ -560,14 +560,15 @@ impl ConsentCache for HqlConsentCache {
         &self,
         idx: &str,
         value: Option<&RemoteConsent>,
-        ttl: u32,
+        ttl: Duration,
     ) -> Result<(), ErrorResponse> {
         DB::hql()
             .put(
                 Cache::ConsentContent,
                 idx.to_string(),
                 &value,
-                Some(i64::from(ttl)),
+                // `t_duration` guarantees a safe downcast
+                Some(ttl.as_secs() as i64),
             )
             .await?;
         Ok(())
@@ -646,7 +647,7 @@ impl Drop for InFlightLookup<'_> {
 
 /// TTL of a cached failed remote fetch: `min(content_cache_ttl, 60s)`.
 #[inline]
-fn negative_cache_ttl(content_cache_ttl: u32) -> u32 {
+fn negative_cache_ttl(content_cache_ttl: Duration) -> Duration {
     content_cache_ttl.min(REMOTE_CONSENT_NEGATIVE_TTL)
 }
 
@@ -701,6 +702,9 @@ mod tests {
     use std::time::Duration;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
+
+    /// The default `consent.content_cache_ttl`.
+    const TTL: Duration = Duration::from_secs(3600);
 
     fn consent_docs(remote: Option<RemoteConsent>, name: Option<&'static str>) -> ConsentDocs {
         ConsentDocs {
@@ -1015,10 +1019,11 @@ mod tests {
 
     #[test]
     fn negative_cache_ttl_is_capped() {
-        assert_eq!(negative_cache_ttl(3600), 60);
-        assert_eq!(negative_cache_ttl(60), 60);
-        assert_eq!(negative_cache_ttl(10), 10);
-        assert_eq!(negative_cache_ttl(1), 1);
+        let secs = Duration::from_secs;
+        assert_eq!(negative_cache_ttl(TTL), secs(60));
+        assert_eq!(negative_cache_ttl(secs(60)), secs(60));
+        assert_eq!(negative_cache_ttl(secs(10)), secs(10));
+        assert_eq!(negative_cache_ttl(secs(1)), secs(1));
     }
 
     #[test]
@@ -1105,7 +1110,7 @@ mod tests {
     fn vars(sources: Vec<VarsConsentSource>) -> &'static VarsConsent {
         leak(VarsConsent {
             enable: true,
-            content_cache_ttl: 3600,
+            content_cache_ttl: TTL,
             danger_allow_private_addresses: false,
             sources: sources
                 .into_iter()
@@ -1494,7 +1499,7 @@ mod tests {
             &self,
             idx: &str,
             value: Option<&RemoteConsent>,
-            _ttl: u32,
+            _ttl: Duration,
         ) -> Result<(), ErrorResponse> {
             self.puts.fetch_add(1, Ordering::SeqCst);
             self.insert(idx, value.cloned());
@@ -1521,15 +1526,15 @@ mod tests {
     #[test]
     fn cache_value_by_result() {
         assert_eq!(
-            cache_value(&Ok(remote_doc()), 3600),
-            Some((Some(&remote_doc()), 3600))
+            cache_value(&Ok(remote_doc()), TTL),
+            Some((Some(&remote_doc()), TTL))
         );
         assert_eq!(
-            cache_value(&Err(unavailable()), 3600),
-            Some((None, negative_cache_ttl(3600)))
+            cache_value(&Err(unavailable()), TTL),
+            Some((None, negative_cache_ttl(TTL)))
         );
         // the fetcher's own back pressure says nothing about the source
-        assert_eq!(cache_value(&Err(too_many()), 3600), None);
+        assert_eq!(cache_value(&Err(too_many()), TTL), None);
     }
 
     #[test]
@@ -1569,7 +1574,7 @@ mod tests {
             &InFlight::default(),
             &url,
             Language::En,
-            3600,
+            TTL,
             || async { Err(unavailable()) },
         )
         .await;
@@ -1587,7 +1592,7 @@ mod tests {
             &InFlight::default(),
             &url,
             Language::En,
-            3600,
+            TTL,
             || async {
                 // another lookup caches the document while this fetch fails
                 cache.insert(&idx, Some(remote_doc()));
@@ -1613,7 +1618,7 @@ mod tests {
         };
 
         let finds = (0..16)
-            .map(|_| RemoteConsent::find_with(&cache, &in_flight, &url, Language::En, 3600, fetch))
+            .map(|_| RemoteConsent::find_with(&cache, &in_flight, &url, Language::En, TTL, fetch))
             .collect::<Vec<_>>();
         for res in futures::future::join_all(finds).await {
             assert_eq!(res.unwrap(), remote_doc());
@@ -1625,8 +1630,8 @@ mod tests {
 
         // another key is fetched on its own
         let (en, de) = tokio::join!(
-            RemoteConsent::find_with(&cache, &in_flight, &url, Language::De, 3600, fetch),
-            RemoteConsent::find_with(&cache, &in_flight, &url, Language::De, 3600, fetch),
+            RemoteConsent::find_with(&cache, &in_flight, &url, Language::De, TTL, fetch),
+            RemoteConsent::find_with(&cache, &in_flight, &url, Language::De, TTL, fetch),
         );
         assert!(en.is_ok() && de.is_ok());
         assert_eq!(fetches.load(Ordering::SeqCst), 2);
@@ -1639,7 +1644,7 @@ mod tests {
         let cache = MemCache::default();
         let in_flight = InFlight::default();
 
-        let find = RemoteConsent::find_with(&cache, &in_flight, &url, Language::En, 3600, || {
+        let find = RemoteConsent::find_with(&cache, &in_flight, &url, Language::En, TTL, || {
             std::future::pending()
         });
         assert!(
@@ -1650,11 +1655,10 @@ mod tests {
         assert_eq!(in_flight.len(), 0);
 
         // a later lookup of the same key fetches again
-        let res =
-            RemoteConsent::find_with(&cache, &in_flight, &url, Language::En, 3600, || async {
-                Ok(remote_doc())
-            })
-            .await;
+        let res = RemoteConsent::find_with(&cache, &in_flight, &url, Language::En, TTL, || async {
+            Ok(remote_doc())
+        })
+        .await;
         assert_eq!(res.unwrap(), remote_doc());
         assert_eq!(in_flight.len(), 0);
     }
@@ -1671,7 +1675,7 @@ mod tests {
             &InFlight::default(),
             &url,
             Language::En,
-            3600,
+            TTL,
             || async {
                 cache.insert(&idx, Some(remote_doc()));
                 Err(too_many())
@@ -1687,7 +1691,7 @@ mod tests {
             &InFlight::default(),
             &url,
             Language::En,
-            3600,
+            TTL,
             || async { Err(too_many()) },
         )
         .await;

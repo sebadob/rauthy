@@ -88,6 +88,11 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### User Consent
+
+- `consent.content_cache_ttl` is a Duration like `'10m'` or `'1h'` (default), an Integer is still
+  read as seconds.
+
 #### Credential Stuffing Detection Can Be Disabled
 
 `cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config

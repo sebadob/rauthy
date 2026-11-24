@@ -945,16 +945,16 @@ rate_limit_db_burst = 200000
 # overwritten by: CONSENT_ENABLE
 #enable = false
 
-# Lifetime in seconds of cached consent content fetched from a
-# remote consent source (see `[[consent.sources]]` below and the
-# per-client consent source in the Admin UI). Must be at least 1.
-# A failed fetch is cached as well, for `min(content_cache_ttl, 60)`
-# seconds, so an unavailable source is not requested on every
-# lookup.
+# Lifetime of cached consent content fetched from a remote consent
+# source (see `[[consent.sources]]` below and the per-client
+# consent source in the Admin UI). Accepts Durations like '60s',
+# '10m', '1h', or an Integer as seconds. Must be at least 1s.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60s)`,
+# so an unavailable source is not requested on every lookup.
 #
-# default: 3600
+# default: 1h
 # overwritten by: CONSENT_CONTENT_CACHE_TTL
-#content_cache_ttl = 3600
+#content_cache_ttl = '1h'
 
 # Remote consent sources that resolve to a loopback, private,
 # link-local or otherwise non-public address are rejected by

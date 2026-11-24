@@ -389,7 +389,7 @@ impl Default for Vars {
             },
             consent: VarsConsent {
                 enable: false,
-                content_cache_ttl: 3600,
+                content_cache_ttl: Duration::from_secs(3600),
                 danger_allow_private_addresses: false,
                 sources: BTreeMap::default(),
             },
@@ -2081,14 +2081,14 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "consent", "enable", "CONSENT_ENABLE") {
             self.consent.enable = v;
         }
-        if let Some(v) = t_u32(
+        if let Some(v) = t_duration(
             &mut table,
             "consent",
             "content_cache_ttl",
             "CONSENT_CONTENT_CACHE_TTL",
         ) {
-            if v == 0 {
-                panic!("`consent.content_cache_ttl` must be at least 1");
+            if v.is_zero() {
+                panic!("`consent.content_cache_ttl` must be at least 1s");
             }
             self.consent.content_cache_ttl = v;
         }
@@ -4949,8 +4949,8 @@ pub struct VarsBootstrap {
 #[derive(Debug)]
 pub struct VarsConsent {
     pub enable: bool,
-    /// At least 1.
-    pub content_cache_ttl: u32,
+    /// At least 1s.
+    pub content_cache_ttl: Duration,
     /// Allows remote consent sources on non-public addresses. Independent of
     /// `ephemeral_clients.danger_allow_private_addresses`.
     pub danger_allow_private_addresses: bool,
@@ -6108,7 +6108,7 @@ mod tests {
     #[test]
     fn consent_sources() {
         let vars = parse_consent("[consent]\nenable = true");
-        assert_eq!(vars.consent.content_cache_ttl, 3600);
+        assert_eq!(vars.consent.content_cache_ttl, Duration::from_secs(3600));
         assert!(vars.consent.sources.is_empty());
         let ephemeral = redirect_test_client("https://cimd.example.com/client", "");
         let static_client = redirect_test_client("app", "");
@@ -6131,7 +6131,7 @@ source = 'https://consent.example.com/data'
 name = 'Data'
 "#,
         );
-        assert_eq!(vars.consent.content_cache_ttl, 600);
+        assert_eq!(vars.consent.content_cache_ttl, Duration::from_secs(600));
         assert_eq!(
             vars.consent.sources.values().cloned().collect::<Vec<_>>(),
             vec![
@@ -6252,9 +6252,27 @@ name = 'B'
     }
 
     #[test]
-    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1")]
+    fn consent_content_cache_ttl_duration() {
+        for (value, secs) in [("90", 90), ("'90s'", 90), ("'15m'", 900), ("'2h'", 7200)] {
+            let vars = parse_consent(&format!("[consent]\ncontent_cache_ttl = {value}"));
+            assert_eq!(
+                vars.consent.content_cache_ttl,
+                Duration::from_secs(secs),
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1s")]
     fn consent_content_cache_ttl_zero_panics() {
         parse_consent("[consent]\ncontent_cache_ttl = 0");
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1s")]
+    fn consent_content_cache_ttl_zero_duration_panics() {
+        parse_consent("[consent]\ncontent_cache_ttl = '0m'");
     }
 
     #[test]

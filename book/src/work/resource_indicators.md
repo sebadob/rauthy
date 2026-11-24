@@ -111,7 +111,7 @@ A remote source is fetched via `GET <url>?lang=<BCP47 language>` with the same S
 ephemeral client documents, but with its own connection limit and a 3 second timeout, so a slow
 consent source cannot hold up ephemeral client lookups. Non-public addresses are only allowed with
 `consent.danger_allow_private_addresses`, independent of the ephemeral client setting. The content
-is cached for `consent.content_cache_ttl` seconds.
+is cached for `consent.content_cache_ttl`.
 
 The `lang=en` response is required and the default: the content is taken from the response for
 the user's language, or the `lang=en` one if that is unavailable. The version of the consent content
@@ -122,7 +122,7 @@ requested does not. A user who switches the language may be asked again. If the 
 response is unavailable or returns an invalid document, the built-in content is used instead. These
 fallbacks change the version as well and may ask again: the built-in content while `lang=en` is
 unavailable or invalid, and the `lang=en` content while the translation is unavailable. A
-failed fetch is cached for `min(content_cache_ttl, 60)` seconds per language, so an unavailable
+failed fetch is cached for `min(content_cache_ttl, 60s)` per language, so an unavailable
 source is not requested on every lookup.
 
 ### Consent screen
