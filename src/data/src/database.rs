@@ -3,6 +3,7 @@ use crate::fido_mds::dataset::MdsDataset;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
+use crate::shutdown;
 use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
 use rauthy_common::constants::CACHE_INVALIDATION_DELAY;
@@ -83,6 +84,9 @@ impl DB {
         // This means, even if Postgres is configured, this will still create and start the Hiqlite
         // DB, but it simply won't do anything else than heartbeats between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
+        // From here on, a fatal error must go through `shutdown::fatal()` or be returned to
+        // `main()`, so the node is shut down cleanly before the process exits.
+        shutdown::init(client.clone());
 
         if is_postgres() {
             Self::init_connect_postgres().await?;
@@ -196,12 +200,18 @@ impl DB {
                 for res in CertificateDer::pem_slice_iter(root_ca.as_bytes()) {
                     match res {
                         Ok(cert) => {
-                            root_store
-                                .add(cert)
-                                .expect("Invalid `database.pg_tls_root_ca`");
+                            if let Err(err) = root_store.add(cert) {
+                                shutdown::fatal(format!(
+                                    "Invalid `database.pg_tls_root_ca`: {err}"
+                                ))
+                                .await;
+                            }
                         }
                         Err(err) => {
-                            panic!("Cannot parse `database.pg_tls_root_ca`: {err:?}")
+                            shutdown::fatal(format!(
+                                "Cannot parse `database.pg_tls_root_ca`: {err:?}"
+                            ))
+                            .await;
                         }
                     }
                 }
