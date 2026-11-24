@@ -190,8 +190,8 @@ export const I18nKo: I18n = {
             로그인하고 최소 하나 이상의 패스키를 추가해야 합니다.`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',
         consent: {
+            agree: '[내 데이터 전송]에 동의합니다',
             changed: '동의 내용이 변경되었습니다. 다시 확인해 주세요.',
-            confirm: '동의합니다',
             continue: '계속',
             details: '자세히',
             intro: '{{ CLIENT }}에서 다음에 대한 액세스를 요청합니다:',

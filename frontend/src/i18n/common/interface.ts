@@ -162,8 +162,9 @@ export interface I18n {
         clientForceMfa: string;
         clientGroupPrefixForbidden: string;
         consent: {
+            // the part in [brackets] opens the full consent content
+            agree: string;
             changed: string;
-            confirm: string;
             continue: string;
             details: string;
             intro: string;

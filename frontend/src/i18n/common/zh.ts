@@ -183,8 +183,8 @@ export const I18nZh: I18n = {
             '本次登陆强制使用多因子认证以增强安全性。\n要完成登陆，请登入您的账户并添加一个登陆密钥。',
         clientGroupPrefixForbidden: '缺少此登录的组分配',
         consent: {
+            agree: '我同意[传输我的数据]',
             changed: '同意内容已更改，请重新检查。',
-            confirm: '我同意',
             continue: '继续',
             details: '详情',
             intro: '{{ CLIENT }} 请求访问：',

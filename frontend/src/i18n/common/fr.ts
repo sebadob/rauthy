@@ -200,8 +200,8 @@ export const I18nFr: I18n = {
             vous connecter à votre compte et ajouter au moins une clé d'accès supplémentaire`,
         clientGroupPrefixForbidden: 'Attribution de groupe manquante pour cette connexion',
         consent: {
+            agree: 'Je consens à la [transmission de mes données]',
             changed: 'Le contenu du consentement a changé, veuillez le vérifier à nouveau.',
-            confirm: "J'accepte",
             continue: 'Continuer',
             details: 'Détails',
             intro: "{{ CLIENT }} demande l'accès à :",

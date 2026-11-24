@@ -201,8 +201,8 @@ export const I18nPt: I18n = {
             obter acesso, tem de iniciar sessão na sua conta e adicionar pelo menos uma Passkey`,
         clientGroupPrefixForbidden: 'Falta a atribuição de grupo para este início de sessão',
         consent: {
+            agree: 'Concordo com a [transmissão dos meus dados]',
             changed: 'O conteúdo do consentimento mudou, verifique-o novamente.',
-            confirm: 'Concordo',
             continue: 'Continuar',
             details: 'Detalhes',
             intro: '{{ CLIENT }} pede acesso a:',

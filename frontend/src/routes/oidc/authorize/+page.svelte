@@ -146,6 +146,7 @@
     let consent: undefined | ConsentContentTemplate = $state();
     let consentAccepted: string[] = $state([]);
     let consentConfirmed = $state(false);
+    let consentChoicesFor: undefined | ConsentContentTemplate = $state.raw();
     let isConsentPending = $derived(!!consent && !consentConfirmed);
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -722,6 +723,20 @@
 <Template id={TPL_PASSWORD_RESET_LINK_ALWAYS} bind:value={resetLinkAlways} />
 <Template id={TPL_PASSKEY_REG_TYPE} bind:value={passkeyRegType} />
 
+{#snippet consentRow()}
+    {#if consent}
+        <!-- the choices live in this page, so that every place of this row keeps them -->
+        <LoginConsent
+            {consent}
+            clientName={clientName || clientId || ''}
+            bind:accepted={consentAccepted}
+            bind:confirmed={consentConfirmed}
+            bind:choicesFor={consentChoicesFor}
+            disabled={isLoading || tooManyRequests}
+        />
+    {/if}
+{/snippet}
+
 <PublicPage>
     {#if isAutoRefreshing}
         <div class="loadingGlobal">
@@ -770,24 +785,9 @@
             {/if}
         {/if}
 
-        {#if consent && !clientMfaForce}
-            <!--
-            One block for the consent view of a valid session and for the login form, so that a switch
-            between them keeps the choices. Hidden, not removed, during the password reset.
-            -->
-            <div hidden={showReset}>
-                <LoginConsent
-                    {consent}
-                    clientName={clientName || clientId || ''}
-                    bind:accepted={consentAccepted}
-                    bind:confirmed={consentConfirmed}
-                    disabled={isLoading || tooManyRequests}
-                />
-            </div>
-        {/if}
-
         {#if loginAction === 'RefreshConsent' && consent}
             <!-- the session is still valid, only the consent is missing -->
+            {@render consentRow()}
             <div class="btn flex-col">
                 <Button
                     ariaLabel={t.authorize.consent.continue}
@@ -857,6 +857,10 @@
                             {t.authorize.passwordForgotten}
                         </Button>
                     </div>
+                {/if}
+
+                {#if !showReset}
+                    {@render consentRow()}
                 {/if}
 
                 {#if consent && hintProvider && !showReset}

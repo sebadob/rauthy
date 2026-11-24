@@ -200,8 +200,8 @@ export const I18nNl: I18n = {
             krijgen, moet u inloggen op uw account en minimaal één extra Passkey toevoegen`,
         clientGroupPrefixForbidden: 'Ontbrekende groepstoewijzing voor deze login',
         consent: {
+            agree: 'Ik stem in met de [overdracht van mijn gegevens]',
             changed: 'De inhoud van de toestemming is gewijzigd, controleer deze opnieuw.',
-            confirm: 'Ik ga akkoord',
             continue: 'Doorgaan',
             details: 'Details',
             intro: '{{ CLIENT }} vraagt toegang tot:',

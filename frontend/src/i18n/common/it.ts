@@ -186,8 +186,8 @@ export const I18nIt: I18n = {
             "L'accesso a questa applicazione richiede la MFA. Accedi al tuo account e aggiungi almeno una passkey.",
         clientGroupPrefixForbidden: "L'utente non appartiene a un gruppo autorizzato ad accedere",
         consent: {
+            agree: 'Acconsento alla [trasmissione dei miei dati]',
             changed: 'Il contenuto del consenso è cambiato, controllalo di nuovo.',
-            confirm: 'Accetto',
             continue: 'Continua',
             details: 'Dettagli',
             intro: "{{ CLIENT }} richiede l'accesso a:",

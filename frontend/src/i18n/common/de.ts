@@ -208,8 +208,8 @@ export const I18nDe: I18n = {
             hinzufügen.`,
         clientGroupPrefixForbidden: 'Fehlende Gruppenzugehörigkeit für diesen Login',
         consent: {
+            agree: 'Ich stimme der [Übermittlung meiner Daten] zu',
             changed: 'Der Inhalt der Zustimmung hat sich geändert, bitte prüfen Sie ihn erneut.',
-            confirm: 'Ich stimme zu',
             continue: 'Weiter',
             details: 'Details',
             intro: '{{ CLIENT }} bittet um Zugriff auf:',
