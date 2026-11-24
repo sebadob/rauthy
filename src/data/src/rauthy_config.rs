@@ -252,9 +252,6 @@ impl RauthyConfig {
                 slf.vars.consent.sources.len()
             );
         }
-        if slf.vars.consent.danger_allow_private_addresses {
-            warn!("`consent.danger_allow_private_addresses` is enabled");
-        }
     }
 
     pub fn init_static(self) {
@@ -390,7 +387,6 @@ impl Default for Vars {
             consent: VarsConsent {
                 enable: false,
                 content_cache_ttl: Duration::from_secs(3600),
-                danger_allow_private_addresses: false,
                 sources: BTreeMap::default(),
             },
             cred_stuff_detect: VarsCredStuff {
@@ -2091,14 +2087,6 @@ impl Vars {
                 panic!("`consent.content_cache_ttl` must be at least 1s");
             }
             self.consent.content_cache_ttl = v;
-        }
-        if let Some(v) = t_bool(
-            &mut table,
-            "consent",
-            "danger_allow_private_addresses",
-            "CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES",
-        ) {
-            self.consent.danger_allow_private_addresses = v;
         }
 
         if let Some(value) = table.remove("sources") {
@@ -4951,9 +4939,6 @@ pub struct VarsConsent {
     pub enable: bool,
     /// At least 1s.
     pub content_cache_ttl: Duration,
-    /// Allows remote consent sources on non-public addresses. Independent of
-    /// `ephemeral_clients.danger_allow_private_addresses`.
-    pub danger_allow_private_addresses: bool,
     /// `[[consent.sources]]` registry, keyed by `resource`.
     pub sources: BTreeMap<String, VarsConsentSource>,
 }
@@ -6240,15 +6225,6 @@ source = 'local'
 name = 'B'
 "#,
         );
-    }
-
-    #[test]
-    fn consent_danger_allow_private_addresses() {
-        let vars = parse_consent("[consent]\nenable = true");
-        assert!(!vars.consent.danger_allow_private_addresses);
-        let vars = parse_consent("[consent]\ndanger_allow_private_addresses = true");
-        assert!(vars.consent.danger_allow_private_addresses);
-        assert!(!vars.ephemeral_clients.danger_allow_private_addresses);
     }
 
     #[test]

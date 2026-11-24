@@ -1111,7 +1111,6 @@ mod tests {
         leak(VarsConsent {
             enable: true,
             content_cache_ttl: TTL,
-            danger_allow_private_addresses: false,
             sources: sources
                 .into_iter()
                 .map(|s| (s.resource.clone(), s))

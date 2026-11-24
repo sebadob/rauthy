@@ -928,20 +928,11 @@ backup_keep_for_local = '3d'
 # overwritten by: CONSENT_CONTENT_CACHE_TTL
 #content_cache_ttl = '1h'
 
-# Remote consent sources that resolve to a loopback, private,
-# link-local or otherwise non-public address are rejected by
-# default, like ephemeral client documents. Consent sources are
-# configured by an admin, so this is independent of
-# `ephemeral_clients.danger_allow_private_addresses`. Set to `true`
-# when your consent service runs on an internal address.
-#
-# Consent source fetches follow redirects only to https, with the
-# same address checks, never use system proxies and time out after
-# 3 seconds.
-#
-# default: false
-# overwritten by: CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES
-#danger_allow_private_addresses = false
+# Remote consent sources are configured by an admin, so they may
+# resolve to a loopback, private or otherwise non-public address,
+# unlike ephemeral client documents. Consent source fetches follow
+# redirects only to https, never use system proxies and time out
+# after 3 seconds.
 
 #[[consent.sources]]
 # The consent source per RFC 8707 resource indicator, with

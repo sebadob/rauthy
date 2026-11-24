@@ -107,11 +107,11 @@ an authorization request without one is answered with `error=consent_required`.
 The registry `name` is shown on the consent screen and wins over the `name` of a remote consent
 document. The remote `name` is only used for a client's own consent source from the Admin UI.
 
-A remote source is fetched via `GET <url>?lang=<BCP47 language>` with the same SSRF protection as
-ephemeral client documents, but with its own connection limit and a 3 second timeout, so a slow
-consent source cannot hold up ephemeral client lookups. Non-public addresses are only allowed with
-`consent.danger_allow_private_addresses`, independent of the ephemeral client setting. The content
-is cached for `consent.content_cache_ttl`.
+A remote source is fetched via `GET <url>?lang=<BCP47 language>` with the same redirect and proxy
+rules as ephemeral client documents, but with its own connection limit and a 3 second timeout, so a
+slow consent source cannot hold up ephemeral client lookups. Unlike an ephemeral client document, a
+consent source may resolve to a non-public address, because only an admin configures it. The
+content is cached for `consent.content_cache_ttl`.
 
 The `lang=en` response is required and the default: the content is taken from the response for
 the user's language, or the `lang=en` one if that is unavailable. The version of the consent content

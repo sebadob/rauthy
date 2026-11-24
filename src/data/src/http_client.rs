@@ -104,7 +104,8 @@ pub(crate) struct GuardedFetcher {
 /// The address policy of a [`GuardedFetcher`], shared by its redirect policy and resolver.
 #[derive(Debug, Clone, Copy)]
 struct AddrPolicy {
-    /// Allows non-public addresses (`danger_allow_private_addresses`).
+    /// Allows non-public addresses: always for consent sources, which only an admin configures,
+    /// and with `ephemeral_clients.danger_allow_private_addresses` for ephemeral clients.
     allow_private: bool,
     /// Names the kind of document in logs and error messages.
     label: &'static str,
@@ -174,7 +175,8 @@ impl GuardedFetcher {
     }
 
     /// Builds the consent source fetcher from [`http_client_builder`] with the short
-    /// [`CONSENT_FETCH_TIMEOUT`] and `consent.danger_allow_private_addresses`.
+    /// [`CONSENT_FETCH_TIMEOUT`]. It allows non-public addresses: a consent source is configured
+    /// by an admin, often for a consent service on an internal address.
     pub(crate) fn consent_from_vars(vars: &Vars) -> reqwest::Result<Self> {
         Self::consent_with(http_client_builder(), vars)
     }
@@ -186,7 +188,7 @@ impl GuardedFetcher {
             builder
                 .connect_timeout(connect_timeout)
                 .timeout(CONSENT_FETCH_TIMEOUT),
-            vars.consent.danger_allow_private_addresses,
+            true,
             LABEL_CONSENT,
             CONSENT_FETCH_PERMITS,
             connect_timeout,
@@ -698,7 +700,6 @@ mod tests {
     fn test_config_defaults() {
         let vars = Vars::default();
         assert!(!vars.ephemeral_clients.danger_allow_private_addresses);
-        assert!(!vars.consent.danger_allow_private_addresses);
         assert_eq!(vars.ephemeral_clients.max_document_bytes, 65536);
     }
 
@@ -1107,7 +1108,8 @@ mod tests {
         assert_eq!(hits(&origin_hits, "/ok"), 1);
     }
 
-    /// Each fetcher takes its own `danger_allow_private_addresses`, label and permits.
+    /// Each fetcher has its own label and permits. The consent fetcher always allows non-public
+    /// addresses, the ephemeral one only with `ephemeral_clients.danger_allow_private_addresses`.
     #[tokio::test]
     async fn test_fetchers_from_vars() {
         let mut routes = HashMap::new();
@@ -1116,19 +1118,17 @@ mod tests {
         let url = Url::parse(&format!("http://127.0.0.1:{port}/ok")).unwrap();
         let builder = || test_builder(Duration::from_secs(5));
 
-        for (consent, ephemeral) in [(true, false), (false, true)] {
+        for ephemeral in [false, true] {
             let mut vars = Vars::default();
-            vars.consent.danger_allow_private_addresses = consent;
             vars.ephemeral_clients.danger_allow_private_addresses = ephemeral;
 
             let fetcher = GuardedFetcher::consent_with(builder(), &vars).unwrap();
-            assert_eq!(fetcher.policy.allow_private, consent);
+            assert!(fetcher.policy.allow_private);
             assert_eq!(fetcher.policy.label, LABEL_CONSENT);
             assert_eq!(fetcher.semaphore.available_permits(), CONSENT_FETCH_PERMITS);
-            assert_eq!(
+            assert!(
                 fetcher.fetch_bounded(url.clone(), 1024).await.is_ok(),
-                consent,
-                "consent fetcher, allow_private: {consent}"
+                "consent fetcher, ephemeral allow_private: {ephemeral}"
             );
 
             let fetcher = GuardedFetcher::ephemeral_with(builder(), &vars).unwrap();
@@ -1141,8 +1141,8 @@ mod tests {
                 "ephemeral fetcher, allow_private: {ephemeral}"
             );
         }
-        // one allowed fetch per fetcher kind
-        assert_eq!(hits(&hits_map, "/ok"), 2);
+        // both consent fetches and the allowed ephemeral one
+        assert_eq!(hits(&hits_map, "/ok"), 3);
     }
 
     #[tokio::test]
