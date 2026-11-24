@@ -136,13 +136,11 @@ async fn execute(now: DateTime<Utc>) -> Result<(), ErrorResponse> {
             "Project sponsoring reminder sent to {} recipient(s)",
             recipients.len()
         );
+    } else if channels_configured {
+        info!("Project sponsoring reminder sent via the configured notification channel(s)");
     } else {
-        if channels_configured {
-            info!("Project sponsoring reminder sent via the configured notification channel(s)");
-        } else {
-            warn!("No recipients found for the Project sponsoring reminder - skipping");
-            return Ok(());
-        }
+        warn!("No recipients found for the Project sponsoring reminder - skipping");
+        return Ok(());
     }
 
     // mark it as sent, so we only do this once a year
