@@ -251,23 +251,23 @@ async fn server_with_metrics() -> std::io::Result<()> {
     thread::spawn(move || {
         let vars = &RauthyConfig::get().vars.server;
         if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {err}");
-            error!(msg);
-            panic!("{}", msg);
+            shutdown::trigger(format!("Error parsing METRICS_ADDR: {err}"));
+            return;
         }
         let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
         info!("Metrics available on: http://{addr_full}/metrics");
         // TODO create single threaded runtime specifically -> probably use tokio
-        System::new()
-            .block_on(
-                HttpServer::new(move || App::new().wrap(metrics.clone()))
-                    .workers(1)
-                    .bind(addr_full)
-                    .unwrap()
-                    .run(),
-            )
-            .unwrap();
+        let res = System::new().block_on(async move {
+            HttpServer::new(move || App::new().wrap(metrics.clone()))
+                .workers(1)
+                .bind(addr_full)?
+                .run()
+                .await
+        });
+        if let Err(err) = res {
+            shutdown::trigger(format!("Metrics server error: {err}"));
+        }
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")
