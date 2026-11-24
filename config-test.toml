@@ -30,12 +30,6 @@ resource = 'https://consent-test.example.com'
 source = 'local'
 name = 'Consent Test API'
 
-# the custom consent document of the dev server itself
-[[consent.sources]]
-resource = 'https://consent-dev.example.com'
-source = 'http://localhost:8081/auth/v1/dev/consent'
-name = 'Consent Dev API'
-
 [database]
 pg_host = 'localhost'
 pg_user = 'rauthy'
@@ -108,3 +102,11 @@ key_path = 'tls/key.pem'
 [webauthn]
 rp_id = 'localhost'
 rp_origin = 'http://localhost:8081'
+
+# debug builds only: everything from here on is cut by `just test-backend-heaptrack`, because a
+# release build accepts no `http://localhost` consent source.
+# the custom consent document of the dev server itself
+[[consent.sources]]
+resource = 'https://consent-dev.example.com'
+source = 'http://localhost:8081/auth/v1/dev/consent'
+name = 'Consent Dev API'

@@ -255,7 +255,10 @@ test-backend-heaptrack: test-backend-stop delete-hiqlite
     #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     # samply currently needs: echo '-1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
-    {{ test_env_vars }} heaptrack ./target/profiling/rauthy serve -c config-test.toml --test
+    # the dev consent source at the end of the test config is `http://localhost`, which only debug
+    # builds accept
+    sed '/^# debug builds only/,$d' config-test.toml > target/config-test-profiling.toml
+    {{ test_env_vars }} heaptrack ./target/profiling/rauthy serve -c target/config-test-profiling.toml --test
     #{{ test_env_vars }} samply record ./target/profiling/dorn -w 4
 
 
