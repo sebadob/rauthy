@@ -1,24 +1,24 @@
-#![allow(dead_code)]
+use rauthy_api_types::clients::{
+    ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
+};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{
-    GrantType, LoginConsent, LoginRequest, SessionInfoResponse, TokenRequest,
+    GrantType, JwkKeyPairAlg, LoginConsent, LoginRequest, SessionInfoResponse, TokenRequest,
 };
 use rauthy_api_types::users::{
-    NewUserRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
+    NewUserRequest, RequestResetRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
 };
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::sha256;
-use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
+use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, new_store_id};
 use rauthy_data::entity::consent_sources::LoginConsentContent;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
+use serde_json::json;
 use spow::pow::Pow;
 use std::error::Error;
-use std::sync::OnceLock;
-
-static SESSION_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
 
 pub const CLIENT_ID: &str = "init_client";
 pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
@@ -27,12 +27,9 @@ pub const PASSWORD: &str = "123SuperSafe";
 /// A `content_hash` of no consent content.
 pub const STALE_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
-#[macro_export]
-macro_rules! aw {
-    ($e:expr) => {
-        tokio_test::block_on($e)
-    };
-}
+/// The password for every user a test creates: the test backend's password policy requires at
+/// least 14 characters, which the seeded [`PASSWORD`] of `init_admin` does not satisfy.
+pub const USER_PASSWORD: &str = "Login-TEST.1234!#$";
 
 /// Asserts the status code of a response and returns it. Only use this when the body is *not*
 /// needed — to get the JSON body, use [`expect_status_json!`]. The `panic!` reports this macro's
@@ -93,27 +90,8 @@ pub fn decode_claims(access_token: &str) -> serde_json::Value {
 }
 
 #[allow(dead_code)]
-#[deprecated = "use `expect_status!` / `expect_status_json!`: they panic at their own call site, \
-this one always inside this function"]
-pub async fn check_status(res: Response, code: u16) -> Result<Response, Box<dyn Error>> {
-    if res.status() != code {
-        let status = res.status();
-        let err = res.text().await?;
-        panic!("Status: {} - Content: {:?}", status, err);
-    }
-    assert_eq!(res.status(), code);
-    Ok(res)
-}
-
-#[allow(dead_code)]
 pub async fn get_auth_headers() -> Result<HeaderMap, Box<dyn Error>> {
-    if let Some(headers) = SESSION_HEADERS.get() {
-        Ok(headers.clone())
-    } else {
-        let (headers, _ts) = session_headers().await;
-        let _ = SESSION_HEADERS.set(headers.clone());
-        Ok(headers)
-    }
+    Ok(session_headers().await.0)
 }
 
 pub fn get_backend_url() -> String {
@@ -161,6 +139,225 @@ pub async fn password_token_set(client: &reqwest::Client, email: &str, password:
     let res = password_grant(client, email, password).await;
     let res: Response = expect_status!(res, 200, format!("password grant for {email}"));
     res.json::<TokenSet>().await.unwrap()
+}
+
+/// A `password` grant for a test's own [`TestClient`]: the seeded `init_client` cannot be used for
+/// a client-secret login, because other tests rotate its secret.
+pub async fn password_token_set_for(
+    http: &reqwest::Client,
+    client: &TestClient,
+    email: &str,
+    password: &str,
+) -> TokenSet {
+    let res = http
+        .post(format!("{}/oidc/token", get_backend_url()))
+        .form(&TokenRequest {
+            grant_type: GrantType::Password,
+            client_id: Some(client.id.clone()),
+            client_secret: Some(client.secret.clone()),
+            username: Some(email.to_string()),
+            password: Some(password.to_string()),
+            ..Default::default()
+        })
+        .send()
+        .await
+        .expect("the test backend to be running");
+    let res: Response = expect_status!(res, 200, format!("password grant for {email}"));
+    res.json::<TokenSet>().await.unwrap()
+}
+
+/// The setup of a client a test owns: its name, the flows it may use, and the URIs it is allowed
+/// to redirect to. Everything a client needs, and nothing a test wants to share.
+pub struct TestClientSetup {
+    pub name: String,
+    pub flows: Vec<GrantType>,
+    pub redirect_uri: String,
+    pub post_logout_redirect_uris: Vec<String>,
+    pub backchannel_logout_uri: Option<String>,
+}
+
+/// A confidential client of its own, with the secret a test logs in with.
+#[derive(Clone)]
+pub struct TestClient {
+    pub id: String,
+    pub secret: String,
+}
+
+/// Creates a client with [`TestClientSetup`], configures it, and rotates its secret.
+pub async fn create_test_client(setup: &TestClientSetup) -> Result<TestClient, Box<dyn Error>> {
+    let id = format!("test_{}", new_store_id());
+    let backend_url = get_backend_url();
+    let admin = get_auth_headers().await?;
+    let http = reqwest::Client::new();
+
+    let res = http
+        .post(format!("{backend_url}/clients"))
+        .headers(admin.clone())
+        .json(&NewClientRequest {
+            id: id.clone(),
+            secret: None,
+            name: Some(setup.name.clone()),
+            confidential: true,
+            redirect_uris: vec![setup.redirect_uri.clone()],
+            post_logout_redirect_uris: None,
+            consent: None,
+        })
+        .send()
+        .await?;
+    expect_status!(res, 200, format!("create client {id}"));
+
+    let res = http
+        .put(format!("{backend_url}/clients/{id}"))
+        .headers(admin.clone())
+        .json(&UpdateClientRequest {
+            name: Some(setup.name.clone()),
+            confidential: true,
+            redirect_uris: vec![setup.redirect_uri.clone()],
+            post_logout_redirect_uris: Some(setup.post_logout_redirect_uris.clone()),
+            allowed_origins: None,
+            enabled: true,
+            flows_enabled: setup.flows.clone(),
+            access_token_alg: JwkKeyPairAlg::EdDSA,
+            id_token_alg: JwkKeyPairAlg::EdDSA,
+            auth_code_lifetime: 60,
+            access_token_lifetime: 300,
+            scopes: vec!["openid".to_string()],
+            default_scopes: vec!["openid".to_string()],
+            challenges: Some(vec!["S256".to_string()]),
+            force_mfa: false,
+            client_uri: None,
+            contacts: None,
+            backchannel_logout_uri: setup.backchannel_logout_uri.clone(),
+            restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
+            actor_same_client: false,
+            scim: None,
+            consent: None,
+        })
+        .send()
+        .await?;
+    expect_status!(res, 200, format!("configure client {id}"));
+
+    let secret = rotate_client_secret(&http, &admin, &id).await?;
+
+    Ok(TestClient { id, secret })
+}
+
+/// POSTs `/clients/{id}/secret`, rotates the client's secret, and returns the new one.
+pub async fn rotate_client_secret(
+    http: &reqwest::Client,
+    admin: &HeaderMap,
+    id: &str,
+) -> Result<String, Box<dyn Error>> {
+    let res = http
+        .post(format!("{}/clients/{}/secret", get_backend_url(), id))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let res = expect_status!(res, 200, format!("rotate secret of client {id}"));
+    Ok(res.json::<ClientSecretResponse>().await?.secret.unwrap())
+}
+
+/// Deletes a client created with [`create_test_client`] again.
+pub async fn delete_test_client(id: &str) -> Result<(), Box<dyn Error>> {
+    let res = reqwest::Client::new()
+        .delete(format!("{}/clients/{id}", get_backend_url()))
+        .headers(get_auth_headers().await?)
+        .send()
+        .await?;
+    expect_status!(res, 200, format!("delete client {id}"));
+    Ok(())
+}
+
+/// POST `/clients` with the request as it is and return the created client.
+pub async fn create_client(
+    http: &reqwest::Client,
+    admin: &HeaderMap,
+    req: &NewClientRequest,
+) -> Result<ClientResponse, Box<dyn Error>> {
+    let res = http
+        .post(format!("{}/clients", get_backend_url()))
+        .headers(admin.clone())
+        .json(req)
+        .send()
+        .await?;
+    let res = expect_status!(res, 200, format!("create client {}", req.id));
+    Ok(res.json::<ClientResponse>().await?)
+}
+
+/// GET `/clients/{id}`.
+pub async fn get_client(admin: &HeaderMap, id: &str) -> Result<ClientResponse, Box<dyn Error>> {
+    let res = reqwest::Client::new()
+        .get(format!("{}/clients/{}", get_backend_url(), id))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let res = expect_status!(res, 200, format!("get client {id}"));
+    Ok(res.json::<ClientResponse>().await?)
+}
+
+/// PUT `/clients/{id}` with the request as it is and return the stored client.
+pub async fn put_client(
+    http: &reqwest::Client,
+    admin: &HeaderMap,
+    id: &str,
+    req: &UpdateClientRequest,
+) -> Result<ClientResponse, Box<dyn Error>> {
+    let res = http
+        .put(format!("{}/clients/{}", get_backend_url(), id))
+        .headers(admin.clone())
+        .json(req)
+        .send()
+        .await?;
+    let res = expect_status!(res, 200, format!("update client {id}"));
+    Ok(res.json::<ClientResponse>().await?)
+}
+
+/// DELETE `/clients/{id}`.
+pub async fn delete_client(admin: &HeaderMap, id: &str) -> Result<(), Box<dyn Error>> {
+    let res = reqwest::Client::new()
+        .delete(format!("{}/clients/{id}", get_backend_url()))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    expect_status!(res, 200, format!("delete client {id}"));
+    Ok(())
+}
+
+/// Rebuilds a full `UpdateClientRequest` from a GET response, so a test overrides a few fields and
+/// PUTs the client back (and so we don't depend on `JwkKeyPairAlg` being `Clone`).
+pub fn update_request(c: ClientResponse) -> UpdateClientRequest {
+    UpdateClientRequest {
+        name: c.name,
+        confidential: c.confidential,
+        redirect_uris: c.redirect_uris,
+        post_logout_redirect_uris: c.post_logout_redirect_uris,
+        allowed_origins: c.allowed_origins,
+        enabled: c.enabled,
+        flows_enabled: c.flows_enabled,
+        access_token_alg: c.access_token_alg,
+        id_token_alg: c.id_token_alg,
+        auth_code_lifetime: c.auth_code_lifetime,
+        access_token_lifetime: c.access_token_lifetime,
+        scopes: c.scopes,
+        default_scopes: c.default_scopes,
+        challenges: c.challenges,
+        force_mfa: c.force_mfa,
+        client_uri: c.client_uri,
+        contacts: c.contacts,
+        backchannel_logout_uri: c.backchannel_logout_uri,
+        restrict_group_prefix: c.restrict_group_prefix,
+        claims: c.claims,
+        claims_at_root: c.claims_at_root,
+        allowed_resources: c.allowed_resources,
+        default_aud: c.default_aud,
+        consent: c.consent,
+        actor_same_client: c.actor_same_client,
+        scim: None,
+    }
 }
 
 /// A refresh token grant on the init client.
@@ -215,13 +412,37 @@ pub async fn session_headers_for_client(
     client_secret: Option<&str>,
     redirect_uri: &str,
 ) -> (HeaderMap, TokenSet) {
+    login_session(&LoginTarget {
+        email: USERNAME.to_string(),
+        password: PASSWORD.to_string(),
+        client_id: client_id.to_string(),
+        client_secret: client_secret.map(String::from),
+        redirect_uri: redirect_uri.to_string(),
+    })
+    .await
+}
+
+/// Who logs in, and on which client: the credentials of the user, and the client with the
+/// `redirect_uri` the login ends on. A test that logs in as a user of its own is not affected by
+/// any other test's sessions and logouts.
+pub struct LoginTarget {
+    pub email: String,
+    pub password: String,
+    pub client_id: String,
+    pub client_secret: Option<String>,
+    pub redirect_uri: String,
+}
+
+/// A full authorization code login (PKCE, S256) on the target client, returning the session
+/// headers and the issued tokens.
+pub async fn login_session(target: &LoginTarget) -> (HeaderMap, TokenSet) {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
     let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
     let query = format!(
-        "client_id={client_id}&redirect_uri={}&response_type=code",
-        redirect_uri
+        "client_id={}&redirect_uri={}&response_type=code",
+        target.client_id, target.redirect_uri
     );
     let challenge_s256 = base64_url_encode(sha256!(challenge_plain.as_bytes()));
     let query_pkce = format!(
@@ -237,11 +458,11 @@ pub async fn session_headers_for_client(
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {
-        email: Some(USERNAME.to_string()),
-        password: Some(PASSWORD.to_string()),
+        email: Some(target.email.clone()),
+        password: Some(target.password.clone()),
         pow: get_solved_pow().await,
-        client_id: client_id.to_string(),
-        redirect_uri: redirect_uri.to_string(),
+        client_id: target.client_id.clone(),
+        redirect_uri: target.redirect_uri.clone(),
         scopes: None,
         state: None,
         nonce: Some("MySuperNonce".to_string()),
@@ -260,9 +481,9 @@ pub async fn session_headers_for_client(
     let req_token = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
         code: Some(code),
-        redirect_uri: Some(redirect_uri.to_string()),
-        client_id: Some(client_id.to_string()),
-        client_secret: client_secret.map(String::from),
+        redirect_uri: Some(target.redirect_uri.clone()),
+        client_id: Some(target.client_id.clone()),
+        client_secret: target.client_secret.clone(),
         code_verifier: Some(challenge_plain.to_string()),
         ..Default::default()
     };
@@ -659,4 +880,95 @@ pub async fn create_login_user(
     expect_status!(res, 200);
 
     Ok(user)
+}
+
+/// Deletes the user with this email, the counterpart of [`create_login_user`]. Deleting a user
+/// cascades to its sessions, devices and refresh tokens.
+pub async fn delete_user(admin: &HeaderMap, email: &str) -> Result<(), Box<dyn Error>> {
+    let backend = get_backend_url();
+    let users = reqwest::Client::new()
+        .get(format!("{backend}/users"))
+        .headers(admin.clone())
+        .send()
+        .await?
+        .json::<Vec<UserResponseSimple>>()
+        .await?;
+    let id = users
+        .iter()
+        .find(|u| u.email == email)
+        .ok_or("test user not found")?
+        .id
+        .clone();
+
+    let res = reqwest::Client::new()
+        .delete(format!("{backend}/users/{id}"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    expect_status!(res, 204, format!("delete user {email}"));
+    Ok(())
+}
+
+/// The user of a test run: created with a unique email and a usable password, and deleted again by
+/// the test itself. A test never logs in with the seeded bootstrap data, so its sessions, tokens
+/// and logouts are always its own.
+pub struct TestUser {
+    pub user: UserResponse,
+}
+
+impl TestUser {
+    /// Creates a user whose email is derived from `given_name` plus a random id, with `password`.
+    pub async fn new(given_name: &str, password: &str) -> Result<Self, Box<dyn Error>> {
+        let email = format!(
+            "{}-{}@localhost",
+            given_name.to_lowercase().replace(' ', "-"),
+            new_store_id().to_lowercase()
+        );
+        let user = create_login_user(
+            &reqwest::Client::new(),
+            &get_auth_headers().await?,
+            &email,
+            given_name,
+            password,
+        )
+        .await?;
+        Ok(Self { user })
+    }
+
+    /// Removes the user again, which cascades to its sessions, devices and refresh tokens.
+    pub async fn delete(&self) -> Result<(), Box<dyn Error>> {
+        delete_user(&get_auth_headers().await?, &self.user.email).await
+    }
+}
+
+/// Requests a password reset for `email` on the public endpoint and returns the id of the created
+/// magic link: a reset link leaves the backend only via mail, so a test has no other way to ever
+/// get the id of a valid one.
+pub async fn create_pwd_reset_link(
+    client: &reqwest::Client,
+    admin: &HeaderMap,
+    user_id: &str,
+    email: &str,
+) -> Result<String, Box<dyn Error>> {
+    let backend = get_backend_url();
+
+    let res = client
+        .post(format!("{backend}/users/request_reset"))
+        .json(&RequestResetRequest {
+            email: email.to_string(),
+            redirect_uri: None,
+            pow: get_solved_pow().await,
+        })
+        .send()
+        .await?;
+    expect_status!(res, 200);
+
+    let res = client
+        .post(format!("{backend}/dev/magic_link"))
+        .headers(admin.clone())
+        .json(&json!({ "user_id": user_id }))
+        .send()
+        .await?;
+
+    Ok(expect_status!(res, 200).text().await?)
 }

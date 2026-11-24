@@ -14,6 +14,10 @@ pub struct CredStuffDetect;
 
 impl CredStuffDetect {
     pub async fn trigger(ip: IpAddr, email: &str, password: Option<&str>) {
+        if !RauthyConfig::get().vars.cred_stuff_detect.enable {
+            return;
+        }
+
         if let Err(err) = Self::handle_trigger(ip, email, password.unwrap_or_default()).await {
             error!(
                 "Error during credential stuffing detection for IP {}: {}",

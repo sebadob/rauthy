@@ -446,7 +446,7 @@ impl User {
             let hash = HashPassword::hash_password(pwd).await?;
             let password_expires = rules.valid_days.map(|d| {
                 OffsetDateTime::now_utc()
-                    .add(::time::Duration::days(d as i64))
+                    .add(::time::Duration::days(i64::from(d)))
                     .unix_timestamp()
             });
 
@@ -742,7 +742,7 @@ ORDER BY created_at ASC"#;
         from_created_at: i64,
         batch_size: u16,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let batch_size = batch_size as i64;
+        let batch_size = i64::from(batch_size);
         let res = if is_hiqlite() {
             DB::hql()
                 .query_as(
@@ -1063,7 +1063,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
         } else {
             let rows = DB::pg_query_rows(
                 SQL_FIND_FOR_SCIM_SYNC,
-                &[&last_created_ts, &last_user_id, &(limit as i32)],
+                &[&last_created_ts, &last_user_id, &i32::from(limit)],
                 limit as usize,
             )
             .await?;
@@ -2131,7 +2131,7 @@ impl User {
         } else {
             let password_expires = rules.valid_days.map(|d| {
                 OffsetDateTime::now_utc()
-                    .add(::time::Duration::days(d as i64))
+                    .add(::time::Duration::days(i64::from(d)))
                     .unix_timestamp()
             });
             self.password_expires = password_expires;

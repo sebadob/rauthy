@@ -3,6 +3,7 @@ use crate::generic::PasswordPolicyResponse;
 use crate::sessions::SessionState;
 use actix_web::HttpRequest;
 use actix_web::http::header;
+use rauthy_common::constants::PASSWORD_MAX_LEN;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_64, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER,
     RE_LOWERCASE, RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
@@ -247,8 +248,8 @@ pub struct LoginRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: Option<String>,
-    /// Validation: Applies password policy - max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -443,8 +444,8 @@ pub struct TokenRequest {
     /// Validation: `email`
     #[validate(email)]
     pub username: Option<String>,
-    /// max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]

@@ -88,6 +88,115 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### Credential Stuffing Detection Can Be Disabled
+
+`cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config
+switch is.
+
+```toml
+[cred_stuff_detection]
+# Switches the detector on or off. It records every login
+# attempt with a password against a non-existing email or a
+# wrong password per source IP, and it blacklists that IP for
+# `blacklist_duration` once `blacklist_threshold` different
+# combinations appear inside `scan_window`. Set this to
+# `false` when a big group of users shares one source address,
+# like a corporate NAT gateway, where the detector would
+# blacklist all of them. A blacklist lives in the database, so
+# it survives restarts until it expires.
+#
+# default: true
+# overwritten by: CRED_STUFF_ENABLE
+enable = true
+```
+
+#### Rolling App Log Files
+
+By default, Rauthy only logs to stdout. With `logging.log_file`, it writes a rolling app log file
+instead: the file is rolled over every day (UTC) into `<file_name>.<YYYY-MM-DD>` files and stdout
+gets no logs at all. A background task, running on the cron schedule of `logging.log_file_cleanup`,
+cleans the files up afterwards: it deletes everything older than `logging.log_file_keep_for` and
+compresses the ones older than `logging.log_file_archive_after` into `.gz` files first.
+
+```toml
+[logging]
+# If you want Rauthy to log into a file instead of stdout, set the
+# path to that log file here. The file is rolled over every day into
+# `<file_name>.<YYYY-MM-DD>` files and stdout will get no logs at all.
+# The parent directory is created if it does not exist.
+#
+# default: None - logs go to stdout
+# overwritten by: LOG_FILE
+log_file = './rauthy.log'
+
+# When the rolling log file cleanup task runs.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 3 * * * *" - every day at 03:00
+# overwritten by: LOG_FILE_CLEANUP
+log_file_cleanup = "0 0 3 * * * *"
+
+# How long rolling log files are kept before the cleanup task deletes
+# them. Accepts Durations like '60s', '10h', '7d', ...
+# '0' disables the cleanup task entirely, including compression.
+#
+# default: 30d
+# overwritten by: LOG_FILE_KEEP_FOR
+log_file_keep_for = '30d'
+
+# Rolling log files older than this Duration are compressed into a
+# `.gz` file before the cleanup deletes them, for instance '3d'.
+# Needs `log_file` to be set.
+#
+# default: None - log files are never compressed
+# overwritten by: LOG_FILE_ARCHIVE_AFTER
+log_file_archive_after = '3d'
+```
+
+[#1962](https://github.com/sebadob/rauthy/pull/1962)
+
+#### Custom JSON path claim matcher
+
+Rauthy now ships a customized, simplified JSONPath matcher. It brings new possibilities and fixes
+some issues with the old one, and it improves the performance for many concurrent provider logins:
+the old matcher re-parsed the path on every single login, the new one compiles a provider's paths
+and regexes once at config save and caches them.
+
+A non-string claim node is compared by its text form, which is what the old matcher did as well, so
+`true` matches a boolean claim and `23` a number. New on top of that are the sigils of a claim
+value, which the old exact comparison did not have: `^` is a prefix match, `~` a regex, and `^^`
+types a literal leading `^`.
+
+[#1961](https://github.com/sebadob/rauthy/pull/1961)
+
+#### Claim mapping to roles and groups
+
+An upstream provider can map values from the ID token of a federated login to existing local roles
+and groups.
+
+Each rule is a `claim_path`, a `claim_value`, a `typ` (`role` / `group`) and the existing `target`
+name, and it is reconciled on every login. Only the targets a provider maps are ever removed, and a
+mapped target belongs to that provider: a login without a match revokes it even when an admin granted
+that role or group to the user by hand. The paths use Rauthy's own reduced JSONPath parser, the
+values support `^` prefix and `~` regex sigils, a provider supports at most 32 rules, a target name
+cannot contain a `,` - the separator of a user's role and group lists - and every path and regex is
+validated when the config is saved.
+
+The `rauthy_admin` prefix is not valid rule targets, because the admin role is granted by the
+provider's own admin claim mapping only. The Admin UI has a rule editor for it, and the
+[provider docs](https://sebadob.github.io/rauthy/auth_providers/) document the grammar and the
+reconcile behavior.
+
+[#1961](https://github.com/sebadob/rauthy/pull/1961)
+
+#### Hide the login button of an upstream provider
+
+An auth provider has a new `hide_login` flag. When it is active, the button of that provider is
+not rendered on the login page and the registration page, which keeps an internal provider away
+from normal users. Everything else about the provider behaves like before, including a targeted
+login via the `idp_hint` query parameter, which is the intended way to reach such a provider.
+
 #### Self-Service E-Mail Change Can Be Denied
 
 You can now deny user self-service email changes via the account dashboard. This usually only comes
@@ -462,6 +571,15 @@ into its own session timeout. A logged-out device code page now redirects to the
 of reloading its own document on every load.
 
 [#1929](https://github.com/sebadob/rauthy/issues/1929)
+
+#### Password Length Up To `1024`
+
+The max password length was validated twice with different values: the password policy's
+`length_max` was capped at `128`, and the request validators hard-capped plain passwords at `256`.
+Both are now `1024`, so a user base can be imported from an application that allowed longer
+passwords. The default password policy is untouched.
+
+[](<>)
 
 ### Bugfix
 

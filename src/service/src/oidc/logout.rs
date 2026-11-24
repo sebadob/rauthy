@@ -306,9 +306,7 @@ pub async fn execute_backchannel_logout(
                 sid,
                 kp.as_ref().unwrap(),
                 &mut tasks,
-            )
-            .await
-            {
+            ) {
                 error!("Error executing Backchannel Logout: {}", err);
             }
         }
@@ -379,9 +377,7 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
             None,
             &kp,
             &mut tasks,
-        )
-        .await
-        {
+        ) {
             error!(?err, "executing Backchannel Logout");
         }
     }
@@ -402,7 +398,7 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
 /// Sends a backchannel logout to the given client. Successful deliveries delete any pending
 /// failure record for this (client_id, sub, sid); failed ones upsert / increment it. Callers
 /// must join their `JoinSet` before assuming all attempts have finished.
-pub async fn send_backchannel_logout(
+pub fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
     sub: Option<String>,

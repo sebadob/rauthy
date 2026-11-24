@@ -191,7 +191,7 @@ impl ClientScim {
     fn url_groups(&self, start_index: usize, count: usize) -> String {
         format!(
             "{}/Groups?startIndex={start_index}&count={count}",
-            self.base_uri.trim_end_matches("/")
+            self.base_uri.trim_end_matches('/')
         )
     }
 
@@ -267,7 +267,7 @@ impl ClientScim {
     /// and update on remote if necessary.
     pub async fn sync_groups(&self) -> Result<(), ErrorResponse> {
         match self.sync_groups_exec().await {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 let err = format!("Error during sync groups: {err:?}");
                 error!(err);
@@ -392,7 +392,7 @@ impl ClientScim {
     ) -> Result<Option<ScimGroup>, ErrorResponse> {
         let url = format!(
             "{}/Groups?filter=externalId%20eq%20%22{}%22",
-            self.base_uri.trim_end_matches("/"),
+            self.base_uri.trim_end_matches('/'),
             group.id
         );
         match self.get_group_with(group, url).await? {
@@ -402,7 +402,7 @@ impl ClientScim {
                 }
                 let url = format!(
                     "{}/Groups?filter=displayName%20eq%20%22{}%22",
-                    self.base_uri.trim_end_matches("/"),
+                    self.base_uri.trim_end_matches('/'),
                     group.name
                 );
                 self.get_group_with(group, url).await
@@ -515,7 +515,7 @@ impl ClientScim {
         };
         debug!(?payload, "Creating SCIM group on remote");
         let json = serde_json::to_string(&payload)?;
-        let url = format!("{}/Groups", self.base_uri.trim_end_matches("/"));
+        let url = format!("{}/Groups", self.base_uri.trim_end_matches('/'));
         let res = http_client()
             .post(url)
             .header(AUTHORIZATION, self.auth_header())
@@ -566,7 +566,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{remote_id}", self.base_uri.trim_end_matches("/"));
+        let url = format!("{}/Groups/{remote_id}", self.base_uri.trim_end_matches('/'));
 
         let external_id = if remove_ext_id_link {
             None
@@ -639,7 +639,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{remote_id}", self.base_uri.trim_end_matches("/"));
+        let url = format!("{}/Groups/{remote_id}", self.base_uri.trim_end_matches('/'));
 
         let res = http_client()
             .delete(url)
@@ -671,7 +671,7 @@ impl ClientScim {
     ) -> Result<Option<ScimUser>, ErrorResponse> {
         let url = format!(
             "{}/Users?filter=externalId%20eq%20%22{}%22",
-            self.base_uri.trim_end_matches("/"),
+            self.base_uri.trim_end_matches('/'),
             user_id
         );
         match self.get_user_with(user_id, user_email, url).await? {
@@ -679,7 +679,7 @@ impl ClientScim {
                 let email = old_email.unwrap_or(user_email);
                 let url = format!(
                     "{}/Users?filter=userName%20eq%20%22{}%22",
-                    self.base_uri.trim_end_matches("/"),
+                    self.base_uri.trim_end_matches('/'),
                     email
                 );
                 self.get_user_with(user_id, user_email, url).await
@@ -758,7 +758,7 @@ impl ClientScim {
             .sync_users_exec(&mut last_created, groups_local, groups_remote)
             .await
         {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 let err = format!("Error during sync users: {err}");
                 error!(err);
@@ -814,7 +814,7 @@ impl ClientScim {
                     )
                     .await
                 } {
-                    Ok(_) => {
+                    Ok(()) => {
                         *last_created = cursor;
                     }
                     Err(err) => {
@@ -949,7 +949,7 @@ impl ClientScim {
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
         let json = serde_json::to_string(&update_payload)?;
-        let base = self.base_uri.trim_end_matches("/");
+        let base = self.base_uri.trim_end_matches('/');
         let res = http_client()
             .post(format!("{}/Users", base))
             .header(AUTHORIZATION, self.auth_header())
@@ -1006,7 +1006,7 @@ impl ClientScim {
         update_payload.id = Some(remote_id.clone());
 
         let json = serde_json::to_string(&update_payload)?;
-        let base = self.base_uri.trim_end_matches("/");
+        let base = self.base_uri.trim_end_matches('/');
         let res = http_client()
             .put(format!(
                 "{}/Users/{}",
@@ -1077,7 +1077,7 @@ impl ClientScim {
         };
         let url = format!(
             "{}/Users/{}",
-            self.base_uri.trim_end_matches("/"),
+            self.base_uri.trim_end_matches('/'),
             remote_id
         );
 
@@ -1190,7 +1190,7 @@ impl ClientScim {
                 }
                 let url = format!(
                     "{}/Groups/{}",
-                    self.base_uri.trim_end_matches("/"),
+                    self.base_uri.trim_end_matches('/'),
                     remote_group_id
                 );
 
@@ -1233,7 +1233,7 @@ impl ClientScim {
 
             let url = format!(
                 "{}/Groups/{}",
-                self.base_uri.trim_end_matches("/"),
+                self.base_uri.trim_end_matches('/'),
                 group_remote.value
             );
             let res = http_client()

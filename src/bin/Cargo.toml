@@ -8,6 +8,11 @@ description.workspace = true
 default-run = "rauthy"
 rust-version = "1.95.0"
 
+# One test binary for the whole integration suite: every test file on its own builds the whole
+# dependency graph again, and Cargo runs test binaries one after another. `ip_blacklist` keeps its
+# own target because it blacklists the source address every other test connects from.
+autotests = false
+
 [features]
 default = ["jemalloc"]
 jemalloc = ["dep:tikv-jemallocator"]
@@ -38,6 +43,7 @@ chrono-tz = { workspace = true }
 cidr = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }
+cron = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
@@ -56,6 +62,7 @@ spow = { workspace = true }
 time = { workspace = true }
 tls-hot-reload = { workspace = true }
 tracing = { workspace = true }
+tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
@@ -79,7 +86,14 @@ josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
-tokio-test = "*"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[[test]]
+name = "ip_blacklist"
+path = "tests/ip_blacklist.rs"
 
 [lints.rust]
 warnings = { level = "deny", priority = -2 }
@@ -98,13 +112,11 @@ too_many_lines = "allow"
 uninlined_format_args = "allow"
 
 # Temporarily allowed (to be reviewed and enabled incrementally)
-cast_lossless = "allow"
 cast_possible_truncation = "allow"
 cast_possible_wrap = "allow"
 cast_sign_loss = "allow"
 deprecated_attributes_without_since = "allow"
 doc_markdown = "allow"
-ignored_unit_patterns = "allow"
 ignore_without_reason = "allow"
 large_futures = "allow"
 map_unwrap_or = "allow"
@@ -115,10 +127,8 @@ needless_pass_by_value = "allow"
 needless_raw_string_hashes = "allow"
 redundant_closure_for_method_calls = "allow"
 redundant_else = "allow"
-single_char_pattern = "allow"
 struct_excessive_bools = "allow"
 struct_field_names = "allow"
 unchecked_time_subtraction = "allow"
 unreadable_literal = "allow"
-unused_async = "allow"
 wildcard_imports = "allow"

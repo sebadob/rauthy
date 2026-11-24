@@ -37,6 +37,18 @@ pg_password = '123SuperSafe'
 
 [dynamic_clients]
 enable = true
+# The seed default is one hour per IP. The suite registers dynamic clients from one source IP and
+# runs more than once per backend, so the window is as short as the "immediately again" assertion
+# in the DCR test needs it.
+rate_limit_reg = 3
+
+[cred_stuff_detection]
+# The detector stores every distinct `email + password` pair it sees per source IP and blacklists
+# that IP when the count reaches `blacklist_threshold` inside `scan_window`. (Almost) every
+# integration test logs in with a brand new user, so a full suite run inserts a few dozen new pairs
+# from 127.0.0.1 alone, and it repeats inside the 3 h window. The threshold is deliberately out of
+# reach for tests; the recording code path stays active.
+blacklist_threshold = 1000
 
 [email]
 rauthy_admin_email = 'admin@localhost'
@@ -67,6 +79,8 @@ danger_insecure = true
 
 [logging]
 level = 'debug'
+log_file = 'src/bin/tests/test_data/rauthy.log'
+log_file_keep_for = '1d'
 
 [mfa]
 admin_force_mfa = false

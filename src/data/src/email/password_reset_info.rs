@@ -39,7 +39,7 @@ pub struct EmailResetInfoTxt<'a> {
 pub async fn send_pwd_reset_info(user: User) {
     debug_assert!(user.password_expires.is_some());
 
-    let exp = email_ts_prettify(user.password_expires.unwrap(), &user.language, None);
+    let exp = email_ts_prettify(user.password_expires.unwrap(), user.language, None);
     let link = format!(
         "{}/auth/v1/account",
         RauthyConfig::get().pub_url_with_scheme
@@ -94,7 +94,7 @@ pub async fn send_pwd_reset_info(user: User) {
         )
         .await;
     match res {
-        Ok(_) => {
+        Ok(()) => {
             debug!("User {} notified about password expiry", user.email);
         }
         Err(ref e) => {

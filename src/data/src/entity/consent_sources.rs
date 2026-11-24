@@ -567,7 +567,7 @@ impl ConsentCache for HqlConsentCache {
                 Cache::ConsentContent,
                 idx.to_string(),
                 &value,
-                Some(ttl as i64),
+                Some(i64::from(ttl)),
             )
             .await?;
         Ok(())

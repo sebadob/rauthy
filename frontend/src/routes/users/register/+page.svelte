@@ -60,6 +60,8 @@
     let providers: AuthProviderTemplate[] = $state([]);
     // the name of the `rauthy` client, which a provider sign-up asks the consent for
     let clientName = $state('Rauthy');
+    // `hide_login` providers are never rendered on this page
+    let visibleProviders = $derived(providers.filter(p => !p.hide_login));
 
     let accInitImmediate = $derived(accInit?.enabled === true);
     let passwordPolicy = $derived(accInit?.password_policy);
@@ -511,7 +513,7 @@
                 </div>
             {/if}
 
-            {#if providers.length > 0}
+            {#if visibleProviders.length > 0}
                 <div class="providers flex-col gap-05">
                     <div class="public-divider">{t.register.orRegisterWith}</div>
                     {#if consent}
@@ -523,7 +525,7 @@
                             disabled={isLoading}
                         />
                     {/if}
-                    {#each providers as provider}
+                    {#each visibleProviders as provider}
                         <ButtonAuthProvider
                             ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
                             {provider}

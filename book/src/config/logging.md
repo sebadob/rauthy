@@ -6,7 +6,8 @@ configurable, and you should be able to achieve whatever you need. All events ar
 console as well with their configured level. This means, if Rauthy fires an event of type `NewUser`
 with the level `info` and you have configured a log level of at least the same, you will see the
 event in the console as well. So you could only use log aggregation and use existing tools without
-configuring other targets and still catch everything.
+configuring other targets and still catch everything. If you need logs inside files instead of the
+console, Rauthy can write rolling app log files, see [`LOG_FILE`](#log_file).
 
 ## Logging
 
@@ -75,6 +76,73 @@ disable the `LOG_LEVEL_ACCESS` fully to reduce duplicated log outputs.
 # default: 'modifying'
 # overwritten by: LOG_LEVEL_ACCESS
 level_access = 'modifying'
+```
+
+### `LOG_FILE`
+
+By default, all logs go to stdout. If you need them in a file, set the path to that file with
+`LOG_FILE`. Rauthy then writes into a rolling app log file: it is rolled over every day (UTC) into
+`<file_name>.<YYYY-MM-DD>` files and stdout will not get any logs at all. The parent directory is
+created if it does not exist. The ASCII banner is logged into that file as well, and the
+`LOG_LEVEL` applies to it, exactly like to any other log line.
+
+```toml
+[logging]
+# If you want Rauthy to log into a file instead of stdout, set the
+# path to that log file here.
+#
+# default: None - logs go to stdout
+# overwritten by: LOG_FILE
+log_file = '/var/log/rauthy.log'
+```
+
+### `LOG_FILE_CLEANUP`
+
+The cron schedule of the rolling log file cleanup task. It deletes files older than
+`LOG_FILE_KEEP_FOR` and compresses the ones older than `LOG_FILE_ARCHIVE_AFTER`.
+
+```toml
+[logging]
+# When the rolling log file cleanup task runs.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 3 * * * *" - every day at 03:00
+# overwritten by: LOG_FILE_CLEANUP
+log_file_cleanup = "0 0 3 * * * *"
+```
+
+### `LOG_FILE_KEEP_FOR`
+
+The rolling app log files are cleaned up by a background task that deletes everything older than
+this duration. It runs on the schedule of [`LOG_FILE_CLEANUP`](#log_file_cleanup). Accepts
+Durations like `60s`, `10h`, `7d`, ..., and `0` disables the cleanup task entirely, including the
+compression of `LOG_FILE_ARCHIVE_AFTER`.
+
+```toml
+[logging]
+# How long rolling log files are kept before the cleanup task deletes
+# them.
+#
+# default: 30d
+# overwritten by: LOG_FILE_KEEP_FOR
+log_file_keep_for = '30d'
+```
+
+### `LOG_FILE_ARCHIVE_AFTER`
+
+Log files older than this duration are compressed into a `.gz` file before the cleanup task
+deletes them. The compression is streamed to a `~` temp file and renamed at the end, so a crash
+can never leave a half-written archive behind. Needs `LOG_FILE` to be set.
+
+```toml
+[logging]
+# Rolling log files older than this Duration are compressed into a
+# `.gz` file before the cleanup deletes them.
+#
+# default: None - log files are never compressed
+# overwritten by: LOG_FILE_ARCHIVE_AFTER
+log_file_archive_after = '3d'
 ```
 
 ### `LOG_FMT`
@@ -194,9 +262,9 @@ matrix_error_no_panic = false
 ```
 
 ```admonish hint
-I suggest that you create a separate room for these events. If you experience issues with Matrix 
-encryption, you should maybe disable the encryption for the Events room. I came across some weird 
-errors from Matrix in the past when I was using a session token which has been created on another 
+I suggest that you create a separate room for these events. If you experience issues with Matrix
+encryption, you should maybe disable the encryption for the Events room. I came across some weird
+errors from Matrix in the past when I was using a session token which has been created on another
 machine.
 ```
 
@@ -234,17 +302,15 @@ process or just forwards the events to where ever you need them.
 
 ```json
 {
-  "name": "events",
-  "created": 1720428190,
-  "expires": null,
-  "access": [
-    {
-      "group": "Events",
-      "access_rights": [
-        "read"
-      ]
-    }
-  ]
+    "name": "events",
+    "created": 1720428190,
+    "expires": null,
+    "access": [
+        {
+            "group": "Events",
+            "access_rights": ["read"]
+        }
+    ]
 }
 ```
 
@@ -313,9 +379,9 @@ enum EventType {
 ```
 
 ```admonish note
-Keep in mind, that depending on proxies you might have in between, they might kill your connection 
-to the events stream after some timeout without messages. Your app should work around this and 
-either re-connect on connection loss, or you could fix it with a different proxy config or keep 
+Keep in mind, that depending on proxies you might have in between, they might kill your connection
+to the events stream after some timeout without messages. Your app should work around this and
+either re-connect on connection loss, or you could fix it with a different proxy config or keep
 alive messages.
 ```
 

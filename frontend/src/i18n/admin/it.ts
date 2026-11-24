@@ -395,6 +395,7 @@ export const I18nAdminIt: I18nAdmin = {
     providers: {
         config: {
             sections: {
+                roleGroupMapping: 'Ruoli e gruppi',
                 tokenAuth: 'Autenticazione del token',
                 adminMapping: 'Accesso amministratore',
                 mfaMapping: 'Autenticazione a più fattori',
@@ -410,6 +411,9 @@ export const I18nAdminIt: I18nAdmin = {
                 'Quando un utente esistente accede tramite il provider, Rauthy può collegare l’account al provider automaticamente.',
             autoLinkDesc2:
                 'Attenzione: se il provider accetta indirizzi email di altre persone senza verificarli, il collegamento automatico può consentire il furto dell’account. In quel caso lascia disattivata questa opzione.',
+            hideLogin: 'Nascondi il pulsante di login',
+            hideLoginDesc:
+                'Il pulsante di login di questo provider è nascosto nelle pagine di login e registrazione. Il login resta possibile tramite il parametro di query "idp_hint", con cui si può aggiungere un pulsante di login dedicato per questo provider.',
             clientName: 'Nome del client',
             custRootCa: 'CA radice personalizzata (PEM)',
             descAuthMethod:
@@ -429,7 +433,25 @@ export const I18nAdminIt: I18nAdmin = {
                 p4: '<code>*</code> è un carattere jolly nel percorso.',
                 p5: '<code>$.roles</code> individua <code>&#123;"roles": "value"&#125;</code>.',
                 p6: '<code>$.roles.*</code> può individuare un elemento in un oggetto o array, ad esempio <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>.',
+                p7: 'Un <code>value</code> corrisponde esattamente, a meno che non inizi con <code>^</code> (prefisso), <code>~</code> (regex) o <code>^^</code> (un <code>^</code> letterale)',
+                p8: "Le chiavi con caratteri fuori da <code>a-z A-Z 0-9 _ -</code> richiedono le virgolette: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Assegna i valori dell’ID token del provider upstream a ruoli e gruppi locali esistenti. Una regola aggiunge il suo target quando il claim in <code>path</code> corrisponde a <code>value</code>, e lo rimuove quando nessuna delle sue regole corrisponde. Vengono rimossi solo i target configurati qui, e un target configurato qui appartiene al provider: un ruolo o un gruppo assegnato manualmente a quell’utente da un admin viene rimosso anche al login quando nessuna regola corrisponde.',
+            addMapping: 'Aggiungi assegnazione',
+            removeMapping: 'Rimuovi assegnazione',
+            mappingTyp: 'Tipo',
+            typRole: 'Ruolo',
+            typGroup: 'Gruppo',
+            pathClaim: 'Percorso del claim',
+            valueClaim: 'Valore del claim',
+            targetClaim: 'Ruolo / Gruppo',
+            noTargetSelected: '— Nessun ruolo / gruppo —',
+            targetMissing: `L'obiettivo salvato {{ target }} non è più un ruolo o un gruppo. Selezionane uno esistente o rimuovi questa mappatura.`,
+            groupAdminTarget: '(admin di gruppo)',
+            maxMappings: 'Un auth provider supporta al massimo 32 assegnazioni di claim.',
+            regexCost:
+                'Un <code>value</code> che inizia con <code>~</code> è una regex valutata su ogni nodo del claim a ogni login: ancorala e rendila il più semplice possibile.',
             lookup: 'Cerca',
             pathAdminClaim: 'Percorso del claim di amministrazione',
             pathMfaClaim: 'Percorso del claim MFA',

@@ -152,7 +152,7 @@ pub async fn login_start<'a>(
     let cookie = ApiCookie::build(
         COOKIE_UPSTREAM_CALLBACK,
         &slf.callback_id,
-        UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
+        i64::from(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS),
     );
 
     slf.save().await?;

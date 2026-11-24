@@ -385,7 +385,7 @@ impl From<String> for EventType {
 
 impl From<i16> for EventType {
     fn from(value: i16) -> Self {
-        Self::from(value as i64)
+        Self::from(i64::from(value))
     }
 }
 
@@ -704,7 +704,7 @@ impl Event {
             level.clone(),
             EventType::InvalidLogins,
             Some(ip),
-            Some(failed_logins as i64),
+            Some(i64::from(failed_logins)),
             None,
         )
     }
@@ -969,7 +969,7 @@ impl Event {
                 .clone(),
             EventType::BackchannelLogoutFailed,
             None,
-            Some(retries as i64),
+            Some(i64::from(retries)),
             Some(format!("{client_id} / {action:?}")),
         )
     }
@@ -1146,7 +1146,7 @@ impl Event {
     #[inline(always)]
     pub async fn send(self) -> Result<(), ErrorResponse> {
         match RauthyConfig::get().tx_events.send_async(self).await {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 error!(?err, "Event::send()");
                 Err(ErrorResponse::new(
@@ -1244,7 +1244,7 @@ mod tests {
         ] {
             assert_eq!(typ.value(), value);
             assert_eq!(EventType::from(typ.value()), typ);
-            assert_eq!(EventType::from(typ.value() as i64), typ);
+            assert_eq!(EventType::from(i64::from(typ.value())), typ);
             assert_eq!(typ.as_str(), name);
             assert_eq!(EventType::from(typ.as_str().to_string()), typ);
             assert_eq!(typ.to_string(), text);

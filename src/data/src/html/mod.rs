@@ -96,7 +96,7 @@ impl HtmlCached {
     }
 
     #[inline]
-    fn cache_key(&self, lang: &Language, encoding: &str) -> String {
+    fn cache_key(&self, lang: Language, encoding: &str) -> String {
         format!("{}_{}_{encoding}", self.as_str(), lang.as_str())
     }
 
@@ -126,7 +126,7 @@ impl HtmlCached {
         debug!(language = ?lang);
         let cache_key = if with_cache {
             if let Some(bytes) = DB::hql()
-                .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
+                .get_bytes(Cache::Html, self.cache_key(lang, encoding))
                 .await?
             {
                 return Ok(HttpResponse::Ok()
@@ -135,7 +135,7 @@ impl HtmlCached {
                     .insert_header(HEADER_HTML)
                     .body(bytes));
             }
-            self.cache_key(&lang, encoding)
+            self.cache_key(lang, encoding)
         } else {
             String::default()
         };

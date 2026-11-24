@@ -165,7 +165,7 @@
             {showCopy}
             bind:reportValidity={reportValidityNew}
             required
-            maxLength={policy?.length_max || 256}
+            maxLength={policy?.length_max || 1024}
             width={inputWidth}
         />
         <InputPassword
@@ -175,7 +175,7 @@
             placeholder={t.account.passwordConfirm}
             bind:reportValidity={reportValidityConfirm}
             required
-            maxLength={policy?.length_max || 256}
+            maxLength={policy?.length_max || 1024}
             width={inputWidth}
         />
 

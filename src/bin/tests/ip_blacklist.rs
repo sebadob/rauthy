@@ -7,8 +7,15 @@ use std::net::IpAddr;
 use std::ops::Add;
 use std::time::Duration;
 
+// The same helper module the `integration` target compiles, included by path instead of
+// duplicated. `dead_code` is off here because this target only uses a part of it.
+#[allow(dead_code, unused_imports)]
+#[path = "integration/common.rs"]
 mod common;
 
+/// This test blacklists the IP the suite connects from for two seconds, which answers every
+/// request from that source with a 429 while it runs, so it lives in a test target of its own:
+/// Cargo runs test binaries one after another and cannot overlap that window with any other area.
 #[tokio::test]
 async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();

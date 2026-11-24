@@ -186,7 +186,7 @@ impl DangerAcceptInvalidCerts {
 ///
 /// # Panics
 /// This will panic if it is called more than once.
-pub async fn init() -> Result<(), RauthyError> {
+pub fn init() -> Result<(), RauthyError> {
     OidcProvider::init_client(None, RauthyHttpsOnly::Yes, DangerAcceptInvalidCerts::No)?;
     JwksCerts::spawn_update_task();
     Ok(())
@@ -198,7 +198,7 @@ pub async fn init() -> Result<(), RauthyError> {
 ///
 /// # Panics
 /// This will panic if it is called more than once.
-pub async fn init_with(
+pub fn init_with(
     root_certificate: Option<RootCertificate>,
     https_only: RauthyHttpsOnly,
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,

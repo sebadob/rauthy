@@ -195,7 +195,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
                 if user.password.is_some() {
                     user.password_expires = Some(
                         Utc::now()
-                            .add(chrono::Duration::days(valid_days as i64))
+                            .add(chrono::Duration::days(i64::from(valid_days)))
                             .timestamp(),
                     );
                 } else {
@@ -492,7 +492,7 @@ impl PasskeyEntity {
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user_with_uv(user_id: &str) -> String {
-        format!("{IDX_WEBAUTHN}_UV_{user_id}",)
+        format!("{IDX_WEBAUTHN}_UV_{user_id}")
     }
 
     /// Index for credentials for a user

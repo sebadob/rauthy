@@ -16,12 +16,11 @@
 //! Without them, every test skips itself and a plain `cargo test` run stays green. The
 //! code the dev-only reveal endpoint returns is the very code the backend has emailed, which is the
 //! only way a test can ever get one, because emails go nowhere during tests.
-mod common;
-
 use crate::common::{
     accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_backend_url,
     get_solved_pow, send_login, stale_consent,
 };
+use crate::{expect_status, expect_status_json};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{LoginConsent, LoginRequest};
 use rauthy_api_types::users::{
@@ -30,18 +29,23 @@ use rauthy_api_types::users::{
     UpdateUserRequest, UserConsentResponse, UserResponseSimple,
 };
 use rauthy_common::sha256;
-use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::{base64_url_encode, new_store_id};
 use reqwest::header::{AUTHORIZATION, COOKIE, HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Client, StatusCode};
 use ring::hmac;
 use std::error::Error;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 /// The password of the user these tests create. The seeded password policy has a minimum length,
 /// and this satisfies it with all of its likely `include_*` rules.
 const PASSWORD_ONLY: &str = "OtpSecret!Regression0123";
-const OTP_USER: &str = "otp-secret-user@localhost";
+/// The user of these tests carries a random suffix: it is created, updated and logged in by email,
+/// and two runs on one backend must not share the account.
+static SUFFIX: LazyLock<String> = LazyLock::new(|| new_store_id().to_lowercase());
+static OTP_USER: LazyLock<String> =
+    LazyLock::new(|| format!("otp-secret-user-{}@localhost", *SUFFIX));
 /// The name inside `BOOTSTRAP_API_KEY` - the very key the `mfa_assurance` suite documents.
 const FIXTURE_KEY_NAME: &str = "mfa-assurance";
 /// The defaults of `otp.length` and `otp.digest_len_default`, which the test config keeps at their
@@ -97,7 +101,7 @@ fn code_from_secret(secret: &[u8], step: i64) -> String {
         hash[offset + 2],
         hash[offset + 3],
     ]);
-    let digits = 10u32.pow(CODE_LEN as u32);
+    let digits = 10u32.pow(u32::from(CODE_LEN));
     format!("{:0width$}", binary % digits, width = CODE_LEN as usize)
 }
 
@@ -379,10 +383,10 @@ async fn test_otp_secret_predictable_code_is_rejected() -> Result<(), Box<dyn Er
     if !gated_suite_ready().await? {
         return Ok(());
     }
-    let user_id = create_test_user(OTP_USER).await?;
-    ensure_otp(&user_id, OTP_USER).await?;
+    let user_id = create_test_user(OTP_USER.as_str()).await?;
+    ensure_otp(&user_id, OTP_USER.as_str()).await?;
 
-    let (session, start_code) = start_ceremony(OTP_USER).await?;
+    let (session, start_code) = start_ceremony(OTP_USER.as_str()).await?;
     let step = otp_rows(&user_id)
         .await?
         .first()
@@ -408,10 +412,10 @@ async fn test_otp_secret_mailed_code_completes_login() -> Result<(), Box<dyn Err
     if !gated_suite_ready().await? {
         return Ok(());
     }
-    let user_id = create_test_user(OTP_USER).await?;
-    ensure_otp(&user_id, OTP_USER).await?;
+    let user_id = create_test_user(OTP_USER.as_str()).await?;
+    ensure_otp(&user_id, OTP_USER.as_str()).await?;
 
-    let (session, start_code) = start_ceremony(OTP_USER).await?;
+    let (session, start_code) = start_ceremony(OTP_USER.as_str()).await?;
     let code = dev_otp_code(&user_id).await?;
     let res = otp_finish(&session, &start_code, &code).await?;
     expect_status!(res, 202);
@@ -420,7 +424,8 @@ async fn test_otp_secret_mailed_code_completes_login() -> Result<(), Box<dyn Err
 }
 
 /// The user these consent tests create, apart from [`OTP_USER`] to not race its tests.
-const OTP_CONSENT_USER: &str = "otp-consent-user@localhost";
+static OTP_CONSENT_USER: LazyLock<String> =
+    LazyLock::new(|| format!("otp-consent-user-{}@localhost", *SUFFIX));
 
 /// The user's consents, as the fixture API key sees them.
 async fn consents(user_id: &str) -> Result<Vec<UserConsentResponse>, Box<dyn Error>> {
@@ -438,7 +443,7 @@ async fn login_mfa_cookie(
     session: &HeaderMap,
     consent: Option<LoginConsent>,
 ) -> Result<reqwest::Response, Box<dyn Error>> {
-    let req = login_request(OTP_CONSENT_USER, None, consent).await;
+    let req = login_request(OTP_CONSENT_USER.as_str(), None, consent).await;
     Ok(Client::new()
         .post(format!("{}/oidc/authorize", get_backend_url()))
         .headers(session.clone())
@@ -455,8 +460,8 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
     if !gated_suite_ready().await? {
         return Ok(());
     }
-    let user_id = create_test_user(OTP_CONSENT_USER).await?;
-    ensure_otp(&user_id, OTP_CONSENT_USER).await?;
+    let user_id = create_test_user(OTP_CONSENT_USER.as_str()).await?;
+    ensure_otp(&user_id, OTP_CONSENT_USER.as_str()).await?;
     let res = Client::new()
         .delete(format!(
             "{}/users/{user_id}/consents?client_id=rauthy",
@@ -470,7 +475,7 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
 
     // --- the password and a consent: no grant before the OTP
     let session = init_session().await?;
-    let res = login(OTP_CONSENT_USER, PASSWORD_ONLY, &session).await;
+    let res = login(OTP_CONSENT_USER.as_str(), PASSWORD_ONLY, &session).await;
     let mfa_cookie = res
         .headers()
         .get_all(SET_COOKIE)

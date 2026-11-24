@@ -115,7 +115,9 @@
     // `webauthn.passkey_reg_type`: without Resident Keys, the Passkey button can never find one
     let passkeyRegType = $state('default resident_key');
     let isPasskeyDiscoverable = $derived(passkeyRegType.split(' ').includes('resident_key'));
-    let hasLoginAlternatives = $derived(isPasskeyDiscoverable || providers.length > 0);
+    // `hide_login` providers are never rendered, but stay in `providers` for an `idp_hint` login
+    let visibleProviders = $derived(providers.filter(p => !p.hide_login));
+    let hasLoginAlternatives = $derived(isPasskeyDiscoverable || visibleProviders.length > 0);
     // the error of a failed Passkey button login, to show a hint with it
     let passkeyDiscoverErr = $state('');
 
@@ -835,7 +837,7 @@
                         autocomplete="current-password"
                         label={t.common.password}
                         placeholder={t.common.password}
-                        maxLength={256}
+                        maxLength={1024}
                         disabled={tooManyRequests || clientMfaForce || isLoading}
                         width={inputWidth}
                         required
@@ -974,7 +976,7 @@
                     </div>
                 {/if}
 
-                {#each providers as provider (provider.id)}
+                {#each visibleProviders as provider (provider.id)}
                     <ButtonAuthProvider
                         ariaLabel={`Login: ${provider.name}`}
                         {provider}

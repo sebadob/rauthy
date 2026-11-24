@@ -2,6 +2,7 @@ use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
 use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use hiqlite::macros::FromRow;
+use rauthy_common::constants::PASSWORD_MAX_LEN;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_ID,
     RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_RESOURCE,
@@ -130,8 +131,8 @@ pub struct PasswordResetRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: String,
-    /// Validation: Applies password policy - max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: String,
     /// Validation: `[a-zA-Z0-9]{48}`
     #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
@@ -175,8 +176,8 @@ pub struct UpdateUserRequest {
     #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
-    /// Validation: Applies password policy - max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_roles"))]
@@ -208,11 +209,12 @@ pub struct UpdateUserSelfRequest {
     #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password_current: Option<String>,
     pub mfa_code: Option<String>,
-    /// Validation: Applies password policy
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password_new: Option<String>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
@@ -356,7 +358,8 @@ pub struct UserRevokeParams {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct MfaModTokenRequest {
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     #[validate(length(min = 48, max = 48))]
     pub mfa_code: Option<String>,
@@ -951,5 +954,25 @@ mod tests {
                 .validate()
                 .is_err()
         );
+    }
+
+    #[test]
+    fn password_max_length_is_the_hard_request_limit() {
+        let upd = |len: usize| UpdateUserSelfRequest {
+            email: None,
+            given_name: None,
+            family_name: None,
+            language: None,
+            password_current: Some("a".repeat(len)),
+            mfa_code: None,
+            password_new: Some("a".repeat(len)),
+            user_values: None,
+        };
+        assert!(
+            upd(256).validate().is_ok(),
+            "passwords from imports with more than the old 256 chars limit are accepted"
+        );
+        assert!(upd(PASSWORD_MAX_LEN as usize).validate().is_ok());
+        assert!(upd(PASSWORD_MAX_LEN as usize + 1).validate().is_err());
     }
 }

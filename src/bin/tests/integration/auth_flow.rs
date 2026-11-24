@@ -4,6 +4,7 @@ use crate::common::{
     decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
     init_client_bcl_uri, refresh, send_login, session_headers,
 };
+use crate::{expect_status, expect_status_json};
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
 use ed25519_compact::Noise;
@@ -30,13 +31,13 @@ use reqwest::header::AUTHORIZATION;
 use ring::digest;
 use std::error::Error;
 use std::fmt::Write;
+use std::net::TcpStream;
 use std::ops::Sub;
+use std::sync::OnceLock;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time;
-
-mod common;
 
 /// a `state` that would inject its own `iss` if the server did not encode it
 const INJECTING_STATE: &str = "orig&iss=https://attacker.example.com/";
@@ -68,7 +69,7 @@ async fn test_certs() -> Result<(), Box<dyn Error>> {
     assert_eq!(certs.keys.len(), 4);
 
     // for _ in 1..1000 {
-    //     aw!(reqwest::get(&url)).unwrap();
+    //     reqwest::get(&url).await.unwrap();
     // }
     // rotate JWKs
     let url_rotate = format!("{}/oidc/rotate_jwk", backend_url);
@@ -690,14 +691,23 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     println!("{:?}", jwk);
 
     // check signature and get the payload
-    let verifier = josekit::jws::RS512.verifier_from_jwk(&jwk).unwrap();
-    let (payload, _) = josekit::jwt::decode_with_verifier(&id_token, &verifier)?;
+    let alg = header
+        .claim("alg")
+        .map(|v| v.to_string().replace('\"', ""))
+        .expect("'alg' is not set in id token header");
+    let claims = SignedIdToken {
+        token: &id_token,
+        alg: &alg,
+        jwk: &jwk,
+    }
+    .verify()?;
 
     // finally, check the 'nonce'
-    let nonce_claim = payload
-        .claim("nonce")
-        .map(|v| v.to_string().replace('\"', ""))
-        .expect("'nonce' is not set in id token");
+    let nonce_claim = claims
+        .get("nonce")
+        .and_then(|v| v.as_str())
+        .expect("'nonce' is not set in id token")
+        .to_string();
     assert_eq!(nonce_claim, nonce);
 
     // ############################################################################
@@ -898,8 +908,11 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// This test is a bit messy currently with some code reception and so one - WIP
-#[tokio::test]
+/// Fires the failing and the successful logins of the same session at the same time and prints how
+/// long the backend takes for all of them. It ends with a failing assertion on purpose: it is a
+/// measurement, not a pass/fail test, and it is heavy on a CI runner, so it stays `#[ignore]` and
+/// runs manually with `cargo test -p rauthy --test integration -- --ignored test_concurrent_logins`.
+#[tokio::test(flavor = "multi_thread")]
 #[ignore]
 async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
@@ -926,7 +939,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
     let headers = cookie_csrf_headers_from_res(res).await?;
 
     // Step 2: POST /authorize with CSRF token cookie
-    let mut req_login = LoginRequest {
+    let req_login = LoginRequest {
         email: Some(USERNAME.to_string()),
         password: Some("IAmSoWrong1337".to_string()),
         pow: get_solved_pow().await,
@@ -943,46 +956,30 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         consent: None,
     };
 
+    // One future per login: on a multi-thread runtime all of them are in flight at the same time,
+    // the first `fail_count` with the wrong, the rest with the correct password.
+    let mut logins = Vec::with_capacity(fail_count + success_count);
+    for i in 0..fail_count + success_count {
+        let url = url_auth.clone();
+        let headers = headers.clone();
+        let mut req = req_login.clone();
+        if i >= fail_count {
+            req.password = Some(PASSWORD.to_string());
+        }
+        logins.push(async move {
+            reqwest::Client::new()
+                .post(&url)
+                .headers(headers)
+                .json(&req)
+                .send()
+                .await
+                .expect("the login reaches the backend");
+        });
+    }
+
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let mut handles: Vec<JoinHandle<()>> = vec![];
-
-    for _ in 0..fail_count {
-        let url = url_auth.clone();
-        let h = headers.clone();
-        let req = req_login.clone();
-        let handle = std::thread::spawn(move || {
-            aw!(reqwest::Client::new()
-                .post(&url)
-                .headers(h)
-                .json(&req)
-                .send())
-            .unwrap();
-        });
-        handles.push(handle);
-        // std::thread::sleep(Duration::from_millis(100));
-    }
-
-    req_login.password = Some(PASSWORD.to_string());
-    for _ in 0..success_count {
-        let url = url_auth.clone();
-        let h = headers.clone();
-        let req = req_login.clone();
-        let handle = std::thread::spawn(move || {
-            aw!(reqwest::Client::new()
-                .post(&url)
-                .headers(h)
-                .json(&req)
-                .send())
-            .unwrap();
-        });
-        handles.push(handle);
-        // std::thread::sleep(Duration::from_millis(100));
-    }
-
-    assert_eq!(handles.len(), fail_count + success_count);
-    for h in handles {
-        h.join().unwrap();
-    }
+    assert_eq!(logins.len(), fail_count + success_count);
+    futures::future::join_all(logins).await;
     let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let total = end.sub(start).as_millis();
     println!("Total time taken: {}", total);
@@ -1254,11 +1251,10 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
 
     // host our own ephemeral client
     let handle = serve_ephemeral_client();
-    // make sure the http server starts and keeps running
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    wait_for_mock();
     assert!(!handle.is_finished());
     // our ephemeral client's id
-    let client_id = "http://127.0.0.1:10080/client";
+    let client_id = mock_client_id();
 
     // Step 1: GET /authorize for the CSRF token and simulate UI login
     let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
@@ -1302,7 +1298,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         email: Some(USERNAME.to_string()),
         password: Some("wrong password".to_string()),
         pow: get_solved_pow().await,
-        client_id: client_id.to_string(),
+        client_id: client_id.clone(),
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
         state: None,
@@ -1341,7 +1337,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         grant_type: GrantType::AuthorizationCode,
         code: Some(code.clone()),
         redirect_uri: Some(redirect_uri.to_string()),
-        client_id: Some(client_id.to_string()),
+        client_id: Some(client_id.clone()),
         code_verifier: Some(challenge_plain.to_string()),
         ..Default::default()
     };
@@ -1360,7 +1356,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     time::sleep(Duration::from_secs(1)).await;
     let req = TokenRequest {
         grant_type: GrantType::RefreshToken,
-        client_id: Some(client_id.to_string()),
+        client_id: Some(client_id.clone()),
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
         ..Default::default()
     };
@@ -1374,7 +1370,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
 
     // the silent re-auth with the now valid session must request a `resource` as well
     let refresh_login = |resource: Option<&str>| LoginRefreshRequest {
-        client_id: client_id.to_string(),
+        client_id: client_id.clone(),
         redirect_uri: redirect_uri.to_string(),
         scopes: None,
         state: None,
@@ -1408,20 +1404,26 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn serve_ephemeral_client() -> JoinHandle<()> {
-    thread::spawn(move || {
-        let actix_system = actix_web::rt::System::new();
-        actix_system.block_on(async {
-            HttpServer::new(|| {
-                App::new().route(
-                    "/client",
-                    web::get().to(|| async {
-                        // Serves the example client response from the Solid OIDC primer
-                        // https://solidproject.org/TR/oidc-primer
-                        HttpResponse::Ok().content_type(APPLICATION_JSON).body(r#"{
+/// The port the ephemeral client mock bound to, set by [`serve_ephemeral_client`].
+static MOCK_PORT: OnceLock<u16> = OnceLock::new();
+
+/// The ephemeral client's `client_id`: the URL its mock serves the client metadata on.
+fn mock_client_id() -> String {
+    let port = *MOCK_PORT
+        .get()
+        .expect("the ephemeral client mock to be running");
+    format!("http://127.0.0.1:{port}/client")
+}
+
+/// The mock waits out its bind before the first request, so the metadata names its own address.
+async fn mock_client_metadata() -> HttpResponse {
+    // The example client response from the Solid OIDC primer
+    // https://solidproject.org/TR/oidc-primer
+    let body = format!(
+        r#"{{
                               "@context": [ "https://www.w3.org/ns/solid/oidc-context.jsonld" ],
 
-                              "client_id": "http://127.0.0.1:10080/client",
+                              "client_id": "{client_id}",
                               "client_name": "DecentPhotos",
                               "redirect_uris": [ "https://decentphotos.example/callback", "http://localhost:3000/oidc/callback" ],
                               "post_logout_redirect_uris": [ "https://decentphotos.example/logout" ],
@@ -1433,17 +1435,97 @@ fn serve_ephemeral_client() -> JoinHandle<()> {
                               "response_types": [ "code" ],
                               "default_max_age": 60,
                               "require_auth_time": true
-                            }"#,
-                        )
-                    }),
-                )
+                            }}"#,
+        client_id = mock_client_id()
+    );
+    HttpResponse::Ok().content_type(APPLICATION_JSON).body(body)
+}
+
+fn serve_ephemeral_client() -> JoinHandle<()> {
+    thread::spawn(move || {
+        let actix_system = actix_web::rt::System::new();
+        actix_system.block_on(async {
+            // Port 0: the OS picks a free port, so the mock never collides with anything else, and
+            // two tests that need one each get their own client id.
+            let server = HttpServer::new(|| {
+                App::new().route("/client", web::get().to(mock_client_metadata))
             })
-                .bind(("127.0.0.1", 10080))
-                .expect("port 10080 to be free for testing")
+            .bind(("127.0.0.1", 0))
+            .expect("an ephemeral port for the ephemeral client mock");
+            let port = server
+                .addrs()
+                .first()
+                .expect("the bound ephemeral client mock address")
+                .port();
+            MOCK_PORT
+                .set(port)
+                .expect("the ephemeral client mock port to be set only once");
+            server
                 .run()
                 .await
-                .expect("ephemeral client test http server to start"); });
+                .expect("ephemeral client test http server to start");
+        });
     })
+}
+
+/// Blocks until the mock from [`serve_ephemeral_client`] answers on the port it bound to.
+fn wait_for_mock() {
+    for _ in 0..50 {
+        if let Some(port) = MOCK_PORT.get()
+            && TcpStream::connect(("127.0.0.1", *port)).is_ok()
+        {
+            return;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+    panic!("the ephemeral client mock did not start");
+}
+
+/// The id token of a login together with the key the backend published for its `kid`.
+#[derive(Debug)]
+struct SignedIdToken<'a> {
+    token: &'a str,
+    /// The `alg` the token's own header names.
+    alg: &'a str,
+    jwk: &'a jwk::Jwk,
+}
+
+impl SignedIdToken<'_> {
+    /// Verifies the signature with the algorithm the token names, signed by the key type the `kid`
+    /// names, and returns the token's claims: the backend rotates its key set, and a rotated set is
+    /// Ed25519, so the algorithm a login was signed with is never a constant a test may assume.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the token is not a three-part JWS, or when the JWK has a `kty` no backend
+    /// publishes.
+    fn verify(&self) -> Result<serde_json::Value, Box<dyn Error>> {
+        use josekit::jws::JwsVerifier;
+
+        let parts: Vec<&str> = self.token.split('.').collect();
+        let [header, payload, sig] = parts.as_slice() else {
+            panic!("an id token is a three part JWS: {self:?}");
+        };
+        let signature = base64_url_no_pad_decode(sig)
+            .map_err(|e| format!("the id token signature is not base64url: {e}"))?;
+
+        let verifier: Box<dyn JwsVerifier> = match (self.jwk.key_type(), self.alg) {
+            ("RSA", "RS256") => Box::new(josekit::jws::RS256.verifier_from_jwk(self.jwk)?),
+            ("RSA", "RS384") => Box::new(josekit::jws::RS384.verifier_from_jwk(self.jwk)?),
+            ("RSA", "RS512") => Box::new(josekit::jws::RS512.verifier_from_jwk(self.jwk)?),
+            ("OKP", "EdDSA" | "Ed25519") => {
+                Box::new(josekit::jws::EdDSA.verifier_from_jwk(self.jwk)?)
+            }
+            (kty, alg) => return Err(format!("published jwk {kty} cannot sign {alg}").into()),
+        };
+        verifier.verify(format!("{header}.{payload}").as_bytes(), &signature)?;
+
+        let claims = base64_url_no_pad_decode(payload)
+            .map_err(|e| format!("the id token payload is not base64url: {e}"))?;
+        let claims = String::from_utf8(claims)
+            .map_err(|e| format!("the id token payload is not utf8: {e}"))?;
+        Ok(serde_json::from_str(&claims)?)
+    }
 }
 
 #[tokio::test]

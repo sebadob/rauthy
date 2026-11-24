@@ -22,6 +22,7 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, btree_map};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -42,6 +43,10 @@ const FROM_SECRETS: &str = "$SECRETS";
 /// which would break the login PoW with a 500 at runtime instead of failing at startup.
 const POW_DIFFICULTY_MIN: u8 = 10;
 const POW_DIFFICULTY_MAX: u8 = 99;
+
+/// How long rolling log files are kept when `logging.log_file` is set. Changing this changes how
+/// much disk space the default log file cleanup will occupy.
+const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -389,6 +394,7 @@ impl Default for Vars {
                 sources: BTreeMap::default(),
             },
             cred_stuff_detect: VarsCredStuff {
+                enable: true,
                 blacklist_duration: Duration::from_secs(24 * 3600),
                 blacklist_threshold: 15,
                 scan_window: Duration::from_secs(3 * 3600),
@@ -638,6 +644,10 @@ impl Default for Vars {
                 level: "info".into(),
                 level_database: "info".into(),
                 level_access: "modifying".into(),
+                log_file: None,
+                log_file_cleanup: "0 0 3 * * * *".into(),
+                log_file_keep_for: DEFAULT_LOG_FILE_KEEP_FOR,
+                log_file_archive_after: None,
                 log_fmt: "text".into(),
             },
             matrix: VarsMatrix {
@@ -705,6 +715,7 @@ impl Default for Vars {
                 swagger_ui_public: false,
                 see_keep_alive: Duration::from_secs(30),
                 ssp_threshold: 1000,
+                instance_label: None,
             },
             sponsor: VarsSponsor {
                 email_reminder_disable: false
@@ -2129,6 +2140,14 @@ impl Vars {
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "cred_stuff_detection");
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "cred_stuff_detection",
+            "enable",
+            "CRED_STUFF_ENABLE",
+        ) {
+            self.cred_stuff_detect.enable = v;
+        }
         if let Some(v) = t_duration(
             &mut table,
             "cred_stuff_detection",
@@ -3570,6 +3589,33 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "logging", "level_access", "LOG_LEVEL_ACCESS") {
             self.logging.level_access = v.into();
         }
+        if let Some(v) = t_str(&mut table, "logging", "log_file", "LOG_FILE") {
+            self.logging.log_file = Some(v.into());
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "logging",
+            "log_file_cleanup",
+            "LOG_FILE_CLEANUP",
+        ) {
+            self.logging.log_file_cleanup = v.into();
+        }
+        if let Some(v) = t_duration(
+            &mut table,
+            "logging",
+            "log_file_keep_for",
+            "LOG_FILE_KEEP_FOR",
+        ) {
+            self.logging.log_file_keep_for = v;
+        }
+        if let Some(v) = t_duration(
+            &mut table,
+            "logging",
+            "log_file_archive_after",
+            "LOG_FILE_ARCHIVE_AFTER",
+        ) {
+            self.logging.log_file_archive_after = Some(v);
+        }
         if let Some(v) = t_str(&mut table, "logging", "log_fmt", "LOG_FMT") {
             self.logging.log_fmt = v.into();
         }
@@ -3841,6 +3887,9 @@ impl Vars {
         }
         if let Some(v) = t_u16(&mut table, "server", "ssp_threshold", "SSP_THRESHOLD") {
             self.server.ssp_threshold = v;
+        }
+        if let Some(v) = t_str(&mut table, "server", "instance_label", "INSTANCE_LABEL") {
+            self.server.instance_label = Some(v);
         }
 
         check_table_empty(table, "server");
@@ -4610,6 +4659,7 @@ impl Vars {
             "lifetimes.jwk_autorotate_cron",
             &self.lifetimes.jwk_autorotate_cron,
         );
+        validate_cron("logging.log_file_cleanup", &self.logging.log_file_cleanup);
         self.validate_ephemeral_clients();
         self.validate_ldap();
         self.validate_reg_acc_init_immediate();
@@ -4958,6 +5008,9 @@ impl VarsConsentSource {
 
 #[derive(Debug)]
 pub struct VarsCredStuff {
+    /// The detector only ever does something with this enabled: it counts login attempts with a
+    /// password per IP and blacklists an IP that exceeds `blacklist_threshold` of them.
+    pub enable: bool,
     pub blacklist_duration: Duration,
     pub blacklist_threshold: u32,
     pub scan_window: Duration,
@@ -5312,6 +5365,10 @@ pub struct VarsLogging {
     pub level: Cow<'static, str>,
     pub level_database: Cow<'static, str>,
     pub level_access: Cow<'static, str>,
+    pub log_file: Option<PathBuf>,
+    pub log_file_cleanup: Cow<'static, str>,
+    pub log_file_keep_for: Duration,
+    pub log_file_archive_after: Option<Duration>,
     pub log_fmt: Cow<'static, str>,
 }
 
@@ -5406,6 +5463,7 @@ pub struct VarsServer {
     pub swagger_ui_public: bool,
     pub see_keep_alive: Duration,
     pub ssp_threshold: u16,
+    pub instance_label: Option<String>,
 }
 
 #[derive(Debug)]
@@ -5751,7 +5809,7 @@ fn parse_duration(input: &str) -> Option<Duration> {
         .ok()
         // i64 casting here is necessary to guarantee safety when we downcast later on
         // for cache TTL and so on.
-        .map(|v| Duration::from_secs((v as i64).saturating_mul(mul) as u64))
+        .map(|v| Duration::from_secs(i64::from(v).saturating_mul(mul) as u64))
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
@@ -5853,7 +5911,7 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 
 fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u32> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u32::MAX as i64 {
+        if v < 0 || v > i64::from(u32::MAX) {
             panic!("{}", err_t(key, parent, "u32"));
         }
         Some(v as u32)
@@ -5863,7 +5921,7 @@ fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u16> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u16::MAX as i64 {
+        if v < 0 || v > i64::from(u16::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u16)
@@ -5873,7 +5931,7 @@ fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u8> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u8::MAX as i64 {
+        if v < 0 || v > i64::from(u8::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u8)

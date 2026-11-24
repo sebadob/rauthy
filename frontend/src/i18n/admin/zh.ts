@@ -435,6 +435,9 @@ export let I18nAdminZh: I18nAdmin = {
             autoLinkDesc2: `注意：如果提供商不对用户完全验证邮箱地址，
                 从而使用户可能添加外来地址，则此选项非常危险并可能导致帐户接管！
                 在这种情况下绝不能使用！`,
+            hideLogin: '隐藏登录按钮',
+            hideLoginDesc: `此提供商的登录按钮在登录页和注册页上被隐藏。仍然可以通过查询参数 "idp_hint"
+                进行登录，并可为它添加专用的登录按钮。`,
             clientName: '客户端名称',
             custRootCa: '自定义根CA PEM',
             descAuthMethod: `在<code>/token</code>端点使用的身份验证方法。<br>
@@ -457,7 +460,26 @@ export let I18nAdminZh: I18nAdmin = {
                 p5: '<code>$.roles</code>将定位<code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code>可以定位对象或数组中的值，如<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: '<code>value</code> 为精确匹配，除非以 <code>^</code>（前缀）、<code>~</code>（正则）或 <code>^^</code>（字面 <code>^</code>）开头',
+                p8: "包含 <code>a-z A-Z 0-9 _ -</code> 之外字符的键需要引号：<code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                '将上游提供方 ID 令牌中的值映射到已存在的本地角色与组。当 <code>path</code> 处的声明匹配 <code>value</code> 时，规则添加其目标；当其所有规则都不匹配时移除目标。只有此处配置的目标会被移除，而此处配置的目标属于该提供方：管理员手动授予该用户的角色与组，在没有任何规则匹配的登录中同样会被移除。',
+            addMapping: '添加映射',
+            removeMapping: '移除映射',
+            mappingTyp: '类型',
+            typRole: '角色',
+            typGroup: '组',
+            pathClaim: '声明路径',
+            valueClaim: '声明值',
+            targetClaim: '角色 / 组',
+            noTargetSelected: '— 无角色 / 组 —',
+            targetMissing:
+                '保存的目标 {{ target }} 不再是角色或组。请选择一个现有的目标，或移除此映射。',
+            groupAdminTarget: '(组管理员)',
+            maxMappings: '一个认证提供方最多支持 32 条声明映射。',
+            regexCost:
+                '以 <code>~</code> 开头的 <code>value</code> 是正则表达式，会在每次登录时对每个声明节点求值：请加上锚点并尽量保持简单。',
             lookup: '查找',
             pathAdminClaim: '管理员声明路径',
             pathMfaClaim: 'MFA声明路径',

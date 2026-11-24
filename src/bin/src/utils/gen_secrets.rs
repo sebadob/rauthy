@@ -2,7 +2,7 @@ use crate::utils::StdError;
 use cryptr::utils::secure_random_alnum;
 use std::fmt::Write;
 
-pub async fn generate() -> Result<(), StdError> {
+pub fn generate() -> Result<(), StdError> {
     let mut out = String::with_capacity(128);
 
     writeln!(out, "\n[cluster]")?;

@@ -318,7 +318,7 @@ impl OneTimePassword {
         self.save().await
     }
 
-    pub async fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
+    pub fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
         match self.kind {
             OtpKind::Email => {
                 if Utc::now().timestamp() - self.last_used
@@ -719,8 +719,8 @@ pub async fn auth_finish(
     };
 
     let otp = OneTimePassword::find(&auth_data.otp_id).await?;
-    match otp.validate(&payload.otp_code).await {
-        Ok(_) => {
+    match otp.validate(&payload.otp_code) {
+        Ok(()) => {
             let mut user = User::find(user_id.clone()).await?;
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;

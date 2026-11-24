@@ -2,20 +2,17 @@ use crate::common::{
     CLIENT_ID, accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_auth_headers,
     get_backend_url, get_solved_pow, stale_consent,
 };
+use crate::expect_status;
 use rauthy_api_types::auth_providers::{ProviderCallbackRequest, ProviderLoginRequest};
 use rauthy_api_types::clients::{NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, LoginConsent};
 use rauthy_common::sha256;
-use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::{base64_url_encode, new_store_id};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{self, HeaderValue, LOCATION};
 use std::error::Error;
 
-mod common;
-
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
-/// A client that allows [`RESOURCE`], which `init_client` does not
-const RES_CLIENT_ID: &str = "provider_resource";
 const RESOURCE: &str = "https://consent-test.example.com";
 
 /// The upstream callback is single-use: once a callback request has been made, any further one
@@ -29,14 +26,18 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
     // The endpoints are never reached: the token request only happens after a fully validated
     // callback, and nothing listens on this port.
     let upstream = "http://localhost:1";
+    // a unique provider per run: its issuer is what the backend enforces as unique, so no other
+    // test, and no concurrent run of this one, can collide with it
+    let suffix = new_store_id();
+    let issuer = format!("{upstream}/issuer-{suffix}");
     let res = http
         .post(format!("{backend_url}/providers/create"))
         .headers(auth_headers.clone())
         .json(&serde_json::json!({
-            "name": "Callback Test",
+            "name": format!("Callback Test {suffix}"),
             "typ": "custom",
             "enabled": true,
-            "issuer": format!("{upstream}/issuer"),
+            "issuer": issuer,
             "authorization_endpoint": format!("{upstream}/authorize"),
             "token_endpoint": format!("{upstream}/token"),
             "userinfo_endpoint": format!("{upstream}/userinfo"),
@@ -45,6 +46,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
             "client_secret_post": false,
             "auto_onboarding": false,
             "auto_link": false,
+            "hide_login": false,
             "client_id": "rauthy",
             "scope": "openid",
         }))
@@ -134,17 +136,14 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
     );
 
     // with an allowed `resource`, the consent is asked for the requested scopes as well
-    let url_res_client = format!("{backend_url}/clients/{RES_CLIENT_ID}");
-    // left-over from a prior run
-    http.delete(&url_res_client)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
+    // a client of its own that allows [`RESOURCE`], which `init_client` does not
+    let res_client_id = format!("provider_resource_{}", new_store_id());
+    let url_res_client = format!("{backend_url}/clients/{res_client_id}");
     let res = http
         .post(format!("{backend_url}/clients"))
         .headers(auth_headers.clone())
         .json(&NewClientRequest {
-            id: RES_CLIENT_ID.to_string(),
+            id: res_client_id.clone(),
             secret: None,
             name: Some("Provider Resource".to_string()),
             confidential: false,
@@ -191,7 +190,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
     expect_status!(res, 200);
     let login_res = |consent| {
         provider_login_to(
-            RES_CLIENT_ID,
+            &res_client_id,
             redirect_uri.clone(),
             scopes.clone(),
             Some(RESOURCE),
@@ -205,7 +204,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
     assert_eq!(content.content.name.as_deref(), Some("Consent Test API"));
     // and checked against it: the consent to the same login without the resource is stale
     let login_no_res = provider_login_to(
-        RES_CLIENT_ID,
+        &res_client_id,
         redirect_uri.clone(),
         scopes.clone(),
         None,
@@ -296,7 +295,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
 
     // linking an account issues no auth code: neither the consent nor the client's redirect URI
     // are checked
-    let (link_headers, _) = common::session_headers().await;
+    let (link_headers, _) = crate::common::session_headers().await;
     let link = async |redirect_uri: String| {
         http.post(format!("{backend_url}/providers/{provider_id}/link"))
             .headers(link_headers.clone())

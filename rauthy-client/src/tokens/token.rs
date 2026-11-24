@@ -100,7 +100,7 @@ impl ValidationClaims<'_> {
         allowed_clock_skew_seconds: Option<u16>,
     ) -> Result<(), RauthyError> {
         let now = Utc::now().timestamp();
-        let skew = allowed_clock_skew_seconds.unwrap_or(0) as i64;
+        let skew = i64::from(allowed_clock_skew_seconds.unwrap_or(0));
 
         if self.iat - skew > now {
             return Err(RauthyError::InvalidJwt("Token was issued in the future"));

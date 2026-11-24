@@ -46,7 +46,7 @@ pub enum OidcSetRedirectStatus {
 }
 
 impl OidcCodeRequestParams {
-    pub async fn try_new(
+    pub fn try_new(
         code: String,
         code_verifier: String,
         redirect_uri: String,
@@ -76,7 +76,7 @@ impl OidcCodeRequestParams {
 ///   In this case, the values in the tuple are header values you should return to the client:
 ///   (LocationHeaderString, EncryptedStateCookieValue)
 #[cfg(not(any(feature = "axum", feature = "actix-web")))]
-pub async fn validate_principal_generic(
+pub fn validate_principal_generic(
     principal: Option<crate::principal::PrincipalOidc>,
     enc_key: &[u8],
     insecure: OidcCookieInsecure,
@@ -131,8 +131,7 @@ pub async fn oidc_callback(
         params.code.clone(),
         cookie_state.pkce_verifier,
         redirect_uri,
-    )
-    .await?;
+    )?;
 
     let res = OidcProvider::client()
         .post(&token_uri)

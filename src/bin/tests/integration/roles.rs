@@ -1,12 +1,12 @@
 use crate::common::{get_auth_headers, get_backend_url};
+use crate::{expect_status, expect_status_json};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::roles::RoleRequest;
 use rauthy_api_types::users::{NewUserRequest, UserResponse, UserResponseSimple};
+use rauthy_common::utils::new_store_id;
 use rauthy_data::entity::roles::Role;
 use std::error::Error;
-
-mod common;
 
 #[tokio::test]
 async fn test_roles() -> Result<(), Box<dyn Error>> {
@@ -20,11 +20,21 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let roles = expect_status_json!(res, 200, Vec<Role>);
-    let len_orig = roles.len();
+    // the roles that existed before this test, by id: concurrent tests create and delete roles of
+    // their own, so the list is verified by membership, never by its length
+    let roles_orig = roles.iter().map(|r| r.id.clone()).collect::<Vec<_>>();
+
+    // every name carries a unique suffix, and the rename target and the substring role extend it,
+    // so the substring check keeps its meaning and no two runs ever use the same names
+    let suffix = new_store_id();
+    let name = format!("role{suffix}");
+    let name_upd = format!("{name}456");
+    let name_sub = format!("{name}45");
+    let email = format!("role-rename-{suffix}@localhost.de");
 
     // add a role
     let new_role = RoleRequest {
-        role: "role123".to_string(),
+        role: name.clone(),
         meta: None,
     };
     let res = reqwest::Client::new()
@@ -34,7 +44,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let role = expect_status_json!(res, 200, Role);
-    assert_eq!(role.name, "role123");
+    assert_eq!(role.name, name);
 
     // assign the role to a user, so the rename below must rewrite the membership
     let url_users = format!("{}/users", backend_url);
@@ -44,10 +54,10 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .json(&NewUserRequest {
             given_name: Some("Role".to_string()),
             family_name: Some("Rename".to_string()),
-            email: "role-rename@localhost.de".to_string(),
+            email: email.clone(),
             preferred_username: None,
             language: Language::En,
-            roles: vec!["role123".to_string()],
+            roles: vec![name.clone()],
             groups: None,
             user_expires: None,
             tz: None,
@@ -55,7 +65,11 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let user = expect_status_json!(res, 200, UserResponse);
-    assert_eq!(user.roles, vec!["role123".to_string()]);
+    assert_eq!(
+        user.roles,
+        vec![name.clone()],
+        "the new user has the new role"
+    );
 
     // the role's member list must contain exactly that user
     let url_members = format!("{}/roles/{}/users", backend_url, role.id);
@@ -72,7 +86,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
 
     // modify the role
     let upd_role = RoleRequest {
-        role: "role456".to_string(),
+        role: name_upd.clone(),
         meta: None,
     };
     let url_name = format!("{}/{}", url, role.id);
@@ -93,7 +107,11 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let user = expect_status_json!(res, 200, UserResponse);
-    assert_eq!(user.roles, vec!["role456".to_string()]);
+    assert_eq!(
+        user.roles,
+        vec![name_upd.clone()],
+        "the renamed role stays assigned to the user"
+    );
 
     // the member list follows the renamed role
     let res = reqwest::Client::new()
@@ -113,7 +131,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .post(&url)
         .headers(auth_headers.clone())
         .json(&RoleRequest {
-            role: "role4".to_string(),
+            role: name_sub.clone(),
             meta: None,
         })
         .send()
@@ -182,7 +200,17 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
     let res = expect_status!(res, 200);
 
     let roles = res.json::<Vec<Role>>().await?;
-    assert_eq!(roles.len(), len_orig);
+    let ids = roles.iter().map(|r| r.id.as_str()).collect::<Vec<_>>();
+    for id in &roles_orig {
+        assert!(
+            ids.contains(&id.as_str()),
+            "the pre-existing role {id} disappeared"
+        );
+    }
+    assert!(
+        !ids.contains(&role.id.as_str()) && !ids.contains(&sub_role.id.as_str()),
+        "a role this test created was not deleted"
+    );
 
     Ok(())
 }

@@ -34,7 +34,7 @@ impl From<tokio_postgres::Row> for EmailJob {
         Self {
             id: row.get("id"),
             scheduled: row.get("scheduled"),
-            status: EmailJobStatus::from(row.get::<_, i16>("status") as i64),
+            status: EmailJobStatus::from(i64::from(row.get::<_, i16>("status"))),
             updated: row.get("updated"),
             last_user_ts: row.get("last_user_ts"),
             filter: row.get::<_, String>("filter").parse().unwrap(),
@@ -441,7 +441,7 @@ impl EmailJob {
                     )
                     .await
                     {
-                        Ok(_) => {
+                        Ok(()) => {
                             trace!(
                                 "E-Mail to {} sent to Mailer-Task (internally) successfully",
                                 user.email

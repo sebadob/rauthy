@@ -256,7 +256,7 @@ impl JwksCerts {
         loop {
             let sleep_secs = if JWKS.get().is_some() { 1800 } else { 1 };
             let msg = tokio::select! {
-                _ = tokio::time::sleep(Duration::from_secs(sleep_secs)) => {
+                () = tokio::time::sleep(Duration::from_secs(sleep_secs)) => {
                     debug!("Updating JWKS after timeout");
                     None
                 },

@@ -1,4 +1,8 @@
-use crate::common::{CLIENT_ID, CLIENT_SECRET, get_auth_headers, get_backend_url};
+use crate::common::{
+    CLIENT_SECRET, create_client, delete_client, get_auth_headers, get_backend_url, get_client,
+    put_client, update_request,
+};
+use crate::{expect_status, expect_status_json};
 use pretty_assertions::{assert_eq, assert_ne};
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretRequest, ClientSecretResponse, NewClientRequest,
@@ -6,14 +10,12 @@ use rauthy_api_types::clients::{
 };
 use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest};
 use rauthy_common::constants::APPLICATION_JSON;
-use rauthy_common::utils::base64_url_no_pad_decode;
+use rauthy_common::utils::{base64_url_no_pad_decode, new_store_id};
 use rauthy_jwt::claims::JwtAccessClaims;
 use rauthy_service::token_set::TokenSet;
-use reqwest::header::CONTENT_TYPE;
+use reqwest::header::{CONTENT_TYPE, HeaderMap};
 use serde_json::{Value, json};
 use std::error::Error;
-
-mod common;
 
 const BAD_REDIRECT_URIS: [&str; 5] = [
     "http://test.client.io/#/callback",
@@ -42,6 +44,10 @@ const BAD_POST_LOGOUT_REDIRECT_URIS: [&str; 4] = [
     "http://test.client.io/logout?x=,https://evil.example/",
 ];
 
+const LOGO: &[u8] = include_bytes!("../../../../assets/logo/rauthy_dark_small.png");
+const FAVICON: &[u8] = include_bytes!("../../../../assets/logo/rauthy_light_small.png");
+const FAVICON_SVG: &[u8] = include_bytes!("../../../../assets/logo/rauthy_light.svg");
+
 fn extract_raw_claims(token: &str) -> Vec<u8> {
     let mut split = token.split('.');
     split.next().unwrap();
@@ -69,64 +75,15 @@ fn template_value<'a>(html: &'a str, id: &str) -> &'a str {
         .unwrap_or_else(|| panic!("template {id} missing from authorize HTML"))
 }
 
-/// Rebuilds the full `UpdateClientRequest` from a GET response (so we don't depend on
-/// `JwkKeyPairAlg` being `Clone`).
-fn update_request(c: ClientResponse) -> UpdateClientRequest {
-    UpdateClientRequest {
-        name: c.name,
-        confidential: c.confidential,
-        redirect_uris: c.redirect_uris,
-        post_logout_redirect_uris: c.post_logout_redirect_uris,
-        allowed_origins: c.allowed_origins,
-        enabled: c.enabled,
-        flows_enabled: c.flows_enabled,
-        access_token_alg: c.access_token_alg,
-        id_token_alg: c.id_token_alg,
-        auth_code_lifetime: c.auth_code_lifetime,
-        access_token_lifetime: c.access_token_lifetime,
-        scopes: c.scopes,
-        default_scopes: c.default_scopes,
-        challenges: c.challenges,
-        force_mfa: c.force_mfa,
-        client_uri: c.client_uri,
-        contacts: c.contacts,
-        backchannel_logout_uri: c.backchannel_logout_uri,
-        restrict_group_prefix: c.restrict_group_prefix,
-        claims: c.claims,
-        claims_at_root: c.claims_at_root,
-        allowed_resources: c.allowed_resources,
-        default_aud: c.default_aud,
-        consent: c.consent,
-        actor_same_client: c.actor_same_client,
-        scim: None,
-    }
-}
-
-async fn get_client(
-    auth_headers: &reqwest::header::HeaderMap,
-    id: &str,
-) -> Result<ClientResponse, Box<dyn Error>> {
-    let res = reqwest::Client::new()
-        .get(format!("{}/clients/{}", get_backend_url(), id))
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
-    let res = expect_status!(res, 200);
-    Ok(res.json::<ClientResponse>().await?)
-}
-
 /// GETs the client, overrides `flows_enabled` + `claims`, PUTs it back and returns the
 /// response.
 async fn put_client_claims(
-    auth_headers: &reqwest::header::HeaderMap,
+    auth_headers: &HeaderMap,
     id: &str,
     flows_enabled: Vec<GrantType>,
     claims: Option<Value>,
     claims_at_root: bool,
 ) -> Result<ClientResponse, Box<dyn Error>> {
-    let url_id = format!("{}/clients/{}", get_backend_url(), id);
-    let c = get_client(auth_headers, id).await?;
-
     let req = UpdateClientRequest {
         flows_enabled,
         claims,
@@ -134,57 +91,49 @@ async fn put_client_claims(
         allowed_resources: None,
         default_aud: None,
         consent: None,
-        ..update_request(c)
+        ..update_request(get_client(auth_headers, id).await?)
     };
-
-    let res = reqwest::Client::new()
-        .put(&url_id)
-        .headers(auth_headers.clone())
-        .json(&req)
-        .send()
-        .await?;
-    let res = expect_status!(res, 200);
-    Ok(res.json::<ClientResponse>().await?)
+    put_client(&reqwest::Client::new(), auth_headers, id, &req).await
 }
 
 #[tokio::test]
 async fn test_clients() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
+    let http = reqwest::Client::new();
 
     let url = format!("{}/clients", backend_url);
-    let res = reqwest::Client::new()
-        .get(&url)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
+    let res = http.get(&url).headers(auth_headers.clone()).send().await?;
     let res = expect_status!(res, 200);
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
-    let client = clients.iter().find(|c| c.id == "rauthy").unwrap();
-    println!("{:?}", client);
-    assert_eq!(client.id, "rauthy");
-    assert_eq!(client.name, Some("Rauthy".to_string()));
-    assert_eq!(client.enabled, true);
-    assert_eq!(client.confidential, false);
-    assert_eq!(client.redirect_uris.len(), 3);
-    assert_eq!(client.post_logout_redirect_uris, None);
+    let seeded = clients.iter().find(|c| c.id == "rauthy").unwrap();
+    println!("{:?}", seeded);
+    assert_eq!(seeded.id, "rauthy");
+    assert_eq!(seeded.name, Some("Rauthy".to_string()));
+    assert_eq!(seeded.enabled, true);
+    assert_eq!(seeded.confidential, false);
+    assert_eq!(seeded.redirect_uris.len(), 3);
+    assert_eq!(seeded.post_logout_redirect_uris, None);
     assert_eq!(
-        client.allowed_origins,
+        seeded.allowed_origins,
         Some(vec!["http://localhost:5173".to_string()])
     );
-    assert_eq!(client.flows_enabled.len(), 1);
-    assert_eq!(client.access_token_alg, JwkKeyPairAlg::EdDSA);
-    assert_eq!(client.id_token_alg, JwkKeyPairAlg::EdDSA);
-    assert_eq!(client.auth_code_lifetime, 10);
-    assert_eq!(client.access_token_lifetime, 10);
-    assert_eq!(client.scopes.len(), 2);
-    assert_eq!(client.default_scopes.len(), 2);
-    assert_eq!(client.challenges.as_ref().unwrap().len(), 1);
+    assert_eq!(seeded.flows_enabled.len(), 1);
+    assert_eq!(seeded.access_token_alg, JwkKeyPairAlg::EdDSA);
+    assert_eq!(seeded.id_token_alg, JwkKeyPairAlg::EdDSA);
+    assert_eq!(seeded.auth_code_lifetime, 10);
+    assert_eq!(seeded.access_token_lifetime, 10);
+    assert_eq!(seeded.scopes, vec!["openid".to_string()]);
+    assert_eq!(seeded.default_scopes, vec!["openid".to_string()]);
+    assert_eq!(seeded.challenges.as_ref().unwrap().len(), 1);
+    assert_eq!(seeded.client_uri, Some("http://localhost:8081".to_string()));
+    assert_eq!(seeded.contacts, Some(vec!["admin@localhost".to_string()]));
 
     // add a new client
+    let id = format!("test_{}", new_store_id());
     let new_client = NewClientRequest {
-        id: "test123".to_string(),
+        id: id.clone(),
         secret: None,
         name: Some("Test Client 123".to_string()),
         confidential: true,
@@ -192,7 +141,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         post_logout_redirect_uris: Some(vec!["http://test.client.io/logout".to_string()]),
         consent: None,
     };
-    let res = reqwest::Client::new()
+    let res = http
         .post(&url)
         .headers(auth_headers.clone())
         .json(&new_client)
@@ -229,7 +178,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         post_logout_redirect_uris: None,
         consent: None,
     };
-    let res = reqwest::Client::new()
+    let res = http
         .post(&url)
         .headers(auth_headers.clone())
         .json(&url_id_client)
@@ -248,7 +197,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             post_logout_redirect_uris: None,
             consent: None,
         };
-        let res = reqwest::Client::new()
+        let res = http
             .post(&url)
             .headers(auth_headers.clone())
             .json(&bad_client)
@@ -273,7 +222,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             ]),
             consent: None,
         };
-        let res = reqwest::Client::new()
+        let res = http
             .post(&url)
             .headers(auth_headers.clone())
             .json(&bad_client)
@@ -341,7 +290,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             "http://test.client.io/callback".to_string(),
             bad_uri.to_string(),
         ];
-        let res = reqwest::Client::new()
+        let res = http
             .put(&url_id)
             .headers(auth_headers.clone())
             .json(&update_client)
@@ -354,7 +303,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     update_client.redirect_uris = redirect_uris.clone();
     for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
         update_client.post_logout_redirect_uris = Some(vec![bad_uri.to_string()]);
-        let res = reqwest::Client::new()
+        let res = http
             .put(&url_id)
             .headers(auth_headers.clone())
             .json(&update_client)
@@ -365,7 +314,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     update_client.post_logout_redirect_uris = None;
-    let res = reqwest::Client::new()
+    let res = http
         .get(&url_id)
         .headers(auth_headers.clone())
         .send()
@@ -382,17 +331,12 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(unchanged.name, client.name);
     assert!(unchanged.enabled);
 
-    let res = reqwest::Client::new()
+    let res = http
         .put(&url_id)
         .headers(auth_headers.clone())
         .json(&update_client)
         .send()
         .await?;
-    if res.status() != 200 {
-        let err = res.text().await?;
-        // let err = aw!(res.json::<ErrorResponse>())?;
-        panic!("{:?}", err);
-    }
     let res = expect_status!(res, 200);
 
     let client = res.json::<ClientResponse>().await?;
@@ -422,7 +366,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert!(contacts.iter().any(|i| i == "@alfred:matrix.org"));
 
     // delete the client again
-    let res = reqwest::Client::new()
+    let res = http
         .delete(&url_id)
         .headers(auth_headers.clone())
         .send()
@@ -430,11 +374,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     expect_status!(res, 200);
 
     // now verify that it is gone
-    let res = reqwest::Client::new()
-        .get(&url)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
+    let res = http.get(&url).headers(auth_headers.clone()).send().await?;
     let res = expect_status!(res, 200);
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
@@ -448,20 +388,13 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
     let http = reqwest::Client::new();
-    let id = "consent-round-trip";
+    let id = format!("test_{}", new_store_id());
     let url_id = format!("{backend_url}/clients/{id}");
     let source = "https://consent.example.com/api?v=1";
 
-    // Allow a rerun after an interrupted test.
-    let _ = http
-        .delete(&url_id)
-        .headers(auth_headers.clone())
-        .send()
-        .await;
-
     // an invalid consent source rejects the create
     let new_client = |consent: &str| NewClientRequest {
-        id: id.to_string(),
+        id: id.clone(),
         secret: None,
         name: Some("Consent Round Trip".to_string()),
         confidential: false,
@@ -505,7 +438,7 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
         res.json::<ClientResponse>().await?.consent.as_deref(),
         Some(source)
     );
-    let client = get_client(&auth_headers, id).await?;
+    let client = get_client(&auth_headers, &id).await?;
     assert_eq!(client.consent.as_deref(), Some(source));
 
     // update to `local`
@@ -524,7 +457,7 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
         res.json::<ClientResponse>().await?.consent.as_deref(),
         Some("local")
     );
-    let client = get_client(&auth_headers, id).await?;
+    let client = get_client(&auth_headers, &id).await?;
     assert_eq!(client.consent.as_deref(), Some("local"));
 
     // invalid values are rejected and leave the stored value alone
@@ -537,7 +470,7 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
     ] {
         let req = UpdateClientRequest {
             consent: Some(invalid.to_string()),
-            ..update_request(get_client(&auth_headers, id).await?)
+            ..update_request(get_client(&auth_headers, &id).await?)
         };
         let res = http
             .put(&url_id)
@@ -549,16 +482,16 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
         let body = res.text().await?;
         assert!(!body.contains("secret"), "{invalid}: {body}");
     }
-    let client = get_client(&auth_headers, id).await?;
+    let client = get_client(&auth_headers, &id).await?;
     assert_eq!(client.consent.as_deref(), Some("local"));
 
     // a missing value unsets it
     let req = UpdateClientRequest {
         consent: None,
-        ..update_request(get_client(&auth_headers, id).await?)
+        ..update_request(get_client(&auth_headers, &id).await?)
     };
     assert_eq!(
-        get_client(&auth_headers, id).await?.consent.as_deref(),
+        get_client(&auth_headers, &id).await?.consent.as_deref(),
         Some("local")
     );
     let res = http
@@ -568,7 +501,7 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 200);
-    assert_eq!(get_client(&auth_headers, id).await?.consent, None);
+    assert_eq!(get_client(&auth_headers, &id).await?.consent, None);
 
     let res = http
         .delete(&url_id)
@@ -582,14 +515,10 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
 
 #[tokio::test]
 async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Error>> {
-    const LOGO: &[u8] = include_bytes!("../../../assets/logo/rauthy_dark_small.png");
-    const FAVICON: &[u8] = include_bytes!("../../../assets/logo/rauthy_light_small.png");
-    const FAVICON_SVG: &[u8] = include_bytes!("../../../assets/logo/rauthy_light.svg");
-
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
-    let client = reqwest::Client::new();
-    let client_id = "favicon_client";
+    let http = reqwest::Client::new();
+    let client_id = format!("test_{}", new_store_id());
     let clients_url = format!("{backend_url}/clients");
     let client_url = format!("{clients_url}/{client_id}");
     let logo_url = format!("{client_url}/logo");
@@ -600,20 +529,8 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
          &response_type=code&code_challenge=test&code_challenge_method=S256"
     );
 
-    // Allow a rerun after an interrupted test.
-    let _ = client
-        .delete(&favicon_url)
-        .headers(auth_headers.clone())
-        .send()
-        .await;
-    let _ = client
-        .delete(&client_url)
-        .headers(auth_headers.clone())
-        .send()
-        .await;
-
     let new_client = NewClientRequest {
-        id: client_id.to_string(),
+        id: client_id.clone(),
         secret: None,
         name: Some("Favicon Client".to_string()),
         confidential: false,
@@ -621,7 +538,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         post_logout_redirect_uris: None,
         consent: None,
     };
-    let res = client
+    let res = http
         .post(&clients_url)
         .headers(auth_headers.clone())
         .json(&new_client)
@@ -629,14 +546,14 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         .await?;
     expect_status!(res, 200);
 
-    let res = client
+    let res = http
         .put(&favicon_url)
         .multipart(image_form(FAVICON, "favicon.png", "image/png"))
         .send()
         .await?;
     expect_status!(res, 401);
 
-    let res = client
+    let res = http
         .put(&logo_url)
         .headers(auth_headers.clone())
         .multipart(image_form(LOGO, "logo.png", "image/png"))
@@ -644,12 +561,12 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         .await?;
     expect_status!(res, 200);
 
-    let res = client.get(&authorize_url).send().await?;
+    let res = http.get(&authorize_url).send().await?;
     let html = expect_status!(res, 200).text().await?;
     assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
     assert!(template_value(&html, "tpl_client_favicon_updated").is_empty());
 
-    let res = client
+    let res = http
         .put(&favicon_url)
         .headers(auth_headers.clone())
         .multipart(image_form(FAVICON, "favicon.png", "image/png"))
@@ -657,12 +574,12 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         .await?;
     expect_status!(res, 200);
 
-    let res = client.get(&logo_url).send().await?;
+    let res = http.get(&logo_url).send().await?;
     let res = expect_status!(res, 200);
     let logo = res.bytes().await?;
     assert!(!logo.is_empty());
 
-    let res = client.get(&favicon_url).send().await?;
+    let res = http.get(&favicon_url).send().await?;
     let res = expect_status!(res, 200);
     assert_eq!(
         res.headers().get(CONTENT_TYPE).unwrap().to_str().unwrap(),
@@ -672,7 +589,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     assert!(!favicon.is_empty());
     assert_ne!(logo, favicon);
 
-    let res = client
+    let res = http
         .put(&favicon_url)
         .headers(auth_headers.clone())
         .multipart(image_form(b"not a png", "invalid.png", "image/png"))
@@ -680,11 +597,11 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         .await?;
     expect_status!(res, 400);
 
-    let res = client.get(&favicon_url).send().await?;
+    let res = http.get(&favicon_url).send().await?;
     let res = expect_status!(res, 200);
     assert_eq!(res.bytes().await?, favicon);
 
-    let res = client
+    let res = http
         .put(&favicon_url)
         .headers(auth_headers.clone())
         .multipart(reqwest::multipart::Form::new())
@@ -692,19 +609,19 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         .await?;
     expect_status!(res, 400);
 
-    let res = client.get(&authorize_url).send().await?;
+    let res = http.get(&authorize_url).send().await?;
     let html = expect_status!(res, 200).text().await?;
     assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
     assert!(!template_value(&html, "tpl_client_favicon_updated").is_empty());
 
-    let res = client.delete(&favicon_url).send().await?;
+    let res = http.delete(&favicon_url).send().await?;
     expect_status!(res, 401);
 
-    let res = client.get(&favicon_url).send().await?;
+    let res = http.get(&favicon_url).send().await?;
     let res = expect_status!(res, 200);
     assert_eq!(res.bytes().await?, favicon);
 
-    let res = client
+    let res = http
         .put(&favicon_url)
         .headers(auth_headers.clone())
         .multipart(image_form(FAVICON_SVG, "favicon.svg", "image/svg+xml"))
@@ -712,30 +629,30 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         .await?;
     expect_status!(res, 200);
 
-    let res = client.get(&logo_url).send().await?;
+    let res = http.get(&logo_url).send().await?;
     let res = expect_status!(res, 200);
     assert_eq!(res.bytes().await?, logo);
 
-    let res = client
+    let res = http
         .delete(&favicon_url)
         .headers(auth_headers.clone())
         .send()
         .await?;
     expect_status!(res, 200);
 
-    let res = client.get(&favicon_url).send().await?;
+    let res = http.get(&favicon_url).send().await?;
     expect_status!(res, 404);
 
-    let res = client.get(&logo_url).send().await?;
+    let res = http.get(&logo_url).send().await?;
     let res = expect_status!(res, 200);
     assert_eq!(res.bytes().await?, logo);
 
-    let res = client.get(&authorize_url).send().await?;
+    let res = http.get(&authorize_url).send().await?;
     let html = expect_status!(res, 200).text().await?;
     assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
     assert!(template_value(&html, "tpl_client_favicon_updated").is_empty());
 
-    let res = client
+    let res = http
         .delete(&client_url)
         .headers(auth_headers)
         .send()
@@ -745,79 +662,100 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     Ok(())
 }
 
+/// `POST /clients/{id}/secret` returns the cleartext secret and is idempotent, `PUT` rotates it.
+///
+/// The rotation happens on a client this test creates and deletes: the seeded `init_client` keeps
+/// its bootstrap secret, so every other test can keep logging in with `common::CLIENT_SECRET`.
 #[tokio::test]
 async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
-    let client = reqwest::Client::new();
+    let http = reqwest::Client::new();
 
-    // get the current client secret
+    // the seeded client's secret is the one the test config was bootstrapped with
     let url = format!("{}/clients/init_client/secret", backend_url);
-    let res = client
-        .post(&url)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
-    assert!(res.status().is_success());
-    let resp = res.json::<ClientSecretResponse>().await?;
+    let res = http.post(&url).headers(auth_headers.clone()).send().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
     assert_eq!(resp.id, "init_client");
     assert_eq!(resp.confidential, true);
     assert_eq!(resp.secret.unwrap(), CLIENT_SECRET);
 
+    // from here on, everything runs on a client of its own
+    let client_id = format!("test_{}", new_store_id());
+    create_client(
+        &http,
+        &auth_headers,
+        &NewClientRequest {
+            id: client_id.clone(),
+            secret: None,
+            name: Some("Secret Test".to_string()),
+            confidential: true,
+            redirect_uris: vec!["http://test.client.io/callback".to_string()],
+            post_logout_redirect_uris: None,
+            consent: None,
+        },
+    )
+    .await?;
+    // a fresh client only gets the `authorization_code` flow, enable the one we log in with
+    put_client_claims(
+        &auth_headers,
+        &client_id,
+        vec![GrantType::ClientCredentials],
+        None,
+        false,
+    )
+    .await?;
+    let url = format!("{backend_url}/clients/{client_id}/secret");
+    let url_token = format!("{backend_url}/oidc/token");
+
+    // get the current client secret
+    let res = http.post(&url).headers(auth_headers.clone()).send().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
+    assert_eq!(resp.id, client_id);
+    assert_eq!(resp.confidential, true);
+    let secret = resp.secret.expect("a confidential client to have a secret");
+
     // be sure that this endpoint is idempotent
-    let url = format!("{}/clients/init_client/secret", backend_url);
-    let res = client
-        .post(&url)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
-    assert!(res.status().is_success());
-    let resp = res.json::<ClientSecretResponse>().await?;
+    let res = http.post(&url).headers(auth_headers.clone()).send().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
     assert!(resp.secret.is_some());
-    let secret = resp.secret.unwrap();
+    assert_eq!(resp.secret.unwrap(), secret);
 
     // try to get a token with the credentials
     let mut token_req = TokenRequest {
         grant_type: GrantType::ClientCredentials,
-        client_id: Some(CLIENT_ID.to_string()),
+        client_id: Some(client_id.clone()),
         client_secret: Some(secret.clone()),
         ..Default::default()
     };
-    let url_token = format!("{}/oidc/token", backend_url);
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
 
     // generate a new secret
-    let res = client
+    let res = http
         .put(&url)
         .headers(auth_headers.clone())
         .header(CONTENT_TYPE, APPLICATION_JSON)
         .send()
         .await?;
-    assert!(res.status().is_success());
-    let resp = res.json::<ClientSecretResponse>().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
     assert!(resp.secret.is_some());
     let secret_new = resp.secret.unwrap();
     assert_ne!(secret_new, secret);
 
     // make sure we cannot login anymore with the old secret
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     expect_status!(res, 401);
 
     // but we should be able to log in with the new one
     token_req.client_secret = Some(secret_new.clone());
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     expect_status!(res, 200);
 
     // make sure we get the same secret back
-    let res = client
-        .post(&url)
-        .headers(auth_headers.clone())
-        .send()
-        .await?;
-    assert!(res.status().is_success());
-    let resp = res.json::<ClientSecretResponse>().await?;
+    let res = http.post(&url).headers(auth_headers.clone()).send().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
     assert!(resp.secret.is_some());
     assert_eq!(resp.secret.unwrap(), secret_new);
 
@@ -826,24 +764,23 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
         cache_current_hours: Some(1),
         secret: None,
     };
-    let res = client
+    let res = http
         .put(&url)
         .headers(auth_headers.clone())
         .json(&payload)
         .send()
         .await?;
-    assert!(res.status().is_success());
-    let resp = res.json::<ClientSecretResponse>().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
     assert!(resp.secret.is_some());
     let secret_rotated = resp.secret.unwrap();
     assert_ne!(secret_rotated, secret_new);
 
     // we should be able to use both secrets (for 1 hour) to log in
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     expect_status!(res, 200);
 
     token_req.client_secret = Some(secret_rotated);
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     expect_status!(res, 200);
 
     // apply an externally provisioned secret
@@ -853,22 +790,21 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
         cache_current_hours: None,
         secret: Some(external_secret.clone()),
     };
-    let res = client
+    let res = http
         .put(&url)
         .headers(auth_headers.clone())
         .json(&payload)
         .send()
         .await?;
-    assert!(res.status().is_success());
-    let resp = res.json::<ClientSecretResponse>().await?;
+    let resp = expect_status_json!(res, 200, ClientSecretResponse);
     assert_eq!(resp.secret.unwrap(), external_secret);
 
     // the old secret does not work anymore, the external one does
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     expect_status!(res, 401);
 
     token_req.client_secret = Some(external_secret.clone());
-    let res = client.post(&url_token).form(&token_req).send().await?;
+    let res = http.post(&url_token).form(&token_req).send().await?;
     expect_status!(res, 200);
 
     // a too short externally provisioned secret is rejected by the payload validation
@@ -876,13 +812,15 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
         cache_current_hours: None,
         secret: Some("too_short".to_string()),
     };
-    let res = client
+    let res = http
         .put(&url)
         .headers(auth_headers.clone())
         .json(&payload)
         .send()
         .await?;
     expect_status!(res, 400);
+
+    delete_client(&auth_headers, &client_id).await?;
 
     Ok(())
 }
@@ -893,22 +831,14 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
-    let url = format!("{}/clients", backend_url);
-    let client_id = "claims_client";
+    let client_id = format!("test_{}", new_store_id());
     let url_id = format!("{}/clients/{}", backend_url, client_id);
     let url_secret = format!("{}/clients/{}/secret", backend_url, client_id);
     let url_token = format!("{}/oidc/token", backend_url);
 
-    // pre-cleanup so a failed earlier run does not block creation
-    let _ = client
-        .delete(&url_id)
-        .headers(auth_headers.clone())
-        .send()
-        .await;
-
     // create a dedicated confidential client for the `client_credentials` flow
     let new_client = NewClientRequest {
-        id: client_id.to_string(),
+        id: client_id.clone(),
         secret: None,
         name: Some("Claims Client".to_string()),
         confidential: true,
@@ -917,7 +847,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
         consent: None,
     };
     let res = client
-        .post(&url)
+        .post(format!("{}/clients", backend_url))
         .headers(auth_headers.clone())
         .json(&new_client)
         .send()
@@ -932,7 +862,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     });
     let resp = put_client_claims(
         &auth_headers,
-        client_id,
+        &client_id,
         vec![GrantType::ClientCredentials],
         Some(claims.clone()),
         false,
@@ -948,7 +878,6 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert!(res.status().is_success());
     let secret = res
         .json::<ClientSecretResponse>()
         .await?
@@ -957,7 +886,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
 
     let token_req = TokenRequest {
         grant_type: GrantType::ClientCredentials,
-        client_id: Some(client_id.to_string()),
+        client_id: Some(client_id.clone()),
         client_secret: Some(secret),
         ..Default::default()
     };
@@ -982,7 +911,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     // root instead of nested under `custom`
     let resp = put_client_claims(
         &auth_headers,
-        client_id,
+        &client_id,
         vec![GrantType::ClientCredentials],
         Some(claims.clone()),
         true,
@@ -1005,7 +934,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     // a root-promoted claim that collides with a reserved claim must fail issuance
     put_client_claims(
         &auth_headers,
-        client_id,
+        &client_id,
         vec![GrantType::ClientCredentials],
         Some(json!({ "iss": "evil" })),
         true,
@@ -1021,7 +950,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     // back-compat / clearing: a client without claims emits no `custom` at all
     let resp = put_client_claims(
         &auth_headers,
-        client_id,
+        &client_id,
         vec![GrantType::ClientCredentials],
         None,
         false,

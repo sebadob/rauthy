@@ -5,6 +5,7 @@ rauthy-client/target
 rauthy-client/examples/*/target
 rauthy-client/.idea
 rauthy-client/examples/*/.idea
+rauthy.log.*
 .vscode
 .helix
 .lapce

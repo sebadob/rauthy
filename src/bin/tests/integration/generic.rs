@@ -1,10 +1,9 @@
 use crate::common::{get_auth_headers, get_backend_url, get_issuer};
+use crate::{expect_status, expect_status_json};
 use pretty_assertions::assert_eq;
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
-
-mod common;
 
 #[tokio::test]
 async fn test_get_ping() -> Result<(), Box<dyn Error>> {
@@ -17,6 +16,8 @@ async fn test_get_ping() -> Result<(), Box<dyn Error>> {
 // Re-defined and copy & pasted here to be able to get rid of lots of
 // memory allocations in prod, because `Deserialize` will not work with
 // `'static` lifetimes.
+// All fields of the discovery document are deserialized, only the asserted ones are read.
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct WellKnown {
     pub issuer: String,
@@ -65,6 +66,7 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
             .iter()
             .any(|m| m == "none")
     );
+    assert!(content.client_id_metadata_document_supported);
     // don't test the rest for now as it might change soon again
 
     Ok(())
@@ -125,7 +127,7 @@ async fn test_backup_download_is_complete() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let (headers, _) = common::session_headers().await;
+    let (headers, _) = crate::common::session_headers().await;
     let client = reqwest::Client::new();
     let url = format!("{}/backup", get_backend_url());
 

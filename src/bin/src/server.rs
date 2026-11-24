@@ -42,6 +42,21 @@ use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
+/// The ASCII art startup banner. It goes to stdout, and into the app log file when
+/// `logging.log_file` is set.
+const BANNER: &str = r#"
+                                                  88
+                                            ,d    88
+                                            88    88
+        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
+        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
+        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
+        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
+        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
+                                                                  d8'
+                                                                 d8'
+            "#;
+
 pub async fn run(
     config_file: String,
     secrets_file: String,
@@ -63,27 +78,19 @@ pub async fn run(
     rauthy_config.init_static();
     init_static_vars::trigger().await;
 
+    let log_level = setup_logging();
+
     if !logging::is_log_fmt_json() {
-        println!(
-            r#"
-                                                  88
-                                            ,d    88
-                                            88    88
-        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
-        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
-        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
-        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
-        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
-                                                                  d8'
-                                                                 d8'
-            "#
-        );
-        // On some terminals, the banner gets mixed up
-        // with the first other logs without this short sleep.
-        time::sleep(Duration::from_micros(10)).await;
+        if RauthyConfig::get().vars.logging.log_file.is_some() {
+            info!("{BANNER}");
+        } else {
+            println!("{BANNER}");
+            // On some terminals, the banner gets mixed up
+            // with the first other logs without this short sleep.
+            time::sleep(Duration::from_micros(10)).await;
+        }
     }
 
-    let log_level = setup_logging();
     info!("Starting Rauthy v{RAUTHY_VERSION} ({})", *BUILD_TIME);
     info!("Log Level set to '{log_level}'");
     if test_mode {
@@ -582,6 +589,7 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_timezones)
                 .service(generic::post_update_language)
                 .service(generic::get_version)
+                .service(generic::get_instance_label)
                 .service(generic::get_whoami)
                 .service(kv::get_kv_ns)
                 .service(kv::post_kv_ns)
@@ -794,7 +802,7 @@ fn workers() -> usize {
             let reserve = if is_hiqlite() { 2 } else { 1 };
             workers = max(
                 2,
-                cores as i64 - vars.hashing.max_hash_threads as i64 - reserve,
+                cores as i64 - i64::from(vars.hashing.max_hash_threads) - reserve,
             ) as usize;
         }
     }

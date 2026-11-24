@@ -449,6 +449,10 @@ export let I18nAdminCs: I18nAdmin = {
             autoLinkDesc2: `POZOR: Tato volba může být velmi nebezpečná a vést k převzetí účtu, pokud
                 poskytovatel plně neověřuje e-mailové adresy uživatelů, a umožňuje tak přidat cizí
                 adresu! V takovém případě ji NIKDY nepoužívejte!`,
+            hideLogin: 'Skrýt tlačítko přihlášení',
+            hideLoginDesc: `Tlačítko přihlášení tohoto poskytovatele je skryto na přihlašovací a registrační
+                stránce. Přihlášení je stále možné pomocí parametru dotazu "idp_hint", kterým lze pro tohoto
+                poskytovatele přidat vlastní tlačítko.`,
             clientName: 'Název klienta',
             custRootCa: 'Vlastní kořenová CA (PEM)',
             descAuthMethod: `Metoda ověření na koncovém bodu <code>/token</code>.<br>
@@ -472,7 +476,26 @@ export let I18nAdminCs: I18nAdmin = {
                 p5: '<code>$.roles</code> odkazuje na <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> může odkazovat na hodnotu v objektu nebo poli, např.<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Hodnota <code>value</code> odpovídá přesně, pokud nezačíná <code>^</code> (prefix), <code>~</code> (regex) nebo <code>^^</code> (literální <code>^</code>)',
+                p8: "Klíče s znaky mimo <code>a-z A-Z 0-9 _ -</code> potřebují uvozovky: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Mapujte hodnoty z ID tokenu upstream providera na existující lokální role a skupiny. Pravidlo přidá svůj cíl, když claim na <code>path</code> odpovídá <code>value</code>, a odstraní ho, když neodpovídá žádné z jeho pravidel. Odstraňovány jsou pouze cíle nakonfigurované zde, a cíl nakonfigurovaný zde náleží providerovi: roli i skupinu, kterou admin uživateli přiřadil ručně, provider při přihlášení bez shody také odstraní.',
+            addMapping: 'Přidat mapování',
+            removeMapping: 'Odstranit mapování',
+            mappingTyp: 'Typ',
+            typRole: 'Role',
+            typGroup: 'Skupina',
+            pathClaim: 'Cesta claimu',
+            valueClaim: 'Hodnota claimu',
+            targetClaim: 'Role / Skupina',
+            noTargetSelected: '— Žádná role / skupina —',
+            targetMissing:
+                'Uložený cíl {{ target }} již není role ani skupina. Vyberte existující, nebo toto mapování odeberte.',
+            groupAdminTarget: '(správce skupiny)',
+            maxMappings: 'Auth provider podporuje maximálně 32 mapování claimů.',
+            regexCost:
+                '<code>value</code> začínající <code>~</code> je regex a vyhodnocuje se proti každému uzlu claimu při každém přihlášení: udržujte ho ukotvený a co nejlevnější.',
             lookup: 'Vyhledat',
             pathAdminClaim: 'Cesta ke claimu správce',
             pathMfaClaim: 'Cesta ke claimu MFA',

@@ -118,7 +118,7 @@ impl EventListener {
         let mut ids_to_remove = Vec::with_capacity(2);
 
         let mut event_ids: BTreeSet<String> = BTreeSet::new();
-        let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
+        let mut events = Event::find_latest(i64::from(EVENTS_LATEST_LIMIT))
             .await
             .unwrap_or_default()
             .into_iter()

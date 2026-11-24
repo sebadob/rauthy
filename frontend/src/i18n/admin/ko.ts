@@ -439,6 +439,10 @@ export let I18nAdminKo: I18nAdmin = {
             autoLinkDesc2: `CAUTION: This option can be very dangerous and lead to account takeover if the provider
                 does not fully validate E-Mail addresses for users and therefore makes it possible to add a foreign
                 address for a user! MUST NEVER be used in such a case!`,
+            hideLogin: '로그인 버튼 숨기기',
+            hideLoginDesc: `이 제공자의 로그인 버튼은 로그인 및 등록 페이지에 표시되지 않습니다. 쿼리 파라미터
+                "idp_hint"를 사용한 로그인은 그대로 가능하며, 이를 이용해 이 제공자를 위한 전용 로그인 버튼을
+                추가할 수 있습니다.`,
             clientName: '클라이언트 이름',
             custRootCa: '사용자 지정 Root CA PEM 사용',
             descAuthMethod: `<code>/token</code> 엔드포인트에서 사용할 인증 방법입니다.<br>
@@ -463,7 +467,26 @@ export let I18nAdminKo: I18nAdmin = {
                     할 수 있습니다.`,
                 p6: `<code>$.roles.*</code> 는 <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>
                     과 같이 객체 또는 배열 내부의 값을 목표로 할 수 있습니다.`,
+                p7: '<code>value</code>는 정확히 일치합니다. 단, <code>^</code> (접두사), <code>~</code> (정규식), <code>^^</code> (리터럴 <code>^</code>)로 시작하면 다릅니다',
+                p8: "<code>a-z A-Z 0-9 _ -</code> 밖의 문자가 포함된 키는 따옴표가 필요합니다: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                '업스트림 ID 토큰의 값을 기존 로컬 역할과 그룹에 매핑합니다. 규칙은 <code>path</code>의 클레임이 <code>value</code>와 일치하면 대상을 추가하고, 어떤 규칙도 일치하지 않으면 제거합니다. 여기서 설정한 대상만 제거되며, 여기서 설정한 대상은 프로바이더에 속합니다 - 관리자가 그 사용자에게 수동으로 부여한 역할과 그룹도 어떤 규칙도 일치하지 않는 로그인에서는 함께 제거됩니다.',
+            addMapping: '매핑 추가',
+            removeMapping: '매핑 제거',
+            mappingTyp: '유형',
+            typRole: '역할',
+            typGroup: '그룹',
+            pathClaim: '클레임 경로',
+            valueClaim: '클레임 값',
+            targetClaim: '역할 / 그룹',
+            noTargetSelected: '— 역할 / 그룹 없음 —',
+            targetMissing:
+                '저장된 대상 {{ target }}은(는) 더 이상 역할 / 그룹이 아닙니다. 기존 항목을 선택하거나 이 매핑을 삭제하세요.',
+            groupAdminTarget: '(그룹 관리자)',
+            maxMappings: '인증 공급자는 최대 32개의 클레임 매핑을 지원합니다.',
+            regexCost:
+                '<code>~</code>로 시작하는 <code>value</code>는 정규식으로, 모든 로그인에서 모든 클레임 노드에 대해 평가됩니다. 앵커를 지정하고 가능한 한 간단하게 유지하세요.',
             lookup: '조회',
             pathAdminClaim: '관리자 Claim 경로',
             pathMfaClaim: 'MFA Claim 경로',

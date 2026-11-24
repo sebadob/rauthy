@@ -1,5 +1,6 @@
 use crate::cust_validation::validate_vec_linux_hostname;
 use crate::users::WebauthnAuthFinishRequest;
+use rauthy_common::constants::PASSWORD_MAX_LEN;
 use rauthy_common::regex::{RE_ALNUM, RE_LINUX_HOSTNAME, RE_LINUX_USERNAME};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
@@ -60,8 +61,8 @@ pub struct PamLoginRequest {
     //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
     #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
     pub username: String,
-    /// Validation: Applies password policy - max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     /// PAM remote password - generated via account dashboard.
     /// Works for both password-only and MFA accounts.
