@@ -558,6 +558,17 @@ export let I18nAdminNb: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin-rollen kan ikke fjernes',
         },
         attributes: 'Attributter',
+        consents: {
+            title: 'Samtykker',
+            desc: 'Samtykker denne brukeren har gitt til applikasjoner. Tidspunkter vises i din lokale tidssone; hold musepekeren over et tidspunkt for å se det i UTC.',
+            none: 'Denne brukeren har ikke gitt samtykke til noen applikasjon.',
+            revokeDesc:
+                'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin for denne brukeren. Applikasjonen må be brukeren om samtykke på nytt.',
+            revokeAllDesc:
+                'Trekker tilbake alle samtykkene til denne brukeren. Hver applikasjon må be brukeren om samtykke på nytt.',
+            sessionsWarning:
+                'Alle øktene til brukeren slettes også, og brukeren logges ut overalt.',
+        },
         deleteUser: 'Skal denne brukeren slettes?',
         descAttr: `Sett individuelle bruker-attributter. Alle nøkkel/verdi-par håndteres som String/JSON-verdi.`,
         forceLogout: `Skal alle økter for denne brukeren invalidiseres og alle refresh tokens slettes?`,

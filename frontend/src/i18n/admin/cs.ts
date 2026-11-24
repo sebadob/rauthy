@@ -575,6 +575,17 @@ export let I18nAdminCs: I18nAdmin = {
             rauthyAdmin: 'roli rauthy_admin nelze odebrat',
         },
         attributes: 'Atributy',
+        consents: {
+            title: 'Souhlasy',
+            desc: 'Souhlasy, které tento uživatel udělil aplikacím. Časy jsou zobrazeny ve vašem místním časovém pásmu; po najetí myší na čas se zobrazí v UTC.',
+            none: 'Tento uživatel zatím neudělil souhlas žádné aplikaci.',
+            revokeDesc:
+                'Odebráním zrušíte souhlas a aplikace si už nebude moci obnovit přístup k tomuto uživateli. Aplikace bude muset uživatele požádat o souhlas znovu.',
+            revokeAllDesc:
+                'Odebere všechny souhlasy tohoto uživatele. Každá aplikace bude muset uživatele požádat o souhlas znovu.',
+            sessionsWarning:
+                'Smažou se také všechny relace uživatele a uživatel bude všude odhlášen.',
+        },
         deleteUser: 'Opravdu chcete tohoto uživatele smazat?',
         descAttr: `Nastavte vlastní atributy uživatele. Všechny dvojice klíč / hodnota se zpracují jako řetězec / hodnota JSON.`,
         forceLogout: `Opravdu chcete zrušit všechny relace a smazat všechny obnovovací tokeny

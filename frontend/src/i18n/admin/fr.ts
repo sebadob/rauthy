@@ -608,6 +608,17 @@ export let I18nAdminFr: I18nAdmin = {
             rauthyAdmin: 'la règle rauthy_admin ne peut pas être supprimée',
         },
         attributes: 'Attributs',
+        consents: {
+            title: 'Consentements',
+            desc: 'Consentements que cet utilisateur a donnés à des applications. Les heures sont affichées dans votre fuseau horaire local ; survolez une heure pour la voir en UTC.',
+            none: 'Cet utilisateur n’a donné son consentement à aucune application.',
+            revokeDesc:
+                'La révocation supprime le consentement et l’application ne peut plus renouveler son accès pour cet utilisateur. L’application devra de nouveau demander le consentement de l’utilisateur.',
+            revokeAllDesc:
+                'Révoque tous les consentements de cet utilisateur. Chaque application devra de nouveau demander le consentement de l’utilisateur.',
+            sessionsWarning:
+                'Toutes les sessions de l’utilisateur sont également supprimées : l’utilisateur est déconnecté partout.',
+        },
         deleteUser: 'Êtes-vous sûr de vouloir supprimer cet utilisateur ?',
         descAttr: `Définissez les attributs personnalisés de l'utilisateur. Toutes les paires clé/valeur seront traitées
             comme des chaînes de caractères ou des valeurs JSON.`,

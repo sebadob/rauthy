@@ -566,6 +566,16 @@ export let I18nAdminKo: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin rule cannot be removed',
         },
         attributes: '속성',
+        consents: {
+            title: '동의',
+            desc: '이 사용자가 애플리케이션에 제공한 동의입니다. 시간은 로컬 시간대로 표시되며, 시간 위에 마우스를 올리면 UTC로 표시됩니다.',
+            none: '이 사용자는 아직 어떤 애플리케이션에도 동의하지 않았습니다.',
+            revokeDesc:
+                '취소하면 동의가 삭제되고 애플리케이션은 이 사용자에 대한 접근 권한을 더 이상 갱신할 수 없습니다. 애플리케이션은 사용자에게 다시 동의를 요청해야 합니다.',
+            revokeAllDesc:
+                '이 사용자의 모든 동의를 취소합니다. 각 애플리케이션은 사용자에게 다시 동의를 요청해야 합니다.',
+            sessionsWarning: '사용자의 모든 세션도 삭제되며, 사용자는 모든 곳에서 로그아웃됩니다.',
+        },
         deleteUser: '이 사용자를 삭제하시겠습니까?',
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,

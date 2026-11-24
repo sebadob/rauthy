@@ -590,6 +590,17 @@ export let I18nAdminEs: I18nAdmin = {
             rauthyAdmin: 'el rol rauthy_admin no se puede quitar',
         },
         attributes: 'Atributos',
+        consents: {
+            title: 'Consentimientos',
+            desc: 'Consentimientos que este usuario ha dado a aplicaciones. Las horas se muestran en su zona horaria local; pase el cursor sobre una hora para verla en UTC.',
+            none: 'Este usuario no ha dado su consentimiento a ninguna aplicación.',
+            revokeDesc:
+                'La revocación elimina el consentimiento y la aplicación ya no puede renovar su acceso para este usuario. La aplicación tendrá que volver a pedir el consentimiento del usuario.',
+            revokeAllDesc:
+                'Revoca todos los consentimientos de este usuario. Cada aplicación tendrá que volver a pedir el consentimiento del usuario.',
+            sessionsWarning:
+                'También se eliminan todas las sesiones del usuario, que queda desconectado en todas partes.',
+        },
         deleteUser: '¿Seguro que desea eliminar este usuario?',
         descAttr: `Establezca atributos de usuario personalizados. Todos los pares clave / valor se tratarán como
             String / valor JSON.`,

@@ -529,6 +529,14 @@ export interface I18nAdmin {
             rauthyAdmin: string;
         };
         attributes: string;
+        consents: {
+            title: string;
+            desc: string;
+            none: string;
+            revokeDesc: string;
+            revokeAllDesc: string;
+            sessionsWarning: string;
+        };
         deleteUser: string;
         descAttr: string;
         forceLogout: string;
