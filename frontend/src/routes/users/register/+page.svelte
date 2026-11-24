@@ -74,6 +74,7 @@
     let consent: undefined | ConsentContentTemplate = $state();
     let consentAccepted: string[] = $state([]);
     let consentConfirmed = $state(false);
+    let consentChoicesFor: undefined | ConsentContentTemplate = $state.raw();
 
     let tos: undefined | ToSLatestResponse = $state();
     let noTosExists = $state(false);
@@ -522,6 +523,7 @@
                             {clientName}
                             bind:accepted={consentAccepted}
                             bind:confirmed={consentConfirmed}
+                            bind:choicesFor={consentChoicesFor}
                             disabled={isLoading}
                         />
                     {/if}

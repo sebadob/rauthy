@@ -201,8 +201,8 @@ export const I18nEn: I18n = {
             to log in to your account and add at least one additional Passkey`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',
         consent: {
+            agree: 'I consent to the [transmission of my data]',
             changed: 'The consent content has changed, please check it again.',
-            confirm: 'I agree',
             continue: 'Continue',
             details: 'Details',
             intro: '{{ CLIENT }} requests access to:',

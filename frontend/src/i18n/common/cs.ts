@@ -194,8 +194,8 @@ export const I18nCs: I18n = {
             přihlaste ke svému účtu a přidejte aspoň jeden přístupový klíč.`,
         clientGroupPrefixForbidden: 'Pro toto přihlášení nejste zařazeni do potřebné skupiny',
         consent: {
+            agree: 'Souhlasím s [předáním svých údajů]',
             changed: 'Obsah souhlasu se změnil, zkontrolujte jej prosím znovu.',
-            confirm: 'Souhlasím',
             continue: 'Pokračovat',
             details: 'Podrobnosti',
             intro: '{{ CLIENT }} žádá o přístup k:',

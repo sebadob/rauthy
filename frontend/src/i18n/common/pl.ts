@@ -196,8 +196,8 @@ export const I18nPl: I18n = {
             zaloguj się na swoje konto i dodaj co najmniej jeden dodatkowy klucz dostępu`,
         clientGroupPrefixForbidden: 'Brak przypisania do grupy dla tego logowania',
         consent: {
+            agree: 'Wyrażam zgodę na [przekazanie moich danych]',
             changed: 'Treść zgody uległa zmianie, sprawdź ją ponownie.',
-            confirm: 'Zgadzam się',
             continue: 'Dalej',
             details: 'Szczegóły',
             intro: '{{ CLIENT }} prosi o dostęp do:',

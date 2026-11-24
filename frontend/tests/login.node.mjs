@@ -217,6 +217,20 @@ test('login: the idle ticker restarts a dead page session before the form is use
     assert.equal(await page.getByText('Invalid credentials').count(), 0);
 });
 
+const agree = 'I consent to the transmission of my data';
+
+/** Opens the full consent content from the link in the checkbox row. @param {any} page */
+async function openDetails(page) {
+    await page.getByRole('button', { name: 'transmission of my data' }).click();
+    await page.getByRole('dialog', { name: 'Consent' }).waitFor();
+}
+
+/** Closes the full consent content with the keyboard. @param {any} page */
+async function closeDetails(page) {
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
+}
+
 const consentContent = {
     source: 'local',
     content_hash: 'a'.repeat(64),
@@ -263,11 +277,12 @@ test('login: the consent block locks the defaults and blocks the login until con
         `http://localhost${documentPath}?client_id=test&redirect_uri=http%3A%2F%2Flocalhost%2Fcb` +
             '&scope=openid%20groups',
     );
-    await page.getByText('Consent', { exact: true }).waitFor();
+    await page.getByLabel(agree).waitFor();
     await page.locator('input[name=email]').fill('user@localhost');
     const submit = page.locator('form button[type=submit]');
     assert.ok(await submit.isDisabled(), 'the login waits for the confirmation');
 
+    await openDetails(page);
     assert.ok(await page.getByLabel('openid', { exact: true }).isDisabled());
     assert.ok(await page.getByLabel('openid', { exact: true }).isChecked());
     assert.ok(!(await page.getByLabel('groups', { exact: true }).isChecked()));
@@ -275,7 +290,8 @@ test('login: the consent block locks the defaults and blocks the login until con
     await page.getByText('Your E-Mail address').waitFor();
 
     await page.getByLabel('groups', { exact: true }).click();
-    await page.getByLabel('I agree').click();
+    await closeDetails(page);
+    await page.getByLabel(agree).click();
     await submit.click();
     await page.getByText('The consent content has changed, please check it again.').waitFor();
     assert.deepEqual(logins[0].consent, {
@@ -285,7 +301,7 @@ test('login: the consent block locks the defaults and blocks the login until con
 
     // the changed content needs a new confirmation and is sent with its own hash
     assert.ok(await submit.isDisabled());
-    await page.getByLabel('I agree').click();
+    await page.getByLabel(agree).click();
     await submit.click();
     await page.getByText('done').waitFor();
     assert.deepEqual(logins[1].consent, {
@@ -371,10 +387,12 @@ test('login: a consent_required on the automatic refresh shows the consent block
     assert.equal(postsTo(refreshPath).length, 1, 'the refresh is sent once');
     assert.equal(postsTo(refreshPath)[0].body.consent, undefined);
     assert.equal(await page.locator('input[name=email]').count(), 0, 'no credential form');
-    assert.ok(await page.getByLabel('groups', { exact: true }).isChecked(), 'granted is checked');
     assert.ok(await cont.isDisabled());
+    await openDetails(page);
+    assert.ok(await page.getByLabel('groups', { exact: true }).isChecked(), 'granted is checked');
+    await closeDetails(page);
 
-    await page.getByLabel('I agree').click();
+    await page.getByLabel(agree).click();
     await cont.click();
     await page.getByText('refreshed').waitFor();
     assert.equal(postsTo(refreshPath).length, 2);
@@ -402,15 +420,18 @@ test('login: a failed consent refresh falls back to the login form', async t => 
     const cont = page.getByRole('button', { name: 'Continue' });
     await cont.waitFor();
     assert.equal(await page.locator('input[name=email]').count(), 0);
+    await openDetails(page);
     await page.getByLabel('groups', { exact: true }).click();
-    await page.getByLabel('I agree').click();
+    await closeDetails(page);
+    await page.getByLabel(agree).click();
     await cont.click();
     await page.getByText('session gone').waitFor();
     await page.locator('input[name=email]').waitFor();
     await page.getByRole('button', { name: 'Login: Upstream' }).waitFor();
     // the login form goes on with the choices made in the consent view
+    assert.ok(await page.getByLabel(agree).isChecked());
+    await openDetails(page);
     assert.ok(await page.getByLabel('groups', { exact: true }).isChecked());
-    assert.ok(await page.getByLabel('I agree').isChecked());
 });
 
 test('login: a busy server keeps the consent view, so that Continue can be retried', async t => {
@@ -431,7 +452,7 @@ test('login: a busy server keeps the consent view, so that Continue can be retri
 
     const cont = page.getByRole('button', { name: 'Continue' });
     await cont.waitFor();
-    await page.getByLabel('I agree').click();
+    await page.getByLabel(agree).click();
     await cont.click();
     await page.getByText('The server is busy right now. Please try again in a moment.').waitFor();
     assert.equal(await page.locator('input[name=email]').count(), 0, 'still the consent view');
@@ -475,7 +496,7 @@ test('login: with a consent block, the idp_hint login waits for Continue', async
 
     const cont = page.getByRole('button', { name: 'Continue' });
     await cont.waitFor();
-    await page.getByLabel('I agree').click();
+    await page.getByLabel(agree).click();
     await page.waitForTimeout(500);
     assert.equal(postsTo('/auth/v1/providers/login').length, 0, 'no login on the checkbox');
 
@@ -544,6 +565,7 @@ test('login: a remote scope description shows as plain text only', async t => {
     });
     t.after(() => context.close());
 
+    await openDetails(page);
     await page
         .getByText("My {{ RESOURCE }} $' App requests access to Calendar API:", { exact: true })
         .waitFor();
@@ -575,18 +597,21 @@ test('login: the consent choices survive the password reset view', async t => {
     });
     t.after(() => context.close());
 
+    await openDetails(page);
     await page.getByLabel('groups', { exact: true }).click();
-    await page.getByLabel('I agree').click();
+    await closeDetails(page);
+    await page.getByLabel(agree).click();
     await page.locator('input[name=email]').fill('user@localhost');
     await page.getByText('Password forgotten?').click();
-    assert.ok(!(await page.getByLabel('I agree').isVisible()), 'hidden during the reset');
+    assert.ok(!(await page.getByLabel(agree).isVisible()), 'hidden during the reset');
     await page.getByRole('button', { name: 'Request', exact: true }).click();
     // the reset view closes 3 s after the email was sent
     const submit = page.locator('form button[type=submit]');
     await submit.waitFor({ timeout: 6000 });
-    assert.ok(await page.getByLabel('groups', { exact: true }).isChecked());
-    assert.ok(await page.getByLabel('I agree').isChecked());
+    assert.ok(await page.getByLabel(agree).isChecked());
     assert.ok(!(await submit.isDisabled()));
+    await openDetails(page);
+    assert.ok(await page.getByLabel('groups', { exact: true }).isChecked());
 });
 
 test('provider callback: a consent_required returns to the page the login started from', async t => {
@@ -653,17 +678,19 @@ test('register: a provider sign-up collects the consent it is asked for', async 
 
     const provider = page.getByRole('button', { name: /Upstream$/ });
     await provider.click();
+    await openDetails(page);
     await page.getByText('My Rauthy requests access to:', { exact: true }).waitFor();
+    await closeDetails(page);
     assert.equal(postsTo('/auth/v1/providers/login')[0].body.consent, undefined);
     assert.equal(await page.getByText('The consent content has changed').count(), 0);
     assert.ok(await provider.isDisabled(), 'the sign-up waits for the confirmation');
 
-    await page.getByLabel('I agree').click();
+    await page.getByLabel(agree).click();
     await provider.click();
     await page.getByText('The consent content has changed, please check it again.').waitFor();
     assert.ok(await provider.isDisabled(), 'the changed content needs a new confirmation');
 
-    await page.getByLabel('I agree').click();
+    await page.getByLabel(agree).click();
     await provider.click();
     await page.getByText('signed up').waitFor();
     assert.deepEqual(postsTo('/auth/v1/providers/login')[2].body.consent, {
@@ -688,4 +715,64 @@ test('register: a busy server on a provider sign-up shows a message to try again
 
     await page.getByRole('button', { name: /Upstream$/ }).click();
     await page.getByText('The server is busy right now. Please try again in a moment.').waitFor();
+});
+
+test('login: the consent link opens the full content without ticking the checkbox', async t => {
+    const { context, page } = await openConsentPage({
+        templates: { tpl_consent_content: JSON.stringify(consentContent) },
+        query: '&scope=openid%20groups',
+    });
+    t.after(() => context.close());
+
+    const link = page.getByRole('button', { name: 'transmission of my data' });
+    await link.click();
+    const dialog = page.getByRole('dialog', { name: 'Consent' });
+    await dialog.waitFor();
+    assert.ok(!(await page.getByLabel(agree).isChecked()), 'the link does not tick it');
+    assert.ok(await dialog.getByLabel('openid', { exact: true }).isChecked(), 'default included');
+    assert.ok(await dialog.getByLabel('openid', { exact: true }).isDisabled(), 'default locked');
+    assert.ok(!(await dialog.getByLabel('groups', { exact: true }).isChecked()), 'opt-in');
+    await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
+    await dialog.waitFor({ state: 'hidden' });
+
+    // the keyboard opens and closes it, and the focus goes back to the link
+    await link.focus();
+    await page.keyboard.press('Enter');
+    await dialog.waitFor();
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'hidden' });
+    assert.ok(await link.evaluate((/** @type {any} */ e) => e === document.activeElement));
+    assert.ok(!(await page.getByLabel(agree).isChecked()));
+
+    // the label text, not the link, ticks it
+    await page.getByText('I consent to the').click({ position: { x: 4, y: 4 } });
+    assert.ok(await page.getByLabel(agree).isChecked());
+});
+
+test('login: an error message does not move the consent checkbox', async t => {
+    const { context, page } = await openConsentPage({
+        templates: { tpl_consent_content: JSON.stringify(consentContent) },
+        handle: (/** @type {any} */ request, /** @type {any} */ url) => {
+            if (url.pathname === documentPath) {
+                return { status: 400, json: { error: 'x', message: 'some long error message' } };
+            }
+        },
+    });
+    t.after(() => context.close());
+
+    const row = page.getByLabel(agree);
+    const email = page.locator('input[name=email]');
+    const submit = page.locator('form button[type=submit]');
+    // the page centers the card, so the offsets inside the card are what must stay
+    const offsets = async () => {
+        const [r, e, s] = await Promise.all([row, email, submit].map(l => l.boundingBox()));
+        return { fromEmail: r.y - e.y, toSubmit: s.y - r.y };
+    };
+    await email.fill('user@localhost');
+    await row.click();
+    const before = await offsets();
+    await submit.click();
+    await page.getByText('some long error message').waitFor();
+    assert.deepEqual(await offsets(), before);
+    assert.ok(await row.isChecked(), 'an error other than consent_required keeps it');
 });

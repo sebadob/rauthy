@@ -198,8 +198,8 @@ export const I18nNb: I18n = {
             logge inn på kontoen din og legge til minst én passkey.`,
         clientGroupPrefixForbidden: 'Manglende gruppetilhørighet for denne påloggingen',
         consent: {
+            agree: 'Jeg samtykker til [overføring av mine data]',
             changed: 'Innholdet i samtykket er endret, sjekk det på nytt.',
-            confirm: 'Jeg samtykker',
             continue: 'Fortsett',
             details: 'Detaljer',
             intro: '{{ CLIENT }} ber om tilgang til:',

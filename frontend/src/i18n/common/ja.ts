@@ -186,8 +186,8 @@ export const I18nJa: I18n = {
             'このログインでは、安全性を高めるため多要素認証が必須です。\nアクセスするには、アカウントにログインして Passkey を少なくとも1つ追加してください',
         clientGroupPrefixForbidden: 'このログインに必要なグループに所属していません',
         consent: {
+            agree: '[データの送信]に同意します',
             changed: '同意の内容が変更されました。もう一度確認してください。',
-            confirm: '同意する',
             continue: '続行',
             details: '詳細',
             intro: '{{ CLIENT }} が次へのアクセスを求めています:',
