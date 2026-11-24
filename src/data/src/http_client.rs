@@ -92,20 +92,29 @@ pub fn http_client_builder() -> reqwest::ClientBuilder {
 }
 
 /// Fetcher for documents from external URLs (ephemeral / CIMD clients, consent sources):
-/// redirects only to https, no proxies, non-public addresses rejected in the resolver and for
-/// IP literals (also on redirect targets), bounded concurrency. Its [`AddrPolicy`] is the
-/// single source for all address checks.
+/// redirects only to https, no proxies, bounded concurrency. Non-public addresses are rejected in
+/// the resolver and for IP literals, also on redirect targets, unless [`AddrPolicy::allow_private`]
+/// is set: for ephemeral clients only with `ephemeral_clients.danger_allow_private_addresses`, for
+/// a consent source only when it is on a non-public address itself.
 pub(crate) struct GuardedFetcher {
-    client: reqwest::Client,
-    policy: AddrPolicy,
+    guarded: GuardedClient,
+    /// Only for consent sources: the client for a source on a non-public address, which may
+    /// redirect to other non-public addresses.
+    internal: Option<GuardedClient>,
     semaphore: Semaphore,
+    dns_timeout: Duration,
 }
 
-/// The address policy of a [`GuardedFetcher`], shared by its redirect policy and resolver.
+/// A client whose redirect policy and resolver check every address with its [`AddrPolicy`].
+struct GuardedClient {
+    client: reqwest::Client,
+    policy: AddrPolicy,
+}
+
+/// The address policy of a [`GuardedClient`], shared by its redirect policy and resolver.
 #[derive(Debug, Clone, Copy)]
 struct AddrPolicy {
-    /// Allows non-public addresses: always for consent sources, which only an admin configures,
-    /// and with `ephemeral_clients.danger_allow_private_addresses` for ephemeral clients.
+    /// Allows non-public addresses.
     allow_private: bool,
     /// Names the kind of document in logs and error messages.
     label: &'static str,
@@ -165,34 +174,52 @@ impl GuardedFetcher {
 
     /// [`Self::from_vars`] with the given `builder`.
     fn ephemeral_with(builder: reqwest::ClientBuilder, vars: &Vars) -> reqwest::Result<Self> {
-        Self::build(
-            builder,
-            vars.ephemeral_clients.danger_allow_private_addresses,
-            LABEL_EPHEMERAL,
-            FETCH_PERMITS,
-            vars.http_client.connect_timeout,
-        )
+        let policy = AddrPolicy {
+            allow_private: vars.ephemeral_clients.danger_allow_private_addresses,
+            label: LABEL_EPHEMERAL,
+        };
+        let dns_timeout = vars.http_client.connect_timeout;
+        Ok(Self {
+            guarded: GuardedClient::build(builder, policy, dns_timeout)?,
+            internal: None,
+            semaphore: Semaphore::new(FETCH_PERMITS),
+            dns_timeout,
+        })
     }
 
     /// Builds the consent source fetcher from [`http_client_builder`] with the short
-    /// [`CONSENT_FETCH_TIMEOUT`]. It allows non-public addresses: a consent source is configured
-    /// by an admin, often for a consent service on an internal address.
+    /// [`CONSENT_FETCH_TIMEOUT`]. A consent source is configured by an admin, often for a consent
+    /// service on an internal address, so a source on a non-public address may be fetched and
+    /// may redirect to another one. A source on a public address must not redirect to a
+    /// non-public one.
     pub(crate) fn consent_from_vars(vars: &Vars) -> reqwest::Result<Self> {
-        Self::consent_with(http_client_builder(), vars)
+        Self::consent_with(http_client_builder, vars)
     }
 
     /// [`Self::consent_from_vars`] with the given `builder`.
-    fn consent_with(builder: reqwest::ClientBuilder, vars: &Vars) -> reqwest::Result<Self> {
+    fn consent_with(
+        builder: impl Fn() -> reqwest::ClientBuilder,
+        vars: &Vars,
+    ) -> reqwest::Result<Self> {
         let connect_timeout = min(vars.http_client.connect_timeout, CONSENT_FETCH_TIMEOUT);
-        Self::build(
-            builder
-                .connect_timeout(connect_timeout)
-                .timeout(CONSENT_FETCH_TIMEOUT),
-            true,
-            LABEL_CONSENT,
-            CONSENT_FETCH_PERMITS,
-            connect_timeout,
-        )
+        let client = |allow_private| {
+            GuardedClient::build(
+                builder()
+                    .connect_timeout(connect_timeout)
+                    .timeout(CONSENT_FETCH_TIMEOUT),
+                AddrPolicy {
+                    allow_private,
+                    label: LABEL_CONSENT,
+                },
+                connect_timeout,
+            )
+        };
+        Ok(Self {
+            guarded: client(false)?,
+            internal: Some(client(true)?),
+            semaphore: Semaphore::new(CONSENT_FETCH_PERMITS),
+            dns_timeout: connect_timeout,
+        })
     }
 
     /// Same as [`Self::from_vars`] with an injected `ClientBuilder` (no config file needed).
@@ -211,49 +238,41 @@ impl GuardedFetcher {
         builder: reqwest::ClientBuilder,
         label: &'static str,
     ) -> reqwest::Result<Self> {
-        Self::build(
-            builder,
-            allow_private,
-            label,
-            FETCH_PERMITS,
-            Duration::from_secs(5),
-        )
-    }
-
-    fn build(
-        builder: reqwest::ClientBuilder,
-        allow_private: bool,
-        label: &'static str,
-        permits: usize,
-        dns_timeout: Duration,
-    ) -> reqwest::Result<Self> {
+        let dns_timeout = Duration::from_secs(5);
         let policy = AddrPolicy {
             allow_private,
             label,
         };
-        let client = builder
-            .redirect(reqwest::redirect::Policy::custom(
-                move |attempt| match policy.check_redirect(attempt.url(), attempt.previous().len())
-                {
-                    Ok(()) => attempt.follow(),
-                    Err(reason) => {
-                        warn!("Refusing {label} redirect to {}: {reason}", attempt.url());
-                        attempt.error(reason)
-                    }
-                },
-            ))
-            .no_proxy()
-            .referer(false)
-            .dns_resolver(GuardedResolver {
-                policy,
-                timeout: dns_timeout,
-            })
-            .build()?;
         Ok(Self {
-            client,
-            policy,
-            semaphore: Semaphore::new(permits),
+            guarded: GuardedClient::build(builder, policy, dns_timeout)?,
+            internal: None,
+            semaphore: Semaphore::new(FETCH_PERMITS),
+            dns_timeout,
         })
+    }
+
+    /// The client for `url`: the one that allows non-public addresses for a consent source whose
+    /// host is an IP literal of a non-public address or resolves to non-public addresses only,
+    /// else the guarded one.
+    async fn client_for(&self, url: &Url) -> &GuardedClient {
+        let Some(internal) = &self.internal else {
+            return &self.guarded;
+        };
+        let is_internal = match (host_literal(url), url.domain()) {
+            (Some(literal), _) => is_forbidden_addr(literal),
+            (None, Some(domain)) => {
+                let lookup = tokio::net::lookup_host((domain, 0));
+                match tokio::time::timeout(self.dns_timeout, lookup).await {
+                    Ok(Ok(addrs)) => {
+                        let mut addrs = addrs.peekable();
+                        addrs.peek().is_some() && addrs.all(|addr| is_forbidden_addr(addr.ip()))
+                    }
+                    _ => false,
+                }
+            }
+            (None, None) => false,
+        };
+        if is_internal { internal } else { &self.guarded }
     }
 
     /// Fetches a document from a user-provided URL, at most `max_size` bytes.
@@ -264,8 +283,9 @@ impl GuardedFetcher {
         url: Url,
         max_size: usize,
     ) -> Result<Vec<u8>, ErrorResponse> {
-        let label = self.policy.label;
-        self.policy.check_literal_host(&url)?;
+        let guarded = self.client_for(&url).await;
+        let label = guarded.policy.label;
+        guarded.policy.check_literal_host(&url)?;
 
         let too_many = || {
             warn!("Too many concurrent {label} lookups, rejecting {url}");
@@ -280,7 +300,7 @@ impl GuardedFetcher {
             return Err(too_many());
         };
 
-        let mut res = self
+        let mut res = guarded
             .client
             .get(url)
             .header(ACCEPT, APPLICATION_JSON)
@@ -357,6 +377,45 @@ impl GuardedFetcher {
 
         Ok(bytes)
     }
+}
+
+impl GuardedClient {
+    fn build(
+        builder: reqwest::ClientBuilder,
+        policy: AddrPolicy,
+        dns_timeout: Duration,
+    ) -> reqwest::Result<Self> {
+        let label = policy.label;
+        let client = builder
+            .redirect(reqwest::redirect::Policy::custom(
+                move |attempt| match policy.check_redirect(attempt.url(), attempt.previous().len())
+                {
+                    Ok(()) => attempt.follow(),
+                    Err(reason) => {
+                        warn!("Refusing {label} redirect to {}: {reason}", attempt.url());
+                        attempt.error(reason)
+                    }
+                },
+            ))
+            .no_proxy()
+            .referer(false)
+            .dns_resolver(GuardedResolver {
+                policy,
+                timeout: dns_timeout,
+            })
+            .build()?;
+        Ok(Self { client, policy })
+    }
+}
+
+/// The address of an IP-literal host, `None` for a name or without a host.
+fn host_literal(url: &Url) -> Option<IpAddr> {
+    let host = url.host_str()?;
+    host.strip_prefix('[')
+        .and_then(|h| h.strip_suffix(']'))
+        .unwrap_or(host)
+        .parse()
+        .ok()
 }
 
 /// Fetches a document from a user-provided URL via the global [`GuardedFetcher`].
@@ -552,23 +611,9 @@ impl AddrPolicy {
     /// resolver.
     fn check_literal_host(self, url: &Url) -> Result<(), ErrorResponse> {
         let label = self.label;
-        let literal = match url.host_str() {
-            Some(host) => {
-                let bare = host
-                    .strip_prefix('[')
-                    .and_then(|h| h.strip_suffix(']'))
-                    .unwrap_or(host);
-                match bare.parse::<IpAddr>() {
-                    Ok(addr) => addr,
-                    Err(_) if url.domain().is_some() => return Ok(()),
-                    Err(_) => {
-                        return Err(ErrorResponse::new(
-                            ErrorResponseType::BadRequest,
-                            format!("{label} URL has no host"),
-                        ));
-                    }
-                }
-            }
+        let literal = match host_literal(url) {
+            Some(addr) => addr,
+            None if url.domain().is_some() => return Ok(()),
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -1108,8 +1153,9 @@ mod tests {
         assert_eq!(hits(&origin_hits, "/ok"), 1);
     }
 
-    /// Each fetcher has its own label and permits. The consent fetcher always allows non-public
-    /// addresses, the ephemeral one only with `ephemeral_clients.danger_allow_private_addresses`.
+    /// Each fetcher has its own label and permits. The consent fetcher allows non-public
+    /// addresses for a source on one, the ephemeral one only with
+    /// `ephemeral_clients.danger_allow_private_addresses`.
     #[tokio::test]
     async fn test_fetchers_from_vars() {
         let mut routes = HashMap::new();
@@ -1122,9 +1168,10 @@ mod tests {
             let mut vars = Vars::default();
             vars.ephemeral_clients.danger_allow_private_addresses = ephemeral;
 
-            let fetcher = GuardedFetcher::consent_with(builder(), &vars).unwrap();
-            assert!(fetcher.policy.allow_private);
-            assert_eq!(fetcher.policy.label, LABEL_CONSENT);
+            let fetcher = GuardedFetcher::consent_with(builder, &vars).unwrap();
+            assert!(!fetcher.guarded.policy.allow_private);
+            assert!(fetcher.internal.as_ref().unwrap().policy.allow_private);
+            assert_eq!(fetcher.guarded.policy.label, LABEL_CONSENT);
             assert_eq!(fetcher.semaphore.available_permits(), CONSENT_FETCH_PERMITS);
             assert!(
                 fetcher.fetch_bounded(url.clone(), 1024).await.is_ok(),
@@ -1132,8 +1179,9 @@ mod tests {
             );
 
             let fetcher = GuardedFetcher::ephemeral_with(builder(), &vars).unwrap();
-            assert_eq!(fetcher.policy.allow_private, ephemeral);
-            assert_eq!(fetcher.policy.label, LABEL_EPHEMERAL);
+            assert_eq!(fetcher.guarded.policy.allow_private, ephemeral);
+            assert!(fetcher.internal.is_none());
+            assert_eq!(fetcher.guarded.policy.label, LABEL_EPHEMERAL);
             assert_eq!(fetcher.semaphore.available_permits(), FETCH_PERMITS);
             assert_eq!(
                 fetcher.fetch_bounded(url.clone(), 1024).await.is_ok(),
@@ -1143,6 +1191,63 @@ mod tests {
         }
         // both consent fetches and the allowed ephemeral one
         assert_eq!(hits(&hits_map, "/ok"), 3);
+    }
+
+    /// A consent source may itself be on a non-public address and redirect to another one, but a
+    /// source on a public address must not redirect into the internal network.
+    #[tokio::test]
+    async fn test_consent_fetcher_redirect_from_public_source() {
+        let mut routes = HashMap::new();
+        routes.insert("/ok", with_len("200 OK", b"{}"));
+        let (port, hits_map) = spawn_server(routes).await;
+        let url = |s: &str| Url::parse(s).unwrap();
+        let fetcher =
+            GuardedFetcher::consent_with(|| test_builder(Duration::from_secs(5)), &Vars::default())
+                .unwrap();
+
+        // a source on a public address: a redirect to a non-public literal or name is refused
+        for source in [
+            "https://1.1.1.1/consent",
+            "https://[2606:4700:4700::1111]/consent",
+        ] {
+            let policy = fetcher.client_for(&url(source)).await.policy;
+            for target in [
+                "https://127.0.0.1/consent",
+                "https://10.0.0.1/consent",
+                "https://169.254.169.254/latest/meta-data",
+                "https://[::1]/consent",
+            ] {
+                assert!(
+                    policy.check_redirect(&url(target), 1).is_err(),
+                    "{source} -> {target}"
+                );
+            }
+            let internal = [SocketAddr::new(ip("10.0.0.1"), 443)];
+            assert!(
+                policy
+                    .filter_resolved("consent.internal", internal.into_iter())
+                    .is_err(),
+                "{source}"
+            );
+        }
+
+        // a source on a non-public address is fetched, and may redirect to another one
+        for host in ["127.0.0.1", "localhost"] {
+            fetcher
+                .fetch_bounded(url(&format!("http://{host}:{port}/ok")), 1024)
+                .await
+                .unwrap();
+            let policy = fetcher
+                .client_for(&url(&format!("https://{host}/consent")))
+                .await
+                .policy;
+            assert_eq!(
+                policy.check_redirect(&url("https://10.0.0.1/consent"), 1),
+                Ok(()),
+                "{host}"
+            );
+        }
+        assert_eq!(hits(&hits_map, "/ok"), 2);
     }
 
     #[tokio::test]

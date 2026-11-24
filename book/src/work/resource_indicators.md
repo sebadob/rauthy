@@ -110,7 +110,9 @@ document. The remote `name` is only used for a client's own consent source from 
 A remote source is fetched via `GET <url>?lang=<BCP47 language>` with the same redirect and proxy
 rules as ephemeral client documents, but with its own connection limit and a 3 second timeout, so a
 slow consent source cannot hold up ephemeral client lookups. Unlike an ephemeral client document, a
-consent source may resolve to a non-public address, because only an admin configures it. The
+consent source itself may resolve to a non-public address, because only an admin configures it,
+and such a source may redirect to another one. A redirect from a source on a public address into
+the internal network, to a loopback, private or otherwise non-public address, is refused. The
 content is cached for `consent.content_cache_ttl`.
 
 The `lang=en` response is required and the default: the content is taken from the response for

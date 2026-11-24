@@ -930,9 +930,11 @@ backup_keep_for_local = '3d'
 # overwritten by: CONSENT_CONTENT_CACHE_TTL
 #content_cache_ttl = '1h'
 
-# Remote consent sources are configured by an admin, so they may
-# resolve to a loopback, private or otherwise non-public address,
-# unlike ephemeral client documents. Consent source fetches follow
+# Remote consent sources are configured by an admin, so the source
+# itself may resolve to a loopback, private or otherwise non-public
+# address, unlike ephemeral client documents, and may redirect to
+# another one. A redirect from a source on a public address into
+# the internal network is refused. Consent source fetches follow
 # redirects only to https, never use system proxies and time out
 # after 3 seconds.
 

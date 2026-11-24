@@ -92,7 +92,8 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 - `consent.content_cache_ttl` is a Duration like `'10m'` or `'1h'` (default), an Integer is still
   read as seconds.
-- Remote consent sources may resolve to non-public addresses: only an admin configures them. The
+- Remote consent sources may resolve to non-public addresses: only an admin configures them. A
+  redirect from a source on a public address into the internal network is refused. The
   `consent.danger_allow_private_addresses` switch is gone. Ephemeral client documents keep their
   address checks and `ephemeral_clients.danger_allow_private_addresses`.
 - A consent revoke deletes all sessions of the user, with a backchannel logout, whoever revokes it:
