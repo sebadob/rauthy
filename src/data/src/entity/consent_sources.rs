@@ -38,8 +38,9 @@ pub enum ConsentSource {
 }
 
 impl ConsentSource {
-    /// Parses `local` or a URL accepted by [`validate_consent_source_url`]: https, no userinfo,
-    /// no fragment and no `lang` query key, which is appended on each fetch.
+    /// Parses `local` or a URL accepted by [`validate_consent_source_url`]: https (debug builds
+    /// also accept `http://localhost`), no userinfo, no fragment and no `lang` query key, which is
+    /// appended on each fetch.
     pub fn parse(value: &str) -> Result<Self, String> {
         if value == "local" {
             return Ok(Self::Local);

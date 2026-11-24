@@ -1022,12 +1022,13 @@ enable = true
 #name = 'Example API'
 
 # The local dev server serves a custom consent document in `en`
-# and `de` from `GET /auth/v1/dev/consent` (debug builds with
-# `dev_mode` only, which also accept this `http://localhost`
-# source). A login shows it for a client that has this
-# `resource` in its `allowed_resources` and requests it with
-# `resource=https://dev-api.localhost`. The same URL works as the
-# consent source of a client in the Admin UI.
+# and `de` from `GET /auth/v1/dev/consent`, in debug builds with
+# `dev_mode` only, `404` otherwise. Any debug build accepts this
+# `http://localhost` source, but only `dev_mode` or
+# `http_client.danger_unencrypted` fetch it. A login shows it for
+# a client that has this `resource` in its `allowed_resources` and
+# requests it with `resource=https://dev-api.localhost`. The same
+# URL works as the consent source of a client in the Admin UI.
 [[consent.sources]]
 resource = 'https://dev-api.localhost'
 source = 'http://localhost:8080/auth/v1/dev/consent'

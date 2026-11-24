@@ -105,8 +105,10 @@ pub fn validate_https_url(value: &str) -> Result<Url, String> {
 /// [`CONSENT_SOURCE_MAX_LEN`] bytes of [`RE_RESOURCE`] characters, an URL accepted by
 /// [`validate_https_url`], and no `lang` query key, which is appended on each fetch.
 ///
-/// Debug builds accept a plain `http://localhost` URL as well, so that a local dev server can
-/// serve its own consent document from `GET /auth/v1/dev/consent`.
+/// Any debug build accepts a plain `http://localhost` URL as well, so that a local dev server can
+/// serve its own consent document from `GET /auth/v1/dev/consent`. The fetcher only fetches it
+/// with `dev.dev_mode` or `http_client.danger_unencrypted`, else the fetch fails and the login
+/// shows the `local` content.
 pub fn validate_consent_source_url(value: &str) -> Result<Url, String> {
     if value.len() > CONSENT_SOURCE_MAX_LEN {
         return Err(format!(
@@ -208,6 +210,9 @@ mod tests {
             "http://127.0.0.1:8080/consent",
             "http://localhost:8080/consent#x",
             "http://localhost:8080/consent?lang=en",
+            // `localhost` as the userinfo of another host
+            "http://localhost:x@evil.example/consent",
+            "http://localhost@evil.example/consent",
         ] {
             assert!(validate_consent_source_url(v).is_err(), "{v}");
         }
