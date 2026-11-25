@@ -4750,6 +4750,8 @@ impl Vars {
             );
         }
 
+        self.validate_smtp();
+
         if let Err(err) = chrono_tz::Tz::from_str(&self.email.tz_fmt.tz_fallback) {
             panic!(
                 "Invalid time zone for `email.tz_fmt.tz_fallback` '{}': {err}",
@@ -4802,6 +4804,52 @@ impl Vars {
                 if value.is_none() {
                     panic!("`MIGRATE_DB_FROM` is Postgres but `database.{key}` is not set");
                 }
+            }
+        }
+    }
+
+    /// The mailer reads these when it connects, after `DB::init()`.
+    fn validate_smtp(&self) {
+        use lettre::transport::smtp::client::{Certificate, TlsParameters};
+        use rustls::pki_types::CertificateDer;
+        use rustls::pki_types::pem::PemObject;
+
+        let email = &self.email;
+        let Some(smtp_url) = &email.smtp_url else {
+            return;
+        };
+        if !matches!(
+            email.smtp_conn_mode,
+            SmtpConnMode::Default | SmtpConnMode::XOauth2
+        ) || email.smtp_tls_mode == EmailTlsMode::DangerInsecure
+        {
+            return;
+        }
+
+        if email.smtp_username.is_none() {
+            panic!("`email.smtp_url` is set but `email.smtp_username` is not");
+        }
+        if email.smtp_conn_mode == SmtpConnMode::Default && email.smtp_password.is_none() {
+            panic!("`email.smtp_url` is set but `email.smtp_password` is not");
+        }
+
+        if let Some(root_ca) = &email.root_ca {
+            // `Certificate::from_pem()` accepts input without any certificate in it.
+            match CertificateDer::pem_slice_iter(root_ca.as_bytes()).collect::<Result<Vec<_>, _>>()
+            {
+                Ok(certs) if certs.is_empty() => {
+                    panic!("Invalid `email.root_ca`: no PEM certificate found")
+                }
+                Ok(_) => {}
+                Err(err) => panic!("Invalid `email.root_ca`: {err}"),
+            }
+            let cert = Certificate::from_pem(root_ca.as_bytes())
+                .unwrap_or_else(|err| panic!("Invalid `email.root_ca`: {err}"));
+            if let Err(err) = TlsParameters::builder(smtp_url.clone())
+                .add_root_certificate(cert)
+                .build_rustls()
+            {
+                panic!("Cannot use `email.root_ca` for `email.smtp_url` '{smtp_url}': {err}");
             }
         }
     }
@@ -6289,6 +6337,57 @@ url = 'https://consent.example.com'
     fn used_after_db_init_invalid_smtp_from() {
         let mut vars = Vars::default();
         vars.email.smtp_from = "Rauthy <rauthy@>".into();
+        vars.validate_used_after_db_init();
+    }
+
+    fn smtp_vars() -> Vars {
+        let mut vars = Vars::default();
+        vars.email.smtp_url = Some("smtp.example.com".into());
+        vars.email.smtp_username = Some("rauthy".into());
+        vars.email.smtp_password = Some("secret".into());
+        vars
+    }
+
+    #[test]
+    fn used_after_db_init_valid_smtp() {
+        smtp_vars().validate_used_after_db_init();
+
+        let mut vars = smtp_vars();
+        vars.email.smtp_username = None;
+        vars.email.smtp_tls_mode = EmailTlsMode::DangerInsecure;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`email.smtp_url` is set but `email.smtp_username` is not")]
+    fn used_after_db_init_smtp_without_username() {
+        let mut vars = smtp_vars();
+        vars.email.smtp_username = None;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`email.smtp_url` is set but `email.smtp_password` is not")]
+    fn used_after_db_init_smtp_without_password() {
+        let mut vars = smtp_vars();
+        vars.email.smtp_password = None;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid `email.root_ca`")]
+    fn used_after_db_init_invalid_smtp_root_ca() {
+        let mut vars = smtp_vars();
+        vars.email.root_ca = Some("not a certificate".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid `email.root_ca`")]
+    fn used_after_db_init_malformed_smtp_root_ca() {
+        let mut vars = smtp_vars();
+        vars.email.root_ca =
+            Some("-----BEGIN CERTIFICATE-----\nnot base64 !\n-----END CERTIFICATE-----\n".into());
         vars.validate_used_after_db_init();
     }
 
