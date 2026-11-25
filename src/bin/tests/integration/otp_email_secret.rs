@@ -2,18 +2,17 @@
 //! with an empty `secret` has a code that is a public function of the server time, and anyone with
 //! the account password completes the ceremony without ever reading the mailbox.
 //!
-//! These tests need `otp.enable` on (the default `config-test.toml` keeps it disabled) plus the
-//! bootstrap API key, which is also how the `mfa_assurance` suite is run, so one env block covers
-//! both. The `just test*` recipes set it, by hand it is:
+//! These tests need `otp.enable` and the bootstrap API key, both of which `config-test.toml` sets.
+//! Only the key's secret stays outside the config, because the test process needs it to use the
+//! key, and its presence is what makes this suite run instead of skipping itself. The `just test*`
+//! recipes set it, by hand it is:
 //!
 //! ```sh
-//! OTP_ENABLE=true \
-//! BOOTSTRAP_API_KEY=eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0= \
 //! BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec \
 //! just test-hiqlite otp_secret
 //! ```
 //!
-//! Without them, every test skips itself and a plain `cargo test` run stays green. The
+//! Without it, every test skips itself and a plain `cargo test` run stays green. The
 //! code the dev-only reveal endpoint returns is the very code the backend has emailed, which is the
 //! only way a test can ever get one, because emails go nowhere during tests.
 use crate::common::{

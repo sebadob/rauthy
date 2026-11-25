@@ -11,6 +11,13 @@ whoami_headers = true
 [auth_headers]
 enable = true
 
+# the API key of the `otp_email_secret`, `mfa_assurance` and `mfa_select` suites, which create
+# their own users; they skip themselves unless `BOOTSTRAP_API_KEY_SECRET` is given to the test
+# process as well, since only the suites that need it should run
+[bootstrap]
+api_key = 'eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0='
+api_key_secret = 'MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec'
+
 [cluster]
 node_id = 1
 nodes = ["1 localhost:8100 localhost:8200"]
@@ -81,6 +88,9 @@ danger_insecure = true
 level = 'debug'
 log_file = 'src/bin/tests/test_data/rauthy.log'
 log_file_keep_for = '1d'
+
+[otp]
+enable = true
 
 [mfa]
 admin_force_mfa = false

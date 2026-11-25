@@ -19,10 +19,10 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-# `OTP_ENABLE` and the bootstrap API key of the `otp_email_secret` and `mfa_assurance` tests,
-# which skip themselves without them
+# The API key itself lives in `config-test.toml`. The test process needs the secret to use it, and
+# its presence is what makes the suites that need it run instead of skipping themselves.
 test_api_key_secret := "BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec"
-test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081 OTP_ENABLE=true BOOTSTRAP_API_KEY=eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0= " + test_api_key_secret
+test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081"
 jemalloc_conf := "MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
 
