@@ -14,7 +14,6 @@ use rauthy_data::email::mailer;
 use rauthy_data::email::mailer::EMail;
 use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::entity;
-use rauthy_data::entity::db_version::DbVersion;
 use rauthy_data::entity::pictures::UserPicture;
 use rauthy_data::events::health_watch::watch_health;
 use rauthy_data::events::listener::EventListener;
@@ -166,13 +165,6 @@ pub async fn run(
     // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
     // anymore. They are rebuilt from their document on the next request.
     DB::hql().clear_cache(Cache::ClientEphemeral).await?;
-    if previous_db_version != Some(DbVersion::app_version()) {
-        // Pending provider, WebAuthn and OTP logins carry the consent of the login, an entry from
-        // an older version may not decode anymore. Such a login is started again.
-        DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
-        DB::hql().clear_cache(Cache::Webauthn).await?;
-        DB::hql().clear_cache(Cache::OneTimePassword).await?;
-    }
 
     #[cfg(debug_assertions)]
     {
