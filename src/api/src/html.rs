@@ -47,7 +47,7 @@ pub async fn get_static_assets(
                     // control char, inside the path. This does not happen by accident, so we
                     // blacklist for a short period of time.
                     if let Ok(ip) = real_ip_from_req(&req) {
-                        let _ = IpBlacklist::put(ip.to_string(), Duration::from_secs(600)).await;
+                        let _ = IpBlacklist::put(ip.to_string(), Duration::from_mins(10)).await;
                     }
                     return HttpResponse::BadRequest().finish();
                 };

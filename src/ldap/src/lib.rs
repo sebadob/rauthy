@@ -39,9 +39,9 @@ mod dn;
 mod filter;
 
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
-const IDLE_TIMEOUT: Duration = Duration::from_secs(300);
+const IDLE_TIMEOUT: Duration = Duration::from_mins(5);
 // bound sessions are not rechecked, so this caps how long a rotated client secret stays usable
-const MAX_CONN_LIFETIME: Duration = Duration::from_secs(3600);
+const MAX_CONN_LIFETIME: Duration = Duration::from_hours(1);
 // each targeted user costs several sequential DB queries, so a search must stay far below a full load
 const MAX_TARGETS: usize = 50;
 

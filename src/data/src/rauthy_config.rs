@@ -45,7 +45,7 @@ const POW_DIFFICULTY_MAX: u8 = 99;
 
 /// How long rolling log files are kept when `logging.log_file` is set. Changing this changes how
 /// much disk space the default log file cleanup will occupy.
-const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_hours(30 * 24);
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -382,7 +382,7 @@ impl Default for Vars {
                 danger_allow_insecure: false,
                 token_lifetime: Duration::from_secs(30),
                 allow_clock_skew: Duration::from_secs(5),
-                allowed_token_lifetime: Duration::from_secs(120),
+                allowed_token_lifetime: Duration::from_mins(2),
             },
             bootstrap: VarsBootstrap {
                 admin_email: "admin@localhost".to_string(),
@@ -392,7 +392,7 @@ impl Default for Vars {
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
                 generated_secrets_file: String::new().into(),
-                generated_secrets_ttl: Duration::from_secs(600),
+                generated_secrets_ttl: Duration::from_mins(10),
                 reconcile: false,
             },
             consent: VarsConsent {
@@ -403,9 +403,9 @@ impl Default for Vars {
             },
             cred_stuff_detect: VarsCredStuff {
                 enable: true,
-                blacklist_duration: Duration::from_secs(24 * 3600),
+                blacklist_duration: Duration::from_hours(24),
                 blacklist_threshold: 15,
-                scan_window: Duration::from_secs(3 * 3600),
+                scan_window: Duration::from_hours(3),
             },
             database: VarsDatabase {
                 hiqlite: true,
@@ -424,19 +424,19 @@ impl Default for Vars {
                 migrate_pg_user: None,
                 migrate_pg_password: None,
                 migrate_pg_db_name: "rauthy".into(),
-                sched_user_exp: Duration::from_secs(3600),
+                sched_user_exp: Duration::from_hours(1),
                 sched_user_exp_delete: None,
             },
             device_grant: VarsDeviceGrant {
-                code_lifetime: Duration::from_secs(5 * 60),
+                code_lifetime: Duration::from_mins(5),
                 user_code_length: 8,
                 rate_limit: None,
                 poll_interval: Duration::from_secs(5),
-                refresh_token_lifetime: Duration::from_secs(3 * 24 * 3600),
+                refresh_token_lifetime: Duration::from_hours(3 * 24),
             },
             dpop: VarsDpop {
                 force_nonce: true,
-                nonce_exp: Duration::from_secs(15 * 60),
+                nonce_exp: Duration::from_mins(15),
             },
             dynamic_clients: VarsDynamicClients {
                 enable: false,
@@ -448,12 +448,12 @@ impl Default for Vars {
                 ],
                 default_scopes: vec!["openid".into()],
                 reg_token: None,
-                default_token_lifetime: Duration::from_secs(30 * 60),
+                default_token_lifetime: Duration::from_mins(30),
                 secret_auto_rotate: true,
-                cleanup_interval: Duration::from_secs(3600),
-                cleanup_threshold: Duration::from_secs(3600),
+                cleanup_interval: Duration::from_hours(1),
+                cleanup_threshold: Duration::from_hours(1),
                 cleanup_inactive_threshold: None,
-                rate_limit_reg: Duration::from_secs(3600),
+                rate_limit_reg: Duration::from_hours(1),
                 allowed_resources: Vec::default(),
             },
             email: VarsEmail {
@@ -467,8 +467,8 @@ impl Default for Vars {
                 smtp_tls_mode: EmailTlsMode::Tls,
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
-                    orphaned_pickup: Duration::from_secs(5 * 60),
-                    scheduler_interval: Duration::from_secs(5 * 60),
+                    orphaned_pickup: Duration::from_mins(5),
+                    scheduler_interval: Duration::from_mins(5),
                     batch_size: 3,
                     batch_delay: Duration::from_secs(2),
                 },
@@ -497,7 +497,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
-                password_exp: Duration::from_secs(10 * 24 * 3600),
+                password_exp: Duration::from_hours(10 * 24),
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -516,7 +516,7 @@ impl Default for Vars {
                     "webid".into(),
                 ],
                 default_scopes: None,
-                cache_lifetime: Duration::from_secs(3600),
+                cache_lifetime: Duration::from_hours(1),
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
                 allowed_resources: Vec::default(),
@@ -538,7 +538,7 @@ impl Default for Vars {
                 notify_level_matrix: EventLevel::Notice,
                 notify_level_slack: EventLevel::Notice,
                 persist_level: EventLevel::Info,
-                cleanup_threshold: Duration::from_secs(60 * 24 * 3600),
+                cleanup_threshold: Duration::from_hours(60 * 24),
                 generate_token_issued: true,
                 level_new_user: EventLevel::Info,
                 level_user_email_change: EventLevel::Notice,
@@ -597,7 +597,7 @@ impl Default for Vars {
                 connect_timeout: Duration::from_secs(10),
                 request_timeout: Duration::from_secs(10),
                 min_tls: "1.3".into(),
-                idle_timeout: Duration::from_secs(15 * 60),
+                idle_timeout: Duration::from_mins(15),
                 danger_unencrypted: false,
                 danger_insecure: false,
                 root_ca_bundle: None,
@@ -639,12 +639,12 @@ impl Default for Vars {
             },
             lifetimes: VarsLifetimes {
                 refresh_token_grace_time: Duration::from_secs(5),
-                refresh_token_lifetime: Duration::from_secs(48 * 3600),
-                session_lifetime: Duration::from_secs(10 * 3600),
+                refresh_token_lifetime: Duration::from_hours(48),
+                session_lifetime: Duration::from_hours(10),
                 session_renew_mfa: false,
-                session_timeout: Duration::from_secs(90 * 60),
-                magic_link_pwd_reset: Duration::from_secs(30 * 60),
-                magic_link_pwd_first: Duration::from_secs(3 * 24 * 3600),
+                session_timeout: Duration::from_mins(90),
+                magic_link_pwd_reset: Duration::from_mins(30),
+                magic_link_pwd_first: Duration::from_hours(3 * 24),
                 jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
             logging: VarsLogging {
@@ -666,8 +666,8 @@ impl Default for Vars {
             otp: VarsOtp {
                 enable: false,
                 length: 6,
-                exp: Duration::from_secs(5 * 60),
-                renew_exp: Duration::from_secs(30 * 24 * 3600),
+                exp: Duration::from_mins(5),
+                renew_exp: Duration::from_hours(30 * 24),
                 digest_len_default: 512,
                 email: VarsOtpEmail {
                     enable: true,
@@ -686,14 +686,14 @@ impl Default for Vars {
             },
             pam: VarsPam {
                 remote_password_len: 24,
-                remote_password_ttl: Duration::from_secs(120),
+                remote_password_ttl: Duration::from_mins(2),
                 authorized_keys: VarsPamAuthorizedKeys {
                     authorized_keys_enable: true,
                     auth_required: true,
                     blacklist_used_keys: true,
-                    blacklist_cleanup_threshold: Duration::from_secs(730 * 24 * 3600),
+                    blacklist_cleanup_threshold: Duration::from_hours(730 * 24),
                     include_comments: true,
-                    forced_key_expiry: Duration::from_secs(365 * 24 * 3600),
+                    forced_key_expiry: Duration::from_hours(365 * 24),
                 },
             },
             pow: VarsPow {
@@ -728,7 +728,7 @@ impl Default for Vars {
                 email_reminder_disable: false
             },
             suspicious_requests: VarsSuspiciousRequests {
-                blacklist: Duration::from_secs(24 * 3600),
+                blacklist: Duration::from_hours(24),
                 log: false,
             },
             templates: VarsTemplates {
@@ -1546,7 +1546,7 @@ Your account has not been compromised and no data was leaked.".into()),
                 poll_watch_interval: None,
             },
             tos: VarsToS {
-                accept_timeout: Duration::from_secs(15 * 60),
+                accept_timeout: Duration::from_mins(15),
             },
             user_delete: VarsUserDelete {
                 enable_self_delete: false,
@@ -1600,9 +1600,9 @@ Your account has not been compromised and no data was leaked.".into()),
                 rp_id: String::default(),
                 rp_origin: String::default(),
                 rp_name: "Rauthy IAM".into(),
-                req_exp: Duration::from_secs(60),
+                req_exp: Duration::from_mins(1),
                 data_exp: Duration::from_secs(90),
-                renew_exp: Duration::from_secs(90 * 24 * 3600),
+                renew_exp: Duration::from_hours(90 * 24),
                 force_uv: false,
                 no_password_exp: true,
                 optimistic_attestation: false,
@@ -6448,33 +6448,21 @@ url = 'https://consent.example.com'
     fn test_parse_duration() {
         assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
         assert_eq!(parse_duration("2s").unwrap(), Duration::from_secs(2));
-        assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
-        assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
-        assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
-        assert_eq!(parse_duration("2h").unwrap(), Duration::from_secs(2 * 3600));
-        assert_eq!(
-            parse_duration("1d").unwrap(),
-            Duration::from_secs(24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2d").unwrap(),
-            Duration::from_secs(2 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("1w").unwrap(),
-            Duration::from_secs(7 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2w").unwrap(),
-            Duration::from_secs(14 * 24 * 3600)
-        );
+        assert_eq!(parse_duration("1m").unwrap(), Duration::from_mins(1));
+        assert_eq!(parse_duration("2m").unwrap(), Duration::from_mins(2));
+        assert_eq!(parse_duration("1h").unwrap(), Duration::from_hours(1));
+        assert_eq!(parse_duration("2h").unwrap(), Duration::from_hours(2));
+        assert_eq!(parse_duration("1d").unwrap(), Duration::from_hours(24));
+        assert_eq!(parse_duration("2d").unwrap(), Duration::from_hours(2 * 24));
+        assert_eq!(parse_duration("1w").unwrap(), Duration::from_hours(7 * 24));
+        assert_eq!(parse_duration("2w").unwrap(), Duration::from_hours(14 * 24));
         assert_eq!(
             parse_duration("1y").unwrap(),
-            Duration::from_secs(365 * 24 * 3600)
+            Duration::from_hours(365 * 24)
         );
         assert_eq!(
             parse_duration("2y").unwrap(),
-            Duration::from_secs(2 * 365 * 24 * 3600)
+            Duration::from_hours(2 * 365 * 24)
         );
     }
 

@@ -15,7 +15,7 @@ use tracing::{debug, error, info};
 /// Runs once every night at 04:30.
 pub async fn password_expiry_checker() {
     time::sleep(Duration::from_secs(5)).await;
-    let mut interval = time::interval(Duration::from_secs(4 * 3600));
+    let mut interval = time::interval(Duration::from_hours(4));
 
     loop {
         interval.tick().await;
