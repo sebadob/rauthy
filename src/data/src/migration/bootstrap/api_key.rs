@@ -43,7 +43,7 @@ async fn bootstrap_legacy_config_api_key() -> Result<(), ErrorResponse> {
     create_or_update_api_key_access(
         req.name,
         req.exp,
-        req.access.into_iter().map(|a| a.into()).collect(),
+        req.access.into_iter().map(Into::into).collect(),
     )
     .await?;
 
@@ -61,7 +61,7 @@ async fn bootstrap_api_keys_json() -> Result<(), ErrorResponse> {
     for api_key in api_keys {
         let key_name = api_key.name.clone();
         debug!("Bootstrapping API Key: {key_name}");
-        let access = api_key.access.into_iter().map(|a| a.into()).collect();
+        let access = api_key.access.into_iter().map(Into::into).collect();
 
         match api_key.secret {
             ApiKeySecret::Generate => {
@@ -198,11 +198,7 @@ impl From<crate::migration::bootstrap::types::ApiKeyAccess>
     fn from(value: crate::migration::bootstrap::types::ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
-            access_rights: value
-                .access_rights
-                .into_iter()
-                .map(|ar| ar.into())
-                .collect(),
+            access_rights: value.access_rights.into_iter().map(Into::into).collect(),
         }
     }
 }

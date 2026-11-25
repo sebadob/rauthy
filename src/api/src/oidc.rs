@@ -57,7 +57,7 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::mem;
 use std::ops::Add;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tracing::{debug, error, info, warn};
 use validator::Validate;
 
@@ -272,7 +272,7 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::LoginAction(action));
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
-        build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
+        build_authorize_resp(&accept_encoding, body, None, origin_header, &browser_id)
     } else {
         // check if we can re-use a still valid session or need to create a new one
         let session = if principal.session.is_some() {
@@ -306,11 +306,11 @@ pub async fn get_authorize(
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
-            accept_encoding,
+            &accept_encoding,
             body,
             Some(&session),
             origin_header,
-            browser_id,
+            &browser_id,
         )
     }
 }
@@ -328,11 +328,11 @@ fn consent_error_code(err: &ErrorResponse) -> &'static str {
 }
 
 fn build_authorize_resp(
-    accept_encoding: web::Header<header::AcceptEncoding>,
+    accept_encoding: &header::AcceptEncoding,
     body: String,
     session: Option<&Session>,
     origin_header: Option<(HeaderName, HeaderValue)>,
-    browser_id: BrowserId,
+    browser_id: &BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
     let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
         // for dynamic, fast compression, gzip wins over brotli
@@ -423,7 +423,7 @@ pub async fn post_authorize_handle(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
 
     let session = principal.get_session()?;
 
@@ -1029,9 +1029,9 @@ pub async fn post_session(
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -1087,9 +1087,9 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(
@@ -1136,9 +1136,9 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -1182,7 +1182,7 @@ pub async fn post_token(
         return Ok(oidc::grant_type_device_code(ip, payload).await);
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
     let has_password_been_hashed = payload.grant_type == GrantType::Password;
     let mut user_failed_logins = None;
 

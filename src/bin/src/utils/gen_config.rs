@@ -79,28 +79,28 @@ impl Display for GenConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            r#"## The full reference config can be found here:
+            r"## The full reference config can be found here:
 ## https://sebadob.github.io/rauthy/config/config.html
-"#
+"
         )?;
 
         writeln!(
             f,
-            r#"
+            r"
 [bootstrap]
 # If set, the email of the default admin will be changed during
 # the initialization of an empty production database.
 #
 # default: 'admin@localhost'
 # overwritten by: BOOTSTRAP_ADMIN_EMAIL
-admin_email = '{}'"#,
+admin_email = '{}'",
             self.admin_email
         )?;
 
         if let Some(hash) = self.password_hash.as_ref() {
             writeln!(
                 f,
-                r#"
+                r"
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
 # `password_plain` and `password_argon2id` are set, the hashed
@@ -108,7 +108,7 @@ admin_email = '{}'"#,
 #
 # default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-password_argon2id = '{}'"#,
+password_argon2id = '{}'",
                 hash
             )?;
         }
@@ -116,19 +116,19 @@ password_argon2id = '{}'"#,
         if self.node_id_from_k8s {
             writeln!(
                 f,
-                r#"
+                r"
 [cluster]
 # Can be set to 'k8s' to try to split off the node id from the hostname
 # when Hiqlite is running as a StatefulSet inside Kubernetes.
 #
 # default: unset
 # overwritten by: HQL_NODE_ID_FROM
-node_id_from = 'k8s'"#
+node_id_from = 'k8s'"
             )?;
         } else {
             writeln!(
                 f,
-                r#"
+                r"
 [cluster]
 # The node id must exist in the nodes and there must always be
 # at least a node with ID 1
@@ -138,7 +138,7 @@ node_id_from = 'k8s'"#
 #
 # default: 0 (invalid)
 # overwritten by: HQL_NODE_ID
-node_id = 1"#
+node_id = 1"
             )?;
         }
         writeln!(f, "\nnodes = [")?;
@@ -150,7 +150,7 @@ node_id = 1"#
         if let Some(tls) = self.cluster_tls_auto_certificates {
             writeln!(
                 f,
-                r#"
+                r"
 # The `tls_auto_certificates` will generate self-signed TLS
 # certificates for internal Raft and API traffic. Clients will
 # simply not validate the certificates for ease of use because
@@ -163,7 +163,7 @@ node_id = 1"#
 #
 # default: false
 # overwritten by: HQL_TLS_AUTO_CERTS
-tls_auto_certificates = {}"#,
+tls_auto_certificates = {}",
                 tls
             )?;
         }
@@ -171,7 +171,7 @@ tls_auto_certificates = {}"#,
         if let Some(cache_storage_disk) = self.cache_storage_disk {
             writeln!(
                 f,
-                r#"
+                r"
 # Set to `false` to store Cache WAL files + Snapshots in-memory only.
 # If you run a Cluster, a Node can re-sync cache data after a restart.
 # However, if you restart too quickly or shut down the whole cluster,
@@ -181,14 +181,14 @@ tls_auto_certificates = {}"#,
 #
 # default: true
 # overwritten by: HQL_CACHE_STORAGE_DISK
-cache_storage_disk = {}"#,
+cache_storage_disk = {}",
                 cache_storage_disk
             )?;
         }
 
         writeln!(
             f,
-            r#"
+            r"
 # Secrets for Raft internal authentication as well as for the API.
 # These must be at least 16 characters long, and you should provide
 # different ones for both variables.
@@ -198,7 +198,7 @@ cache_storage_disk = {}"#,
 secret_raft = '{}'
 # default: not set - required
 # overwritten by: HQL_SECRET_API
-secret_api = '{}'"#,
+secret_api = '{}'",
             secure_random_alnum(48),
             secure_random_alnum(48)
         )?;
@@ -206,7 +206,7 @@ secret_api = '{}'"#,
         if let Some(s3) = &self.s3_config {
             writeln!(
                 f,
-                r#"
+                r"
 # Access values for the S3 bucket where backups will be pushed to.
 # overwritten by: HQL_S3_URL
 s3_url = '{}'
@@ -219,7 +219,7 @@ s3_path_style = {}
 # overwritten by: HQL_S3_KEY
 s3_key = '{}'
 # overwritten by: HQL_S3_SECRET
-s3_secret = '{}'"#,
+s3_secret = '{}'",
                 s3.url, s3.bucket, s3.region, s3.path_style, s3.key, s3.secret
             )?;
         }
@@ -229,21 +229,21 @@ s3_secret = '{}'"#,
         if let Some(hiqlite) = self.use_hiqlite {
             writeln!(
                 f,
-                r#"# Hiqlite is the default database for Rauthy.
+                r"# Hiqlite is the default database for Rauthy.
 # You can opt-out and use Postgres instead by setting this
 # value to `false`. Rauthy will then read the `pg_*` values
 # below to establish a Postgres connection.
 #
 # default: true
 # overwritten by: HIQLITE
-hiqlite = {}"#,
+hiqlite = {}",
                 hiqlite
             )?;
         }
         if let Some(pg) = &self.pg_config {
             writeln!(
                 f,
-                r#"# If you set `hiqlite = false` and want to use Postgres as your
+                r"# If you set `hiqlite = false` and want to use Postgres as your
 # database, you need to set the following variables.
 # These will be ignored as long as `hiqlite = true`.
 #
@@ -265,7 +265,7 @@ pg_db_name = '{}'
 #
 # default: false
 # overwritten by: PG_TLS_NO_VERIFY
-pg_tls_no_verify = {}"#,
+pg_tls_no_verify = {}",
                 pg.host, pg.user, pg.password, pg.db_name, pg.pg_tls_no_verify
             )?;
         }
@@ -299,7 +299,7 @@ smtp_from = '{}'"#,
         let keys_b64 = keys.keys_as_b64_vec();
         writeln!(
             f,
-            r#"
+            r"
 [encryption]
 # You need to define at least one valid encryption key.
 # These keys are used in various places, like for instance
@@ -329,39 +329,39 @@ keys = ['{}']
 # should actively be used for new encryptions.
 #
 # overwritten by: ENC_KEY_ACTIVE
-key_active = '{}'"#,
+key_active = '{}'",
             keys_b64.first().unwrap(),
             keys.enc_key_active
         )?;
 
         writeln!(
             f,
-            r#"
+            r"
 [events]
 # The E-Mail address event notifications should be sent to.
 #
 # overwritten by: EVENT_EMAIL
-email = '{}'"#,
+email = '{}'",
             self.admin_email
         )?;
 
         writeln!(
             f,
-            r#"
+            r"
 [mfa]
 # If 'true', MFA for an account must be enabled to access the
 # rauthy admin UI.
 #
 # default: true
 # overwritten by: ADMIN_FORCE_MFA
-admin_force_mfa = {}"#,
+admin_force_mfa = {}",
             self.admin_force_mfa
         )?;
 
         let scheme = if self.use_https { "https" } else { "http" };
         writeln!(
             f,
-            r#"
+            r"
 [server]
 # The scheme to use locally, valid values:
 # http | https | http_https | unix_http | unix_https
@@ -380,14 +380,14 @@ scheme = '{}'
 #
 # default: not set - mandatory
 # overwritten by: PUB_URL
-pub_url = '{}'"#,
+pub_url = '{}'",
             scheme, self.pub_url
         )?;
 
         if !self.trusted_proxies.is_empty() {
             writeln!(
                 f,
-                r#"
+                r"
 # When rauthy is running behind a reverse proxy, set to true
 #
 # default: false
@@ -402,7 +402,7 @@ proxy_mode = {}
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
 trusted_proxies = [
-"#,
+",
                 self.proxy_mode
             )?;
             for cidr in &self.trusted_proxies {
@@ -419,7 +419,7 @@ trusted_proxies = [
 
             writeln!(
                 f,
-                r#"
+                r"
 [tls]
 ## UI + API TLS
 
@@ -436,7 +436,7 @@ cert_path = '{}'
 #
 # default: 'tls/tls.key'
 # overwritten by: TLS_KEY
-key_path = '{}'"#,
+key_path = '{}'",
                 cert_path, key_path
             )?;
         }
@@ -447,7 +447,7 @@ key_path = '{}'"#,
             }
             writeln!(
                 f,
-                r#"
+                r"
 # If set to `true`, Rauthy will generate self-signed TLS certs and copy
 # them into `tls/self_signed_cert.pem` and `tls/self_signed_key.pem`.
 # It will also IGNORE any `cert_path` / `key_path`.
@@ -460,7 +460,7 @@ key_path = '{}'"#,
 #
 # default: false
 # overwritten by: TLS_GENERATE_SELF_SIGNED
-generate_self_signed = {}"#,
+generate_self_signed = {}",
                 self_signed
             )?;
         }
@@ -468,7 +468,7 @@ generate_self_signed = {}"#,
         if let Some(self_del) = self.user_self_delete_enable {
             writeln!(
                 f,
-                r#"
+                r"
 [user_delete]
 # You can enable user self-deletion via the Account Dashboard.
 # It is disabled by default, because especially if you use things like
@@ -479,7 +479,7 @@ generate_self_signed = {}"#,
 #
 # default: false
 # overwritten by: USER_ENABLE_SELF_DELETE
-enable_self_delete = {}"#,
+enable_self_delete = {}",
                 self_del
             )?;
         }
@@ -487,21 +487,21 @@ enable_self_delete = {}"#,
         if let Some(user_reg) = self.user_registration_enable {
             writeln!(
                 f,
-                r#"
+                r"
 [user_registration]
 # If the User Registration endpoint should be accessible by anyone.
 # If not, an admin must create each new user.
 #
 # default: false
 # overwritten by: OPEN_USER_REG
-enable = {}"#,
+enable = {}",
                 user_reg
             )?;
         }
 
         writeln!(
             f,
-            r#"
+            r"
 [webauthn]
 # The 'Relaying Party (RP) ID' - effective domain name.
 #
@@ -528,7 +528,7 @@ rp_origin = '{}'
 #
 # default: 'Rauthy IAM'
 # overwritten by: RP_NAME
-rp_name = '{}'"#,
+rp_name = '{}'",
             self.rp_id, self.rp_origin, self.rp_name
         )?;
 
@@ -578,12 +578,12 @@ impl GenConfig {
                 }
 
                 println!(
-                    r#"
+                    r"
 The recommended set for HA is 3 nodes. Do NOT run 2 nodes.
 It makes no sense. Rauthy uses the Raft consensus algorithm
 under the hood which already needs a quorum. We assume you
 want to run 3 nodes. Provide the 3 IPs or DNS names for
-each node 1 by 1:"#
+each node 1 by 1:"
                 );
 
                 println!("Node 1: ");
@@ -684,7 +684,7 @@ each node 1 by 1:"#
     A random one will be generated otherwise on first start."
         );
         if read_line_stdin_yes().await? {
-            let msg = r#"
+            let msg = r"
 
 To be as secure as possible, Rauthy comes with a default
 password policy you must match. At least:
@@ -692,7 +692,7 @@ password policy you must match. At least:
 - 1 lowercase char
 - 1 uppercase char
 - 1 digit
-"#
+"
             .to_string();
 
             let policy = PromptPassword::default();
@@ -743,9 +743,9 @@ password policy you must match. At least:
                 slf.tls_generate_self_signed = Some(true);
             } else if v == "existing" {
                 println!(
-                    r#"
+                    r"
 The default path's where Rauthy will look for TLS certificates are
-'tls/tls.crt' and 'tls/tls.key'. Do you want to overwrite these?"#
+'tls/tls.crt' and 'tls/tls.key'. Do you want to overwrite these?"
                 );
                 if read_line_stdin_yes().await? {
                     'outer: loop {
@@ -805,11 +805,11 @@ The default path's where Rauthy will look for TLS certificates are
         slf.proxy_mode = read_line_stdin_yes().await?;
         if slf.proxy_mode {
             println!(
-                r#"
+                r"
 Provide a list of trusted proxy CIDRs. When `proxy_mode = true`
 these are mandatory to be able to extract the real client IP
 properly and safely to prevent IP header spoofing. All requests
-with a different source will be blocked."#
+with a different source will be blocked."
             );
 
             'outer: loop {
@@ -841,12 +841,12 @@ with a different source will be blocked."#
         // Webauthn
         ///////////////////////
         println!(
-            r#"
+            r"
 Provide the Public URL of the whole deployment
 The LISTEN_SCHEME + PUB_URL must match the HTTP ORIGIN HEADER
 later on, which is especially important when running Rauthy
 behind a reverse proxy. In case of a non-standard port (80/443),
-you need to add the port to the PUB_URL."#
+you need to add the port to the PUB_URL."
         );
         slf.pub_url = read_line_stdin().await?;
         if slf.pub_url.contains("://") {
@@ -854,33 +854,33 @@ you need to add the port to the PUB_URL."#
         }
 
         println!(
-            r#"
+            r"
 Provide the 'Relaying Party (RP) ID' for Webauthn (Passkeys).
 This is the effective domain name.
 E.g. if your PUB_URL is 'iam.example.com', you would use the
 same as RP ID.
 CAUTION: When this changes, already registered devices will
 stop working and users cannot log in anymore! This is a
-set-once-and-never-change value!"#
+set-once-and-never-change value!"
         );
         slf.rp_id = read_line_stdin().await?;
 
         println!(
-            r#"
+            r"
 Provide the 'Relaying Party (RP)' Origin for Webauthn (Passkeys).
 This is basically the RP ID from above, but with the HTTPS scheme
 AND ALWAYS the port! Even if it's a default port!
 E.g. if your PUB_URL / RP_ID is 'iam.example.com', you would use
-'https://iam.example.com:443'."#
+'https://iam.example.com:443'."
         );
         slf.rp_origin = read_line_stdin().await?;
 
         println!(
-            r#"
+            r"
 Your 'Relaying Party (RP)' Name for Webauthn (Passkeys).
 This is a non-critical value that could be changed at any time.
 Some browsers will display this name during the Webauthn Ceremony.
-It has just informative purposes."#
+It has just informative purposes."
         );
         slf.rp_name = read_line_stdin().await?;
 
@@ -945,7 +945,7 @@ pub async fn generate(args: ArgsGenConfig) -> Result<(), StdError> {
 
     println!("Configuration written to: {}", args.output_file);
     println!(
-        r#"
+        r"
 Keep in mind that this is only to get you started. This is by no means
 a full config. You can configure a lot more things, and especially when
 finally going into production, you should check the Book:
@@ -958,7 +958,7 @@ the uid:gid. If you plan to use it inside the original container directly,
 the file needs to be owned by user 10001:
 
 chown 10001:10001 /path/to/file
-"#
+"
     );
 
     Ok(())

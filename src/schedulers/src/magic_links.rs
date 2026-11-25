@@ -14,7 +14,7 @@ use tracing::{debug, error, info};
 /// 'set first ever password' magic link to keep the database clean in case of an open user registration.
 /// Runs every 6 hours.
 pub async fn magic_link_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 6));
+    let mut interval = tokio::time::interval(Duration::from_hours(6));
 
     loop {
         interval.tick().await;
@@ -46,14 +46,14 @@ pub async fn magic_link_cleanup() {
 }
 
 async fn cleanup(exp: i64) -> Result<(), ErrorResponse> {
-    let sql = r#"
+    let sql = r"
 DELETE FROM users
 WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
 AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL
-RETURNING id, email"#;
+RETURNING id, email";
 
     let res = if is_hiqlite() {
         match DB::hql().execute_returning(sql, params!(exp)).await {
@@ -116,13 +116,13 @@ RETURNING id, email"#;
             // env.
             error!("{err}");
 
-            let sql = r#"
+            let sql = r"
 SELECT * FROM users
 WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL"#;
+AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL";
 
             let users: Vec<User> = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(exp)).await?
@@ -137,7 +137,7 @@ AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL"#
             }
 
             error!(
-                r#"
+                r"
 
 This Magic Link cleanup error should never happen. This is additional debugging
 information. It was not possible to cleanup the following users. Please confirm
@@ -153,12 +153,12 @@ Did you do anything special / manually for the listed users? Please report at:
 
 https://github.com/sebadob/rauthy/issues/1532
 
-"#
+"
             );
 
             if !states.is_empty() {
                 error!(
-                    r#"
+                    r"
 Additional debugging information about user magic link cleanup error. The following
 login states were found:
 
@@ -171,7 +171,7 @@ users? Please report at:
 
 https://github.com/sebadob/rauthy/issues/1532
 
-                "#
+                "
                 );
             }
         }

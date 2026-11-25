@@ -138,11 +138,11 @@ pub async fn migrate_dev_data() -> Result<(), ErrorResponse> {
     let entity = deserialize::<Jwk>(hex::decode(eddsahex).unwrap().as_slice())?;
     jwks.push(entity);
 
-    let sql = r#"
+    let sql = r"
 INSERT INTO
 jwks (kid, created_at, signature, enc_key_id, jwk)
 VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT DO NOTHING"#;
+ON CONFLICT DO NOTHING";
 
     for jwk in jwks {
         if is_hiqlite() {
@@ -186,11 +186,11 @@ ON CONFLICT DO NOTHING"#;
     };
 
     let sql_1 = "UPDATE clients SET backchannel_logout_uri = $1 WHERE id = 'init_client'";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO
 magic_links (id, user_id, csrf_token, exp, used, usage)
 VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT DO NOTHING"#;
+ON CONFLICT DO NOTHING";
 
     if is_hiqlite() {
         // make sure that the newer backchannel logout uri is set for integration tests

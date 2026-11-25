@@ -314,7 +314,7 @@ impl AuthProvider {
         let slf = Self::try_from_id_req(new_store_id(), payload)?;
         let typ = slf.typ.as_str();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
@@ -322,7 +322,7 @@ mfa_claim_path, mfa_claim_value, claim_mappings, use_pkce, client_secret_basic,
 client_secret_post, auto_onboarding, auto_link, hide_login)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21, $22, $23)"#;
+$21, $22, $23)";
 
         if is_hiqlite() {
             DB::hql()
@@ -491,14 +491,14 @@ $21, $22, $23)"#;
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let typ = self.typ.as_str();
 
-        let sql = r#"
+        let sql = r"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
 scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
 mfa_claim_value = $15, claim_mappings = $16, use_pkce = $17, client_secret_basic = $18,
 client_secret_post = $19, auto_onboarding = $20, auto_link = $21, hide_login = $22
-WHERE id = $23"#;
+WHERE id = $23";
 
         if is_hiqlite() {
             DB::hql()
@@ -732,7 +732,7 @@ impl AuthProvider {
                 ));
             }
             if let (Some(path), Some(value)) = (path, value) {
-                ClaimRule::compile(path, value).map_err(|err| Self::claim_rule_err(name, err))?;
+                ClaimRule::compile(path, value).map_err(|err| Self::claim_rule_err(name, &err))?;
             }
         }
 
@@ -802,7 +802,7 @@ impl AuthProvider {
             // The path is parsed and the matcher compiled here, exactly as on the login path, so
             // neither can fail there.
             ClaimRule::compile(&mapping.claim_path, &mapping.claim_value)
-                .map_err(|err| Self::claim_rule_err(&mapping.target, err))?;
+                .map_err(|err| Self::claim_rule_err(&mapping.target, &err))?;
         }
 
         if mappings.is_empty() {
@@ -816,7 +816,7 @@ impl AuthProvider {
         })
     }
 
-    fn claim_rule_err(target: &str, err: ErrorResponse) -> ErrorResponse {
+    fn claim_rule_err(target: &str, err: &ErrorResponse) -> ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Claim mapping for `{target}`: {}", err.message),
@@ -931,7 +931,7 @@ impl AuthProvider {
         let scopes_supported = well_known
             .scopes_supported
             .iter()
-            .map(|s| s.as_str())
+            .map(String::as_str)
             .collect::<Vec<&str>>();
         let mut scope = String::with_capacity(24);
         if scopes_supported.contains(&"openid") {
@@ -1841,7 +1841,7 @@ impl AuthProviderIdClaims<'_> {
         let preferred_username = if let Some(username) = &self.preferred_username {
             Some(username.to_string())
         } else {
-            self.login.as_ref().map(|l| l.to_string())
+            self.login.as_ref().map(ToString::to_string)
         };
         if let Some(username) = preferred_username {
             // Check via local read first, which is a lot cheaper than write through the Raft.

@@ -15,7 +15,7 @@ use tracing::{debug, error, info};
 /// Runs once every night at 04:30.
 pub async fn password_expiry_checker() {
     time::sleep(Duration::from_secs(5)).await;
-    let mut interval = time::interval(Duration::from_secs(4 * 3600));
+    let mut interval = time::interval(Duration::from_hours(4));
 
     loop {
         interval.tick().await;
@@ -47,10 +47,10 @@ async fn execute() -> Result<(), ErrorResponse> {
 
     // This query also needs to look into the past just in case we missed
     // a cleanup for `pwd_exp_mails` somewhere.
-    let sql = r#"SELECT * FROM users
+    let sql = r"SELECT * FROM users
 WHERE password_expires <= $1 AND NOT EXISTS (
     SELECT 1 FROM pwd_exp_mails WHERE user_id = id AND mail_sent_ts > $2
-)"#;
+)";
 
     let expiring_users: Result<Vec<User>, ErrorResponse> = if is_hiqlite() {
         DB::hql()

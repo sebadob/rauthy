@@ -162,7 +162,7 @@ impl PasswordPolicy {
 }
 
 impl PasswordPolicy {
-    pub fn apply_req(&mut self, req: PasswordPolicyRequest) {
+    pub fn apply_req(&mut self, req: &PasswordPolicyRequest) {
         self.length_min = req.length_min;
         self.length_max = req.length_max;
         self.include_lower_case = req.include_lower_case;

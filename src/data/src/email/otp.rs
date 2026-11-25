@@ -71,7 +71,7 @@ pub async fn send_email_otp(code: &str, user: &User) {
 
     let res = RauthyConfig::get()
         .tx_email
-        .send_timeout((req, EMailCallback::None), Duration::from_secs(60))
+        .send_timeout((req, EMailCallback::None), Duration::from_mins(1))
         .await;
     match res {
         Ok(()) => {}

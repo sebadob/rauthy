@@ -43,7 +43,7 @@ pub async fn jwks_auto_rotate() {
 
 /// Cleans up old / expired JWKSs
 pub async fn jwks_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 24));
+    let mut interval = tokio::time::interval(Duration::from_hours(24));
 
     loop {
         interval.tick().await;

@@ -35,10 +35,10 @@ impl Debug for ApiKeyEntity {
 
 impl ApiKeyEntity {
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         if is_hiqlite() {
             DB::hql()
@@ -197,10 +197,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
-        let sql = r#"
+        let sql = r"
 UPDATE api_keys
 SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-WHERE name = $5"#;
+WHERE name = $5";
 
         if is_hiqlite() {
             DB::hql()
@@ -231,10 +231,10 @@ WHERE name = $5"#;
     pub async fn save(self) -> Result<(), ErrorResponse> {
         let name = self.name.clone();
 
-        let sql = r#"
+        let sql = r"
 UPDATE api_keys
 SET secret = $1, expires = $2, enc_key_id = $3, access = $4
-WHERE name = $5"#;
+WHERE name = $5";
 
         if is_hiqlite() {
             DB::hql()
@@ -350,7 +350,7 @@ impl ApiKeyEntity {
 
 // NOTE: If you expand this list in the future, make sure to only add new types at the end to never
 // run into deserialization issues!
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AccessGroup {
     Blacklist,
     Clients,
@@ -368,7 +368,7 @@ pub enum AccessGroup {
     ApiKeys,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessRights {
     Read,
@@ -501,11 +501,7 @@ impl From<ApiKeyAccess> for rauthy_api_types::api_keys::ApiKeyAccess {
     fn from(value: ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
-            access_rights: value
-                .access_rights
-                .into_iter()
-                .map(|ar| ar.into())
-                .collect(),
+            access_rights: value.access_rights.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -546,11 +542,7 @@ impl From<rauthy_api_types::api_keys::ApiKeyAccess> for ApiKeyAccess {
     fn from(value: rauthy_api_types::api_keys::ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
-            access_rights: value
-                .access_rights
-                .into_iter()
-                .map(|ar| ar.into())
-                .collect(),
+            access_rights: value.access_rights.into_iter().map(Into::into).collect(),
         }
     }
 }

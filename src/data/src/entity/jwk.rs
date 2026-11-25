@@ -55,9 +55,9 @@ impl Debug for Jwk {
 impl Jwk {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()
@@ -354,7 +354,7 @@ impl JWKSPublicKey {
                 let pubkey = key.to_public_key();
                 Self {
                     kty: JwkKeyPairType::RSA,
-                    alg: Some(key_pair.typ.clone()),
+                    alg: Some(key_pair.typ),
                     crv: None,
                     kid: Some(key_pair.kid.clone()),
                     n: Some(base64_url_encode(&pubkey.n().to_bytes_be())),
@@ -367,7 +367,7 @@ impl JWKSPublicKey {
                 let x = base64_url_encode(key.public_key().as_slice());
                 Self {
                     kty: JwkKeyPairType::OKP,
-                    alg: Some(key_pair.typ.clone()),
+                    alg: Some(key_pair.typ),
                     crv: Some("Ed25519".to_string()),
                     kid: Some(key_pair.kid.clone()),
                     n: None,
@@ -673,7 +673,7 @@ impl JwkKeyPair {
             DB::pg_query_one(sql, &[&kid]).await?
         };
 
-        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
+        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature)?;
         client.put(Cache::App, idx, &kp, CACHE_TTL_APP).await?;
 
         Ok(kp)
@@ -699,11 +699,11 @@ impl JwkKeyPair {
         .as_str()
         .to_string();
 
-        let sql = r#"
+        let sql = r"
 SELECT * FROM jwks
 WHERE signature = $1
 ORDER BY created_at DESC
-LIMIT 1"#;
+LIMIT 1";
 
         let jwk_latest: Jwk = if is_hiqlite() {
             client.query_as_one(sql, params!(signature)).await?
@@ -868,7 +868,7 @@ impl JwkKeyPairType {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,

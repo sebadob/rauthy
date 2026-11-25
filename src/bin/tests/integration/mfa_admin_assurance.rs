@@ -127,7 +127,10 @@ async fn create_test_user(email: &str, roles: &[&str]) -> Result<String, Box<dyn
     let _fixture = FIXTURE_LOCK.get_or_init(Default::default).lock().await;
     let backend = get_backend_url();
     let admin = fixture_headers()?;
-    let roles = roles.iter().map(|r| r.to_string()).collect::<Vec<String>>();
+    let roles = roles
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<String>>();
 
     let res = Client::new()
         .get(format!("{backend}/users"))

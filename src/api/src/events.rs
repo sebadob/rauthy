@@ -40,7 +40,7 @@ pub async fn post_events(
         payload.from,
         payload.until.unwrap_or_else(|| Utc::now().timestamp()),
         payload.level.into(),
-        payload.typ.map(|t| t.into()),
+        payload.typ.map(Into::into),
     )
     .await?
     .into_iter()
@@ -84,7 +84,7 @@ pub async fn sse_events(
     let params = params.into_inner();
     let (tx, rx) = mpsc::channel(10);
 
-    let level = params.level.map(|l| l.into()).unwrap_or_default();
+    let level = params.level.map(Into::into).unwrap_or_default();
     if let Err(err) = RauthyConfig::get()
         .tx_events_router
         .send_async(EventRouterMsg::ClientReg {
@@ -164,7 +164,7 @@ pub async fn post_event_test(
         Event::user_login_revoke(
             "alfred@batcave.io",
             "123.123.123.123".parse().unwrap(),
-            Some("Gotham City".to_string()),
+            Some("Gotham City"),
         )
         .send()
         .await?;
@@ -179,7 +179,7 @@ pub async fn post_event_test(
         Event::suspicious_request(
             "/.git/config",
             "123.123.123.123".parse().unwrap(),
-            Some("Gotham City".to_string()),
+            Some("Gotham City"),
         )
         .send()
         .await?;

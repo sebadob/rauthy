@@ -113,27 +113,27 @@ impl MdsDataset {
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
         // we always want to have a single row in metadata
         let sql_meta_delete = "DELETE FROM fido_mds_metadata";
-        let sql_meta = r#"
+        let sql_meta = r"
 INSERT INTO fido_mds_metadata (current_blob_no, next_update)
 VALUES ($1, $2)
-"#;
-        let sql_cert = r#"
+";
+        let sql_cert = r"
 INSERT INTO fido_mds_certs (hash, cert_der) VALUES ($1, $2)
 ON CONFLICT (hash) DO UPDATE SET cert_der = $2
-"#;
-        let sql_entry = r#"
+";
+        let sql_entry = r"
 INSERT INTO fido_mds_entries (
     aaguid, description, key_protection, attachment_hint, attestation_types, cert_level
 )
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (aaguid) DO UPDATE SET description = $2, key_protection = $3, attachment_hint = $4,
 attestation_types = $5, cert_level = $6
-"#;
-        let sql_join = r#"
+";
+        let sql_join = r"
 INSERT INTO fido_mds_entry_certs (aaguid, cert_hash)
 VALUES ($1, $2)
 ON CONFLICT (aaguid, cert_hash) DO NOTHING
-"#;
+";
 
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> =

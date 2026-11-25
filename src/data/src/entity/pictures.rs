@@ -109,9 +109,9 @@ impl UserPicture {
         data: Option<Vec<u8>>,
     ) -> Result<String, ErrorResponse> {
         let id = new_store_id();
-        let sql = r#"
+        let sql = r"
 INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
         if is_hiqlite() {
             DB::hql()
