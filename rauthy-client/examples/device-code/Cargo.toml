@@ -1,7 +1,7 @@
 [package]
 name = "device-code-example"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 
@@ -11,5 +11,23 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.23", features = ["tracing"] }
 rauthy-client = { path = "../..", features = ["device-code", "qrcode"] }
 
-[lints]
-workspace = true
+[lints.rust]
+warnings = { level = "deny", priority = -2 }
+unknown_lints = { level = "allow", priority = -1 } # allow nightly lints
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+redundant_clone = "deny"
+
+# Permanently allowed (intentional disagreement with pedantic)
+assert_is_empty = "allow"
+manual_assert = "allow"
+missing_errors_doc = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+uninlined_format_args = "allow"
+
+# Temporarily allowed (to be reviewed and enabled incrementally)
+needless_raw_string_hashes = "allow"
