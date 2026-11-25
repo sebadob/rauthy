@@ -933,9 +933,11 @@ mod tests {
     }
 
     fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
+        use std::fmt::Write;
+
         let mut res = format!("HTTP/1.1 {status}\r\n");
         for (k, v) in headers {
-            res.push_str(&format!("{k}: {v}\r\n"));
+            let _ = write!(res, "{k}: {v}\r\n");
         }
         res.push_str("Connection: close\r\n\r\n");
         let mut bytes = res.into_bytes();
