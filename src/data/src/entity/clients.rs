@@ -1375,7 +1375,7 @@ impl Client {
             .default_scopes
             .split(',')
             .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<_>>();
 
         let Some(scopes) = scopes else {
@@ -2314,7 +2314,7 @@ impl Client {
         let added = requested
             .iter()
             .filter(|g| !current.contains(g))
-            .map(|g| g.as_str())
+            .map(GrantType::as_str)
             .collect::<Vec<_>>();
         if added.is_empty() {
             Ok(())
@@ -3249,7 +3249,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
     }
 
     fn strs(v: &[&str]) -> Vec<String> {
-        v.iter().map(|s| s.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     #[test]

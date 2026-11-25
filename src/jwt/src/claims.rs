@@ -279,7 +279,7 @@ pub fn validate_no_reserved_collision(
     let mut collisions = flattened
         .keys()
         .filter(|k| RESERVED_ROOT_CLAIMS.contains(&k.as_str()))
-        .map(|k| k.as_str())
+        .map(String::as_str)
         .collect::<Vec<_>>();
     collisions.sort_unstable();
     Err(ErrorResponse::new(

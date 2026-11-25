@@ -2661,7 +2661,7 @@ impl Vars {
             }
         }
         if let Some(v) = t_str_vec(&mut table, "encryption", "keys", "ENC_KEYS") {
-            if v.first().map(|v| v.as_str()) == Some(FROM_SECRETS) {
+            if v.first().map(String::as_str) == Some(FROM_SECRETS) {
                 self.encryption.keys = mem::take(&mut secrets.encryption.keys);
             } else {
                 self.encryption.keys = v;
@@ -5708,7 +5708,7 @@ impl VarsWebauthn {
     pub fn passkey_reg_type_str(&self) -> String {
         self.passkey_reg_type
             .iter()
-            .map(|t| t.as_str())
+            .map(PasskeyRegType::as_str)
             .collect::<Vec<_>>()
             .join(" ")
     }

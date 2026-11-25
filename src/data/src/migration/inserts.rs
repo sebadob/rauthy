@@ -45,6 +45,7 @@ use crate::fido_mds::mds_entry::MdsEntrySimple;
 use crate::fido_mds::metadata::MdsMetadata;
 use cryptr::EncValue;
 use hiqlite::macros::params;
+use rauthy_api_types::users::UserAttrConfigTyp;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::cmp::max;
@@ -1760,7 +1761,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            let typ = b.typ.as_ref().map(|t| t.as_str());
+            let typ = b.typ.as_ref().map(UserAttrConfigTyp::as_str);
             DB::hql()
                 .execute(
                     sql_2,
@@ -1771,7 +1772,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            let typ = b.typ.as_ref().map(|t| t.as_str());
+            let typ = b.typ.as_ref().map(UserAttrConfigTyp::as_str);
             DB::pg_execute(
                 sql_2,
                 &[&b.name, &b.desc, &b.default_value, &typ, &b.user_editable],

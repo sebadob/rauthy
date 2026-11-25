@@ -501,11 +501,7 @@ impl From<ApiKeyAccess> for rauthy_api_types::api_keys::ApiKeyAccess {
     fn from(value: ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
-            access_rights: value
-                .access_rights
-                .into_iter()
-                .map(|ar| ar.into())
-                .collect(),
+            access_rights: value.access_rights.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -546,11 +542,7 @@ impl From<rauthy_api_types::api_keys::ApiKeyAccess> for ApiKeyAccess {
     fn from(value: rauthy_api_types::api_keys::ApiKeyAccess) -> Self {
         Self {
             group: value.group.into(),
-            access_rights: value
-                .access_rights
-                .into_iter()
-                .map(|ar| ar.into())
-                .collect(),
+            access_rights: value.access_rights.into_iter().map(Into::into).collect(),
         }
     }
 }

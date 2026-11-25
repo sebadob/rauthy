@@ -290,8 +290,8 @@ impl Principal {
         }
         if self.group_admin_can_manage(current_roles, current_groups)
             || self.group_admin_can_manage(
-                new_roles.iter().map(|r| r.as_str()),
-                new_groups.iter().map(|g| g.as_str()),
+                new_roles.iter().map(String::as_str),
+                new_groups.iter().map(String::as_str),
             )
         {
             return Ok(());
@@ -300,8 +300,8 @@ impl Principal {
         // group admin, so the resulting roles classify the failure the same as the current
         // ones would: an admin target yields the clearer message.
         match self.group_admin_access(
-            new_roles.iter().map(|r| r.as_str()),
-            new_groups.iter().map(|g| g.as_str()),
+            new_roles.iter().map(String::as_str),
+            new_groups.iter().map(String::as_str),
         ) {
             GroupAdminAccess::TargetIsAdmin => Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -382,7 +382,7 @@ impl Principal {
         let new_roles: BTreeSet<&str> = new_roles
             .iter()
             .filter(|r| !r.is_empty())
-            .map(|r| r.as_str())
+            .map(String::as_str)
             .collect();
         if current_roles != new_roles {
             return Err(ErrorResponse::new(
@@ -398,7 +398,7 @@ impl Principal {
         let new_groups: BTreeSet<&str> = new_groups
             .iter()
             .filter(|g| !g.is_empty())
-            .map(|g| g.as_str())
+            .map(String::as_str)
             .collect();
         for changed in current_groups.symmetric_difference(&new_groups) {
             if !self.group_admin_matches(changed) {
@@ -438,7 +438,7 @@ impl Principal {
             .map(|g| {
                 g.iter()
                     .filter(|s| !s.is_empty())
-                    .map(|s| s.as_str())
+                    .map(String::as_str)
                     .collect()
             })
             .unwrap_or_default();
@@ -475,7 +475,7 @@ impl Principal {
     pub fn has_mfa_active(&self) -> bool {
         self.session
             .as_ref()
-            .map(|s| s.is_mfa_completed())
+            .map(Session::is_mfa_completed)
             .unwrap_or(false)
     }
 
@@ -665,7 +665,7 @@ mod tests {
 
     fn principal(roles: &[&str]) -> Principal {
         Principal {
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
             ..Default::default()
         }
     }
@@ -774,7 +774,7 @@ mod tests {
     }
 
     fn s(v: &[&str]) -> Vec<String> {
-        v.iter().map(|x| x.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     #[test]

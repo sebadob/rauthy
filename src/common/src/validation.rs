@@ -88,7 +88,7 @@ pub fn validate_https_url(value: &str) -> Result<Url, String> {
     if url.scheme() != "https" {
         return Err("the URL must be an https URL".to_string());
     }
-    if url.host_str().is_none_or(|h| h.is_empty()) {
+    if url.host_str().is_none_or(str::is_empty) {
         return Err("the URL has no host".to_string());
     }
     if !url.username().is_empty() || url.password().is_some() {

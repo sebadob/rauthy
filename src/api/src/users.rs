@@ -224,7 +224,7 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 
     UserAttrConfigEntity::find_all().await.map(|values| {
         HttpResponse::Ok().json(UserAttrConfigResponse {
-            values: values.into_iter().map(|v| v.into()).collect(),
+            values: values.into_iter().map(Into::into).collect(),
         })
     })
 }
@@ -3151,7 +3151,7 @@ mod tests {
                 remote_ip: None,
             }),
             api_key: None,
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
         }
     }
 

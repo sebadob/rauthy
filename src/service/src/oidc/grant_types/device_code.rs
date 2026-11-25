@@ -55,12 +55,12 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         // TODO compare to live-secret because of graceful secret migration
         code.client_secret
             .as_ref()
-            .map(|s| s.as_bytes())
+            .map(String::as_bytes)
             .unwrap_or_default(),
         payload
             .client_secret
             .as_ref()
-            .map(|s| s.as_bytes())
+            .map(String::as_bytes)
             .unwrap_or_default(),
     ) {
         return HttpResponse::BadRequest().json(OAuth2ErrorResponse {

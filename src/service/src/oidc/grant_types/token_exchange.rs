@@ -123,7 +123,7 @@ pub async fn grant_type_token_exchange(
             validate_exchange_token(subject_token, subject_token_type, "subject_token", &mut buf)
                 .await?;
         (
-            subject_claims.common.sub.map(|s| s.to_string()),
+            subject_claims.common.sub.map(ToString::to_string),
             subject_claims.common.scope.map(|s| s.to_string()),
             subject_claims.common.exp,
             act_chain_subs(subject_claims.act.as_ref()),

@@ -57,7 +57,7 @@ impl GrantType {
     pub fn csv(flows: &[Self]) -> String {
         flows
             .iter()
-            .map(|f| f.as_str())
+            .map(GrantType::as_str)
             .collect::<Vec<_>>()
             .join(",")
     }

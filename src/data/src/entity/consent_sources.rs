@@ -636,7 +636,7 @@ mod tests {
     use tokio::net::TcpListener;
 
     fn strs(v: &[&str]) -> Vec<String> {
-        v.iter().map(|s| s.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     const REMOTE: &str = r#"{

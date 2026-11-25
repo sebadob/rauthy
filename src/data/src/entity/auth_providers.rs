@@ -930,7 +930,7 @@ impl AuthProvider {
         let scopes_supported = well_known
             .scopes_supported
             .iter()
-            .map(|s| s.as_str())
+            .map(String::as_str)
             .collect::<Vec<&str>>();
         let mut scope = String::with_capacity(24);
         if scopes_supported.contains(&"openid") {
@@ -1842,7 +1842,7 @@ impl AuthProviderIdClaims<'_> {
         let preferred_username = if let Some(username) = &self.preferred_username {
             Some(username.to_string())
         } else {
-            self.login.as_ref().map(|l| l.to_string())
+            self.login.as_ref().map(ToString::to_string)
         };
         if let Some(username) = preferred_username {
             // Check via local read first, which is a lot cheaper than write through the Raft.
