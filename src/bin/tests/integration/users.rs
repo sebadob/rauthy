@@ -1354,7 +1354,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
             pow: get_solved_pow().await,
             client_id: CLIENT_ID.to_string(),
             redirect_uri: redirect_uri.to_string(),
-            scopes: Some(scopes.iter().map(|s| s.to_string()).collect()),
+            scopes: Some(scopes.iter().map(ToString::to_string).collect()),
             state: None,
             nonce: None,
             code_challenge: Some(challenge.to_string()),
@@ -1411,7 +1411,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     // --- a consent for other content, without a default or with an unrequested scope
     let accepted = |scopes: &[&str]| LoginConsent {
         content_hash: content.content.content_hash.clone(),
-        accepted_scopes: scopes.iter().map(|s| s.to_string()).collect(),
+        accepted_scopes: scopes.iter().map(ToString::to_string).collect(),
     };
     let stale = LoginConsent {
         content_hash: STALE_HASH.to_string(),
@@ -1435,7 +1435,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         Some(accepted(&["openid", "email", "profile"])),
     )
     .await;
-    let (code, _) = code_state_from_headers(expect_status!(res, 202))?;
+    let (code, _) = code_state_from_headers(&expect_status!(res, 202))?;
     let res = exchange(code).await;
     let ts = expect_status_json!(res, 200, TokenSet);
     let mut scope = ts.scope.as_deref().unwrap().split(' ').collect::<Vec<_>>();
@@ -1562,7 +1562,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         .json(&refresh_login)
         .send()
         .await?;
-    let (code, _) = code_state_from_headers(expect_status!(res, 202))?;
+    let (code, _) = code_state_from_headers(&expect_status!(res, 202))?;
 
     // --- a refresh beyond the grant asks for consent, and the consent extends the grant
     let mut refresh_groups = LoginRefreshRequest {
@@ -1584,7 +1584,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         .json(&refresh_groups)
         .send()
         .await?;
-    let (code_refresh, _) = code_state_from_headers(expect_status!(res, 202))?;
+    let (code_refresh, _) = code_state_from_headers(&expect_status!(res, 202))?;
     let ts_refresh = expect_status_json!(exchange(code_refresh).await, 200, TokenSet);
     assert!(ts_refresh.scope.as_deref().unwrap().contains("groups"));
     let res = client
@@ -1597,7 +1597,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
 
     // --- a login with fewer scopes keeps the grant's other scopes, and so does the refresh
     let res = login(&headers, OPENID_GROUPS, Some(accept_all(&content))).await;
-    let (code_groups, _) = code_state_from_headers(expect_status!(res, 202))?;
+    let (code_groups, _) = code_state_from_headers(&expect_status!(res, 202))?;
     let ts_groups = expect_status_json!(exchange(code_groups).await, 200, TokenSet);
     assert!(ts_groups.scope.as_deref().unwrap().contains("groups"));
 
@@ -1758,7 +1758,7 @@ async fn test_user_consent_resource() -> Result<(), Box<dyn Error>> {
             pow: get_solved_pow().await,
             client_id: client_id.to_string(),
             redirect_uri: redirect_uri.to_string(),
-            scopes: Some(scopes.iter().map(|s| s.to_string()).collect()),
+            scopes: Some(scopes.iter().map(ToString::to_string).collect()),
             state: None,
             nonce: None,
             code_challenge: Some(challenge.to_string()),

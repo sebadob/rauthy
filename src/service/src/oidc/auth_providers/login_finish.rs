@@ -92,8 +92,7 @@ pub async fn login_finish<'a>(
 
     // From here on, we deal with a normal login instead of just an account federation.
 
-    let require_webauthn = user.has_webauthn_enabled();
-    let require_otp = user.has_otp_enabled().await;
+    let mfa_methods = user.allowed_mfa_methods().await;
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;
@@ -114,8 +113,7 @@ pub async fn login_finish<'a>(
             consent: slf.req_consent,
             first_factor: FirstFactor::Proven,
             header_origin,
-            require_webauthn,
-            require_otp,
+            mfa_methods,
             is_forward_auth: slf.is_forward_auth,
         },
         None,

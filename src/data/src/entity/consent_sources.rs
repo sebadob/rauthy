@@ -23,7 +23,7 @@ use utoipa::ToSchema;
 const REMOTE_CONSENT_MAX_SIZE: usize = 64 * 1024;
 /// Max lifetime of a cached failed remote fetch, so an unavailable source is not
 /// fetched again on every lookup. Capped by `consent.content_cache_ttl`.
-const REMOTE_CONSENT_NEGATIVE_TTL: Duration = Duration::from_secs(60);
+const REMOTE_CONSENT_NEGATIVE_TTL: Duration = Duration::from_mins(1);
 /// How long a lookup rejected by the fetcher's back pressure waits before it reads the cache
 /// once more, in case another node or lookup has cached the document meanwhile.
 const TOO_MANY_REQUESTS_RETRY_DELAY: Duration = Duration::from_millis(250);
@@ -705,7 +705,7 @@ mod tests {
     use tokio::net::TcpListener;
 
     /// The default `consent.content_cache_ttl`.
-    const TTL: Duration = Duration::from_secs(3600);
+    const TTL: Duration = Duration::from_hours(1);
 
     fn consent_docs(remote: Option<RemoteConsent>, name: Option<&'static str>) -> ConsentDocs {
         ConsentDocs {

@@ -234,6 +234,10 @@ export const I18nPl: I18n = {
         login: 'Zaloguj się',
         mfaAck: 'Potwierdzono',
         mfaOpenApp: 'Otwórz aplikację, aby kontynuować',
+        mfaSelectionDesc: 'Wybierz metodę weryfikacji:',
+        usePasskey: 'Użyj klucza dostępu (passkey)',
+        useEmailCode: 'Użyj kodu z e-maila',
+        emailCodeDesc: 'Otrzymaj jednorazowy kod e-mailem',
         navigateToAccount: 'Panel konta',
         needsUserUpdate: `Brakuje niektórych informacji o tym koncie. Musisz je uzupełnić, zanim
             będziesz mógł kontynuować logowanie.`,

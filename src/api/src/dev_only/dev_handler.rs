@@ -38,15 +38,15 @@ pub struct DevMagicLinkRequest {
 
 #[derive(serde::Deserialize)]
 pub struct DevConsentQuery {
-    lang: String,
+    pub lang: String,
 }
 
-pub fn get_consent(query: web::Query<DevConsentQuery>) -> Result<HttpResponse, ErrorResponse> {
+pub fn get_consent(lang: &str) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.dev.dev_mode {
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    let doc = match query.lang.as_str() {
+    let doc = match lang {
         "en" => serde_json::json!({
             "name": "Rauthy Dev API",
             "intro": "This consent document is served by the local dev server from \

@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::{templates, DEV_MODE};
+use crate::{DEV_MODE, templates};
 use axum::body::Body;
 use axum::extract::Query;
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};

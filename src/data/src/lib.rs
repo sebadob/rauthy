@@ -4,6 +4,7 @@ use crate::entity::sessions::Session;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::users::ActiveOtp;
 use std::fmt::{Display, Formatter};
+use std::ops::BitOrAssign;
 
 pub mod api_cookie;
 pub mod database;
@@ -42,11 +43,54 @@ pub(crate) fn init_test_enc_keys() {
     });
 }
 
+/// A single second factor a user can authenticate with. The value is its bit in `MfaMethods`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum MfaMethod {
+    Webauthn = 0b01,
+    Otp = 0b10,
+}
+
+impl MfaMethod {
+    /// All methods, in the order `MfaMethods::iter()` yields them: Webauthn first.
+    const ALL: [Self; 2] = [Self::Webauthn, Self::Otp];
+}
+
+/// The second factors a login may be completed with. An empty set means no MFA is required.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct MfaMethods(u8);
+
+impl MfaMethods {
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    pub const fn contains(self, method: MfaMethod) -> bool {
+        self.0 & method as u8 != 0
+    }
+
+    /// The contained methods, always in the same order: Webauthn first.
+    pub fn iter(self) -> impl Iterator<Item = MfaMethod> {
+        MfaMethod::ALL
+            .into_iter()
+            .filter(move |m| self.contains(*m))
+    }
+}
+
+impl BitOrAssign<MfaMethod> for MfaMethods {
+    fn bitor_assign(&mut self, method: MfaMethod) {
+        self.0 |= method as u8;
+    }
+}
+
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),
     AwaitToSAccept(AwaitToSAccept),
-    AwaitWebauthn(AuthStepAwaitWebauthn),
-    AwaitOtpCode(AuthStepAwaitOtp),
+    AwaitMfa(AuthStepAwaitMfa),
     ProviderLink,
 }
 
@@ -66,21 +110,14 @@ pub struct AwaitToSAccept {
     pub user_id: String,
 }
 
-pub struct AuthStepAwaitWebauthn {
+pub struct AuthStepAwaitMfa {
     pub code: String,
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub email: String,
-    pub exp: u64,
-    pub session: Session,
-}
-
-pub struct AuthStepAwaitOtp {
-    pub code: String,
-    pub header_csrf: (HeaderName, HeaderValue),
-    pub header_origin: Option<(HeaderName, HeaderValue)>,
-    pub email: String,
+    pub mfa_methods: MfaMethods,
     pub active_otps: Vec<ActiveOtp>,
+    pub session: Session,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,5 +147,46 @@ impl Display for ListenScheme {
             #[cfg(not(target_os = "windows"))]
             ListenScheme::UnixHttps => write!(f, "unix+https"),
         }
+    }
+}
+
+#[cfg(test)]
+mod mfa_methods_tests {
+    use super::{MfaMethod, MfaMethods};
+
+    #[test]
+    fn empty_contains_nothing() {
+        let methods = MfaMethods::empty();
+        assert!(methods.is_empty());
+        assert!(!methods.contains(MfaMethod::Webauthn));
+        assert!(!methods.contains(MfaMethod::Otp));
+        assert_eq!(methods.iter().count(), 0);
+        assert_eq!(methods, MfaMethods::default());
+    }
+
+    #[test]
+    fn insert_sets_only_that_method() {
+        let mut methods = MfaMethods::empty();
+        methods |= MfaMethod::Otp;
+        assert!(!methods.is_empty());
+        assert!(methods.contains(MfaMethod::Otp));
+        assert!(!methods.contains(MfaMethod::Webauthn));
+        assert_eq!(methods.iter().collect::<Vec<_>>(), [MfaMethod::Otp]);
+
+        // inserting twice changes nothing
+        let once = methods;
+        methods |= MfaMethod::Otp;
+        assert_eq!(methods, once);
+    }
+
+    #[test]
+    fn iter_yields_webauthn_first() {
+        let mut methods = MfaMethods::empty();
+        methods |= MfaMethod::Otp;
+        methods |= MfaMethod::Webauthn;
+        assert_eq!(
+            methods.iter().collect::<Vec<_>>(),
+            [MfaMethod::Webauthn, MfaMethod::Otp]
+        );
     }
 }

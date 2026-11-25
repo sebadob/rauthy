@@ -16,6 +16,7 @@ mod group_admin;
 mod groups;
 mod logout_redirect;
 mod mfa_admin_assurance;
+mod mfa_select;
 mod otp_email_secret;
 mod password_policy;
 mod provider_callback;

@@ -862,6 +862,16 @@ pub struct WebauthnLoginResponse {
     pub exp: u64,
 }
 
+/// One entry of the list a login that needs MFA responds with, one per method the user may
+/// complete the login with. All entries carry the same `code`. Untagged: each entry serializes
+/// exactly like the inner response, and an `OtpLoginResponse` is the one with `active_otps`.
+#[derive(Serialize, ToSchema)]
+#[serde(untagged)]
+pub enum LoginResponse {
+    Webauthn(WebauthnLoginResponse),
+    Otp(OtpLoginResponse),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -982,5 +992,34 @@ mod tests {
         );
         assert!(upd(PASSWORD_MAX_LEN as usize).validate().is_ok());
         assert!(upd(PASSWORD_MAX_LEN as usize + 1).validate().is_err());
+    }
+
+    /// Each entry of the MFA login list serializes exactly like the response it wraps.
+    #[test]
+    fn login_response_serializes_untagged() {
+        let reqs = vec![
+            LoginResponse::Webauthn(WebauthnLoginResponse {
+                code: "c0de".to_string(),
+                exp: 60,
+            }),
+            LoginResponse::Otp(OtpLoginResponse {
+                code: "c0de".to_string(),
+                active_otps: vec![ActiveOtp {
+                    otp_id: "otp1".to_string(),
+                    otp_kind: OtpKind::Time,
+                }],
+            }),
+        ];
+        let json = serde_json::to_value(&reqs).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!([
+                { "code": "c0de", "exp": 60 },
+                {
+                    "code": "c0de",
+                    "active_otps": [{ "otp_id": "otp1", "otp_kind": "time" }],
+                },
+            ])
+        );
     }
 }

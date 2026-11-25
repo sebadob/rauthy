@@ -2,7 +2,7 @@ use rauthy_client::device_code::DeviceCode;
 use rauthy_client::rauthy_error::RauthyError;
 use rauthy_client::token_set::OidcTokenSet;
 use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
-use tracing::{subscriber, Level};
+use tracing::{Level, subscriber};
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]

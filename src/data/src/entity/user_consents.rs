@@ -1442,10 +1442,11 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
             );
 
             // rt_c1 and rtd_src, and rt_legacy with `drop_legacy`
+            let res = pg_revoke(&mut cl, drop_legacy, "u1", "c1", RES)
+                .await
+                .unwrap();
             assert_eq!(
-                pg_revoke(&mut cl, drop_legacy, "u1", "c1", RES)
-                    .await
-                    .unwrap(),
+                res,
                 ConsentRevoked {
                     consent_deleted: true,
                     refresh_tokens_deleted: if drop_legacy { 3 } else { 2 },
@@ -1453,8 +1454,9 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
             );
             // without refresh tokens
             for (c, r) in [("c1", ""), ("c2", "")] {
+                let res = pg_revoke(&mut cl, drop_legacy, "u1", c, r).await.unwrap();
                 assert_eq!(
-                    pg_revoke(&mut cl, drop_legacy, "u1", c, r).await.unwrap(),
+                    res,
                     ConsentRevoked {
                         consent_deleted: true,
                         refresh_tokens_deleted: 0,

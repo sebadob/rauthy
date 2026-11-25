@@ -177,7 +177,7 @@ test('account: a single revoke warns about the logout and sends the user to the 
         const dialog = page.getByRole('dialog');
         await dialog.getByText(LOGOUT_WARNING).waitFor();
         await dialog.getByRole('button', { name: 'Revoke Access', exact: true }).click();
-        await page.waitForURL(url => url.pathname === AUTHORIZE_PATH);
+        await page.waitForURL((/** @type {URL} */ url) => url.pathname === AUTHORIZE_PATH);
 
         assert.deepEqual(s.deletes, [`/auth/v1/users/${USER_ID}/consents?client_id=app`]);
         assert.equal(s.login?.searchParams.get('state'), 'account');
@@ -204,7 +204,7 @@ test('account: revoke all asks first, then sends the user to the login', async (
 
         await page.getByRole('button', { name: 'Revoke All Access', exact: true }).click();
         await dialog.getByRole('button', { name: 'Revoke All Access', exact: true }).click();
-        await page.waitForURL(url => url.pathname === AUTHORIZE_PATH);
+        await page.waitForURL((/** @type {URL} */ url) => url.pathname === AUTHORIZE_PATH);
 
         assert.deepEqual(s.deletes, [`/auth/v1/users/${USER_ID}/consents/all`]);
         assert.equal(s.login?.searchParams.get('state'), 'account');

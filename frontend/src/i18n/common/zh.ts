@@ -218,6 +218,10 @@ export const I18nZh: I18n = {
         login: '登录',
         mfaAck: '已确认',
         mfaOpenApp: '打开应用以继续',
+        mfaSelectionDesc: '请选择验证方式：',
+        usePasskey: '使用通行密钥',
+        useEmailCode: '使用电子邮件验证码',
+        emailCodeDesc: '通过电子邮件接收一次性验证码',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,

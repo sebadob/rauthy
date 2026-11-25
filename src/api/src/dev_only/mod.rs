@@ -30,7 +30,7 @@ pub async fn get_template() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_dev_consent(
     query: actix_web::web::Query<dev_handler::DevConsentQuery>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    dev_handler::get_consent(query)
+    dev_handler::get_consent(&query.lang)
 }
 
 #[cfg(not(debug_assertions))]

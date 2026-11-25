@@ -196,6 +196,10 @@ export interface I18n {
         login: string;
         mfaAck: string;
         mfaOpenApp: string;
+        mfaSelectionDesc: string;
+        usePasskey: string;
+        useEmailCode: string;
+        emailCodeDesc: string;
         navigateToAccount: string;
         needsUserUpdate: string;
         orLoginWith: string;

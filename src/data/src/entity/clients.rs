@@ -2682,7 +2682,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
     fn consent_vars(enable: bool) -> VarsConsent {
         VarsConsent {
             enable,
-            content_cache_ttl: std::time::Duration::from_secs(3600),
+            content_cache_ttl: std::time::Duration::from_hours(1),
             sources: [
                 VarsConsentSource::new(
                     "https://api.example.com".to_string(),

@@ -34,9 +34,8 @@
         LoginConsent as LoginConsentData,
         LoginRefreshRequest,
         LoginRequest,
-        OtpLoginResponse,
+        LoginResponse,
         RequestResetRequest,
-        WebauthnLoginResponse,
     } from '#api/types/authorize.ts';
     import Form from '#lib/form/Form.svelte';
     import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
@@ -57,6 +56,7 @@
     import IconKey from '#icons/IconKey.svelte';
     import LoginConsent from '#lib/LoginConsent.svelte';
     import type { ConsentContentTemplate } from '#api/templates/ConsentContent.ts';
+    import MfaSelection from '#lib/MfaSelection.svelte';
 
     const inputWidth = '100%';
 
@@ -95,7 +95,7 @@
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' | 'selection' = $state();
     let activeOtps: undefined | ActiveOtp[] = $state();
 
     let isLoading = $state(false);
@@ -306,7 +306,7 @@
             payload.resource = resource;
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse | OtpLoginResponse>(
+        let res = await fetchPost<undefined | LoginResponse[]>(
             '/auth/v1/oidc/authorize/refresh',
             payload,
         );
@@ -388,16 +388,17 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >(url, payload, 'json', 'noRedirect');
+        let res = await fetchPost<undefined | LoginResponse[] | ToSAwaitLoginResponse>(
+            url,
+            payload,
+            'json',
+            'noRedirect',
+        );
         await handleAuthRes(res);
     }
 
     async function handleAuthRes(
-        res?: IResponse<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >,
+        res?: IResponse<undefined | LoginResponse[] | ToSAwaitLoginResponse>,
         isRefresh = false,
     ) {
         isLoading = false;
@@ -431,11 +432,13 @@
             // -> all good, but needs additional MFA validation
             err = '';
             let body = res.body;
-            if (body && 'code' in body) {
-                mfaPurpose = { Login: body.code as string };
-                if ('active_otps' in body) {
-                    activeOtps = body.active_otps;
-                    mfaKind = 'otp';
+            if (Array.isArray(body) && body.length > 0) {
+                // one entry per MFA method the user may choose, all with the same code
+                mfaPurpose = { Login: body[0].code };
+                let otp = body.find(r => 'active_otps' in r);
+                if (otp && 'active_otps' in otp) {
+                    activeOtps = otp.active_otps;
+                    mfaKind = body.length > 1 ? 'selection' : 'otp';
                 } else {
                     mfaKind = 'webauthn';
                 }
@@ -769,7 +772,14 @@
             to output proper logs in case of misconfiguration.
             Another approach would be to check this in the backend and emit warning logs.
             -->
-            {#if mfaKind == 'webauthn'}
+            {#if mfaKind == 'selection'}
+                <MfaSelection
+                    {activeOtps}
+                    isDisabled={isLoading}
+                    onSelect={kind => (mfaKind = kind)}
+                    onError={onMfaError}
+                />
+            {:else if mfaKind == 'webauthn'}
                 <WebauthnRequest
                     purpose={mfaPurpose}
                     onSuccess={onMfaSuccess}
