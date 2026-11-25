@@ -20,6 +20,19 @@ full restart of all nodes, independent of `consent.enable`.
   issued before this version, nor device refresh tokens that were already rotated. With
   `consent.enable`, those need a new login.
 
+#### SMTP Settings Are Validated At Startup
+
+When `email.smtp_url` is set, `email.smtp_conn_mode` is `default` or `xoauth2`, and
+`email.smtp_tls_mode` is not `danger-insecure`, Rauthy now refuses to start if:
+
+- `email.smtp_username` is not set
+- `email.smtp_password` is not set (`default` only)
+- `email.root_ca` is set but does not contain a valid PEM certificate
+
+The first two aborted the process before, but only later, when the mailer connected after the
+start. A `root_ca` without any certificate in it was silently ignored, so the connection used no
+custom root at all. Such a config needs to be fixed before the upgrade.
+
 ### Security
 
 #### Additional `device_code` checks
