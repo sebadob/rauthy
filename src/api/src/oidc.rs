@@ -55,7 +55,7 @@ use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -354,7 +354,7 @@ pub async fn post_authorize_handle(
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
 
     let session = principal.get_session()?;
 
@@ -1080,7 +1080,7 @@ pub async fn post_token(
         return Ok(oidc::grant_type_device_code(ip, payload).await);
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
     let has_password_been_hashed = payload.grant_type == GrantType::Password;
     let mut user_failed_logins = None;
 

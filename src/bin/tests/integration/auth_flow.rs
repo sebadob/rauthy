@@ -32,11 +32,10 @@ use ring::digest;
 use std::error::Error;
 use std::fmt::Write;
 use std::net::TcpStream;
-use std::ops::Sub;
 use std::sync::OnceLock;
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 use tokio::time;
 
 /// a `state` that would inject its own `iss` if the server did not encode it
@@ -975,11 +974,10 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         });
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
     assert_eq!(logins.len(), fail_count + success_count);
     futures::future::join_all(logins).await;
-    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let total = end.sub(start).as_millis();
+    let total = start.elapsed().as_millis();
     println!("Total time taken: {}", total);
 
     assert_eq!(1, 2);
