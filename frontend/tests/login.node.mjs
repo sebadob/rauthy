@@ -526,7 +526,9 @@ test('login: a consent_required provider login shows the content to confirm', as
     t.after(() => context.close());
 
     await page.getByRole('button', { name: 'Login: Upstream' }).click();
-    await page.getByText('The consent content has changed, please check it again.').waitFor();
+    // the first ask shows the row to confirm, and no message: the checkbox itself is the ask
+    await page.getByLabel(agree).waitFor();
+    assert.equal(await page.getByText('The consent content has changed').count(), 0);
     assert.ok(await page.getByRole('button', { name: 'Login: Upstream' }).isDisabled());
     assert.equal(postsTo('/auth/v1/providers/login').length, 1);
 });

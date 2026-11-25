@@ -147,6 +147,7 @@
     let consentAccepted: string[] = $state([]);
     let consentConfirmed = $state(false);
     let consentChoicesFor: undefined | ConsentContentTemplate = $state.raw();
+    let consentNotice = $state('');
     let isConsentPending = $derived(!!consent && !consentConfirmed);
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -331,6 +332,7 @@
         }
 
         err = '';
+        consentNotice = '';
 
         if (!clientId) {
             console.error('clientId is undefined');
@@ -526,6 +528,7 @@
     // The consent is missing or the content changed: shows the content the answer carries. The
     // automatic refresh of a valid session continues with the consent block only.
     function showConsentRequired(message: string, isRefresh = false) {
+        let sentConsent = !!loginConsent();
         try {
             consent = JSON.parse(message) as ConsentContentTemplate;
         } catch {
@@ -535,7 +538,9 @@
         if (isRefresh && loginAction === 'Refresh') {
             loginAction = 'RefreshConsent';
         } else {
-            err = t.authorize.consent.changed;
+            // a confirmed consent that comes back refused means the content changed meanwhile; the
+            // first ask needs no message, the checkbox itself shows what is missing
+            consentNotice = sentConsent ? t.authorize.consent.changed : '';
         }
     }
 
@@ -736,6 +741,7 @@
             bind:confirmed={consentConfirmed}
             bind:choicesFor={consentChoicesFor}
             disabled={isLoading || tooManyRequests}
+            notice={consentNotice}
         />
     {/if}
 {/snippet}

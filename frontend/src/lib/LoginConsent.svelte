@@ -12,6 +12,7 @@
         confirmed = $bindable(),
         choicesFor = $bindable(),
         disabled,
+        notice,
     }: {
         consent: ConsentContentTemplate;
         clientName: string;
@@ -20,6 +21,8 @@
         // the content the choices in `accepted` and `confirmed` were made for
         choicesFor: undefined | ConsentContentTemplate;
         disabled?: boolean;
+        // shown with this row instead of among the errors of the page, which sit far below it
+        notice?: string;
     } = $props();
 
     let t = useI18n();
@@ -96,8 +99,19 @@
     }
 </script>
 
-<div class="agree">
-    <InputCheckbox ariaLabel={label.full} bind:checked={confirmed} {disabled}>
+{#if notice}
+    <div class="notice">{notice}</div>
+{/if}
+
+<!-- the login waits for this box, so an unchecked one is marked as what's missing, not as an error
+     message somewhere else on the page -->
+<div class="agree" class:pending={!confirmed && !disabled}>
+    <InputCheckbox
+        ariaLabel={label.full}
+        bind:checked={confirmed}
+        {disabled}
+        borderColor={confirmed || disabled ? undefined : 'hsl(var(--error))'}
+    >
         {label.before}<button
             type="button"
             class="link"
@@ -188,6 +202,16 @@
         min-height: 1.75rem;
         margin: 0.75rem 0 0;
         font-size: 0.9rem;
+    }
+
+    .agree.pending {
+        color: hsl(var(--error));
+    }
+
+    .notice {
+        margin: 0.75rem 0 -0.25rem;
+        color: hsl(var(--error));
+        font-size: 0.85rem;
     }
 
     .link {
