@@ -556,7 +556,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     // 13. bulk email: a group admin may only send to a single group it manages, with an
     // `in_group` filter; everything else is rejected. Jobs are scheduled far in the future so
     // nothing is actually sent during the test.
-    let future_ts = 4102444800i64; // 2100-01-01, safely in the future
+    let future_ts = 4_102_444_800_i64; // 2100-01-01, safely in the future
 
     // a full admin can target any group, incl. one the group admin does not manage; this job
     // must stay invisible to the group admin

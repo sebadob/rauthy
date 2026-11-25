@@ -572,8 +572,8 @@ impl Default for Vars {
             },
             fedcm: ConfigVarsFedCM {
                 experimental_enable: false,
-                session_lifetime: 2592000,
-                session_timeout: 259200,
+                session_lifetime: 2_592_000,
+                session_timeout: 259_200,
             },
             geo: ConfigVarsGeo {
                 block_is_whitelist: None,
@@ -587,7 +587,7 @@ impl Default for Vars {
                 maxmind_update_cron: "0 0 5 * * * *".into(),
             },
             hashing: VarsHashing {
-                argon2_m_cost: 131072,
+                argon2_m_cost: 131_072,
                 argon2_t_cost: 4,
                 argon2_p_cost: 8,
                 max_hash_threads: 2,

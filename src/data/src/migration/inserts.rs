@@ -1104,7 +1104,7 @@ VALUES ($1, $2, $3)";
             DB::pg_execute(sql_7, &[&i64::from(b.id), &b.name, &b.typ.as_str()]).await?;
         }
 
-        highest_id = max(highest_id + 1, 100000);
+        highest_id = max(highest_id + 1, 100_000);
         let stmt = format!("ALTER SEQUENCE pam_groups_id_seq RESTART WITH {highest_id}");
         DB::pg_execute(&stmt, &[]).await?;
     }
@@ -1243,7 +1243,7 @@ VALUES ($1, $2, $3, $4, $5, $6)";
             .await?;
         }
 
-        highest_id = max(highest_id + 1, 100000);
+        highest_id = max(highest_id + 1, 100_000);
         let stmt = format!("ALTER SEQUENCE pam_users_id_seq RESTART WITH {highest_id}");
         DB::pg_execute(&stmt, &[]).await?;
     }

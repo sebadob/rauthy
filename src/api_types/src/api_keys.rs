@@ -45,7 +45,7 @@ pub struct ApiKeyRequest {
     // TODO max validation for inner i64 is broken in the current validator crate
     // #[validate(range(min = 1719784800, max = 4070905200))]
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub exp: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
 }
