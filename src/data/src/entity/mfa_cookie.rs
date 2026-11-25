@@ -11,7 +11,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-use crate::{api_cookie::ApiCookie, rauthy_config::RauthyConfig};
+use crate::{MfaMethod, MfaMethods, api_cookie::ApiCookie, rauthy_config::RauthyConfig};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MfaCookie {
@@ -20,13 +20,17 @@ pub struct MfaCookie {
 }
 
 impl MfaCookie {
-    pub fn new_webauthn(email: String) -> Self {
-        let exp = OffsetDateTime::now_utc().add(RauthyConfig::get().vars.webauthn.renew_exp);
-        Self { email, exp }
-    }
-
-    pub fn new_otp(email: String) -> Self {
-        let exp = OffsetDateTime::now_utc().add(RauthyConfig::get().vars.otp.renew_exp);
+    pub fn new_mfa(email: String, mfa_methods: MfaMethods) -> Self {
+        let vars = &RauthyConfig::get().vars;
+        let renew_exp = mfa_methods
+            .iter()
+            .map(|m| match m {
+                MfaMethod::Webauthn => vars.webauthn.renew_exp,
+                MfaMethod::Otp => vars.otp.renew_exp,
+            })
+            .min()
+            .unwrap_or_default();
+        let exp = OffsetDateTime::now_utc().add(renew_exp);
         Self { email, exp }
     }
 

@@ -422,6 +422,7 @@ use utoipa::{OpenApi, openapi};
             PasswordPolicyResponse,
             MfaModTokenResponse,
             OtpGetResponse,
+            LoginResponse,
             OtpLoginResponse,
             OtpAuthStartResponse,
             OtpLoginFinishResponse,

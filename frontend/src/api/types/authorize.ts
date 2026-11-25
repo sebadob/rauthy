@@ -81,3 +81,9 @@ export interface WebauthnLoginResponse {
     user_id: string;
     exp: number;
 }
+
+/**
+ * A login that needs MFA responds with a list of these, one per method the user may choose.
+ * All entries share the same `code`. An `OtpLoginResponse` is the one with `active_otps`.
+ */
+export type LoginResponse = WebauthnLoginResponse | OtpLoginResponse;

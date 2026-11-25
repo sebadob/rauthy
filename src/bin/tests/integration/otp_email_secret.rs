@@ -66,7 +66,7 @@ fn fixture_headers() -> Result<HeaderMap, Box<dyn Error>> {
     Ok(headers)
 }
 
-/// The `AwaitOtpCode` body of a `POST /oidc/authorize`, down to what a ceremony needs.
+/// The OTP entry of the `AwaitMfa` body of a `POST /oidc/authorize`, as far as a ceremony needs.
 #[derive(serde::Deserialize)]
 struct OtpChallenge {
     code: String,
@@ -330,12 +330,12 @@ async fn otp_finish(
 }
 
 /// Password login that stops at the 2nd factor and starts its ceremony. A login that needs the
-/// 2nd factor answers `200` with the `AwaitOtpCode` body; the login itself only completes with the
+/// 2nd factor answers `200` with the `AwaitMfa` body; the login itself only completes with the
 /// `202` of a finished ceremony.
 async fn start_ceremony(email: &str) -> Result<(HeaderMap, String), Box<dyn Error>> {
     let session = init_session().await?;
     let res = login(email, PASSWORD_ONLY, &session).await;
-    let challenge = expect_status_json!(res, 200, OtpChallenge);
+    let [challenge] = expect_status_json!(res, 200, [OtpChallenge; 1]);
     let start_code = otp_start(&session, &challenge).await?;
 
     Ok((session, start_code))

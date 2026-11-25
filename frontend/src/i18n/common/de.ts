@@ -218,6 +218,10 @@ export const I18nDe: I18n = {
         login: 'Login',
         mfaAck: 'Bestätigt',
         mfaOpenApp: 'App öffnen, um fortzufahren',
+        mfaSelectionDesc: 'Wählen Sie Ihre Bestätigungsmethode:',
+        usePasskey: 'Passkey verwenden',
+        useEmailCode: 'E-Mail-Code verwenden',
+        emailCodeDesc: 'Erhalten Sie einen einmaligen Code per E-Mail',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Es fehlen Informationen zum Account. Diese benötigen ein Update, bevor
             mit dem Login fortgefahren werden kann.`,

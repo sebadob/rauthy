@@ -662,6 +662,8 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+                optional_select_mfa: false,
+                admin_passkey_only: true,
             },
             otp: VarsOtp {
                 enable: false,
@@ -3642,6 +3644,22 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "mfa", "admin_force_mfa", "ADMIN_FORCE_MFA") {
             self.mfa.admin_force_mfa = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "mfa",
+            "optional_select_mfa",
+            "OPTIONAL_SELECT_MFA",
+        ) {
+            self.mfa.optional_select_mfa = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "mfa",
+            "admin_passkey_only",
+            "ADMIN_PASSKEY_ONLY",
+        ) {
+            self.mfa.admin_passkey_only = v;
+        }
 
         check_table_empty(&table, "mfa");
     }
@@ -5377,6 +5395,8 @@ pub struct VarsMatrix {
 #[derive(Debug)]
 pub struct VarsMfa {
     pub admin_force_mfa: bool,
+    pub optional_select_mfa: bool,
+    pub admin_passkey_only: bool,
 }
 
 #[derive(Debug)]

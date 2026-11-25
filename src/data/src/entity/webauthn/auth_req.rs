@@ -29,7 +29,14 @@ impl WebauthnLoginReq {
         Ok(())
     }
 
+    /// Removes the whole login. If `optional_select_mfa` is enabled, this also removes the
+    /// `OtpLoginReq` offered with the same `code`.
     pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
+        if RauthyConfig::get().vars.mfa.optional_select_mfa {
+            DB::hql()
+                .delete(Cache::OneTimePassword, code.clone())
+                .await?;
+        }
         let res: Option<Self> = DB::hql().get_remove(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(

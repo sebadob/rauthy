@@ -10,7 +10,7 @@
     import { fetchPost, type IResponse } from '#api/fetch.ts';
     import { onMount } from 'svelte';
     import { formatDateFromTs } from '#utils/helpers.ts';
-    import type { WebauthnLoginResponse } from '#api/types/authorize.ts';
+    import type { LoginResponse } from '#api/types/authorize.ts';
     import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
 
     let {
@@ -25,7 +25,7 @@
         tosAcceptCode?: string;
         forceAccept?: boolean;
         onToSAccept: (
-            res?: IResponse<undefined | ToSAwaitLoginResponse | WebauthnLoginResponse>,
+            res?: IResponse<undefined | ToSAwaitLoginResponse | LoginResponse[]>,
         ) => Promise<void>;
         onToSCancel?: () => void;
         skipRequest?: boolean;

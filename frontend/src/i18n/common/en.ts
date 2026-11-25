@@ -211,6 +211,10 @@ export const I18nEn: I18n = {
         login: 'Login',
         mfaAck: 'Acknowledged',
         mfaOpenApp: 'Open the App to continue',
+        mfaSelectionDesc: 'Choose your verification method:',
+        usePasskey: 'Use Passkey',
+        useEmailCode: 'Use Email Code',
+        emailCodeDesc: 'Receive a one-time code via email',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
