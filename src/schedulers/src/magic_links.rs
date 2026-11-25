@@ -14,7 +14,7 @@ use tracing::{debug, error, info};
 /// 'set first ever password' magic link to keep the database clean in case of an open user registration.
 /// Runs every 6 hours.
 pub async fn magic_link_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 6));
+    let mut interval = tokio::time::interval(Duration::from_hours(6));
 
     loop {
         interval.tick().await;

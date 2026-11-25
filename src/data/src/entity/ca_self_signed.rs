@@ -52,15 +52,15 @@ impl SelfSignedCA {
             DB::pg_query_opt(sql, &[]).await?
         };
         if let Some(slf) = slf
-            && slf.exp > now.add(Duration::from_secs(3600))
+            && slf.exp > now.add(Duration::from_hours(1))
         {
             info!("Found already existing Self-Signed CA");
             return Ok(slf);
         }
 
         info!("Generating new Self-Signed CA");
-        let nbf = now.sub(Duration::from_secs(60));
-        let exp = now.add(Duration::from_secs(24 * 3600 * 3650));
+        let nbf = now.sub(Duration::from_mins(1));
+        let exp = now.add(Duration::from_hours(24 * 3650));
 
         let kp = Self::generate_key_pair().await;
         let key_pair = EncValue::encrypt(kp.serialize_pem().as_bytes())?
@@ -107,7 +107,7 @@ SET data = $2
             .push(ExtendedKeyUsagePurpose::ServerAuth);
 
         let now = OffsetDateTime::now_utc();
-        params.not_before = now.sub(Duration::from_secs(60));
+        params.not_before = now.sub(Duration::from_mins(1));
         let exp = now.add(Duration::from_secs(SELF_SIGNED_LT_SECS));
         params.not_after = exp;
 

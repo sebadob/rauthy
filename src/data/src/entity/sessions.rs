@@ -956,7 +956,7 @@ mod tests {
 
     #[test]
     fn test_validate_csrf() {
-        let s = Session::new(Duration::from_secs(3600), None);
+        let s = Session::new(Duration::from_hours(1), None);
 
         let ok = TestRequest::default()
             .insert_header((CSRF_HEADER, s.csrf_token.clone()))
@@ -974,7 +974,7 @@ mod tests {
 
     #[test]
     fn test_session_validation() -> Result<(), ErrorResponse> {
-        let mut s = Session::new(Duration::from_secs(3600), None);
+        let mut s = Session::new(Duration::from_hours(1), None);
 
         let path_exep_1 = "/auth/v1/oidc/authorize";
         let path_exep_2 = "/auth/v1/oidc/token";
@@ -997,21 +997,21 @@ mod tests {
 
     #[test]
     fn test_init_session_needs_exception_path_without_ip_validation() {
-        let s = Session::new(Duration::from_secs(3600), None);
+        let s = Session::new(Duration::from_hours(1), None);
         assert!(!s.is_valid(600, None, "/"));
         assert!(!s.is_valid(600, None, "/auth/v1/users"));
 
         assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
         assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
 
-        let mut a = Session::new(Duration::from_secs(3600), None);
+        let mut a = Session::new(Duration::from_hours(1), None);
         a.state = SessionState::Auth;
         assert!(a.is_valid(600, None, "/"));
 
-        let mut l = Session::new(Duration::from_secs(3600), None);
+        let mut l = Session::new(Duration::from_hours(1), None);
         l.state = SessionState::LoggedOut;
         assert!(!l.is_valid(600, None, "/"));
-        let mut u = Session::new(Duration::from_secs(3600), None);
+        let mut u = Session::new(Duration::from_hours(1), None);
         u.state = SessionState::Unknown;
         assert!(!u.is_valid(600, None, "/"));
     }

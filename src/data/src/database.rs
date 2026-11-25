@@ -225,7 +225,7 @@ impl DB {
         let pool: deadpool_postgres::Pool = deadpool_postgres::Pool::builder(mgr)
             .max_size(db_max_conn as usize)
             .create_timeout(Some(Duration::from_secs(10)))
-            .recycle_timeout(Some(Duration::from_secs(3600)))
+            .recycle_timeout(Some(Duration::from_hours(1)))
             .runtime(deadpool::Runtime::Tokio1)
             .build()?;
 

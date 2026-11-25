@@ -530,7 +530,7 @@ impl TokenSet {
             now
         } else {
             // allow 60 second early usage
-            now.add(access_token_lifetime).sub(Duration::from_secs(60))
+            now.add(access_token_lifetime).sub(Duration::from_mins(1))
         };
         let exp = if did.is_some() {
             nbf.add(config.vars.device_grant.refresh_token_lifetime)

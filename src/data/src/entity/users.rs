@@ -1933,7 +1933,7 @@ LIMIT $2"#
 
                 let ml = MagicLink::create(
                     user.id.clone(),
-                    Duration::from_secs(3600),
+                    Duration::from_hours(1),
                     MagicLinkUsage::EmailChange(email.clone()),
                 )
                 .await?;

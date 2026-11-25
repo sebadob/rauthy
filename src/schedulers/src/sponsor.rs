@@ -25,7 +25,7 @@ pub async fn run_sponsor_reminder() {
     debug!("Project sponsoring Notifications enabled.");
 
     // Do a short sleep before starting, just in case we are inside the time window.
-    time::sleep(Duration::from_secs(300)).await;
+    time::sleep(Duration::from_mins(5)).await;
 
     loop {
         let now = Utc::now();
@@ -70,7 +70,7 @@ pub async fn run_sponsor_reminder() {
             debug!("Project sponsoring reminder: not the leader yet - checking again shortly");
         }
 
-        time::sleep(Duration::from_secs(600)).await;
+        time::sleep(Duration::from_mins(10)).await;
     }
 }
 
