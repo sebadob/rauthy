@@ -21,16 +21,19 @@ pub async fn get_static_assets(
     let accept_encoding = accept_encoding.into_inner();
 
     let mime = mime_guess::from_path(&path);
-    let (p, encoding) =
-        if path.ends_with(".png") || path.ends_with(".webp") || path.ends_with(".jpg") {
-            (Cow::Borrowed(path.as_str()), "none")
-        } else if accept_encoding.contains(&"br".parse().unwrap()) {
-            (Cow::Owned(format!("{path}.br")), "br")
-        } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-            (Cow::Owned(format!("{path}.gz")), "gzip")
-        } else {
-            (Cow::Borrowed(path.as_str()), "none")
-        };
+    let (p, encoding) = if path.ends_with(".png")
+        || path.ends_with(".webp")
+        || path.ends_with(".jpg")
+        || path.ends_with(".woff2")
+    {
+        (Cow::Borrowed(path.as_str()), "none")
+    } else if accept_encoding.contains(&"br".parse().unwrap()) {
+        (Cow::Owned(format!("{path}.br")), "br")
+    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
+        (Cow::Owned(format!("{path}.gz")), "gzip")
+    } else {
+        (Cow::Borrowed(path.as_str()), "none")
+    };
 
     match Assets::get(p.as_ref()) {
         Some(content) => HttpResponse::Ok()

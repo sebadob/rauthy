@@ -88,6 +88,15 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### Refreshed public pages
+
+The login, registration, password reset, device, error and account pages have a new look: a soft
+background glow in the theme's `--action` and `--accent` colors, a frosted card, and self-hosted
+Bricolage Grotesque and JetBrains Mono fonts (SIL OFL 1.1). All colors still come from the theme
+variables, so custom client branding keeps working, and the branding preview in the Admin UI shows
+the new login card. The background animation is skipped with `prefers-reduced-motion` and on small
+screens. The Admin UI itself is unchanged.
+
 #### Credential Stuffing Detection Can Be Disabled
 
 `cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config

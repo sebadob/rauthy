@@ -26,6 +26,7 @@ const backend = 'http://127.0.0.1:8080';
                     'script-src': ['self', 'wasm-unsafe-eval'],
                     'style-src': ['self', 'unsafe-inline'],
                     'img-src': ['self'],
+                    'font-src': ['self'],
                 },
             },
         }),

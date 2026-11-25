@@ -912,10 +912,14 @@
     }
 
     .errMsg {
-        margin: 0.5rem 0;
-        max-width: 18rem;
+        margin: 0.75rem 0 0.25rem;
+        padding: 0.6rem 0.85rem;
+        border-left: 3px solid hsl(var(--error));
+        border-radius: var(--field-radius);
+        background: hsl(var(--error) / 0.08);
         text-wrap: wrap;
         color: hsl(var(--error));
+        font-size: 0.9rem;
     }
 
     .flex-col {
@@ -931,6 +935,17 @@
     .head {
         display: flex;
         justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .head :global(.logo) {
+        height: 64px;
+        margin: 0;
+        filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--canvas-a) 35%, transparent));
+    }
+
+    .head :global(.logo.default) {
+        width: 64px;
     }
 
     .home {
@@ -943,12 +958,16 @@
     }
 
     .name {
-        margin: 0.5rem 0 1rem;
+        margin: 1.25rem 0 0.75rem;
     }
 
     .reg {
-        margin-top: 0.5rem;
+        display: inline-block;
+        margin-top: 0.75rem;
         color: var(--ui-text);
+        font-weight: 600;
+        text-decoration-color: color-mix(in srgb, var(--canvas-a) 60%, transparent);
+        text-underline-offset: 4px;
     }
 
     .success {

@@ -1,3 +1,23 @@
+/*
+Self-hosted display and mono faces for the public pages (SIL OFL 1.1, see src/fonts/).
+Subset to Latin, Latin Extended and Vietnamese; other scripts fall back to the system fonts.
+*/
+@font-face {
+    font-family: 'Bricolage Grotesque';
+    src: url('../fonts/BricolageGrotesque-var.woff2') format('woff2');
+    font-weight: 300 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('../fonts/JetBrainsMono-var.woff2') format('woff2');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* CSS Reset */
 *,
 *::before,
@@ -581,4 +601,246 @@ pre {
 
 .ui-shell .ui-field-grid .admin-labeled-value {
     margin-block: 0;
+}
+
+/*
+Aurora canvas for the public pages and the account page.
+Every color is derived from the theme variables (--bg, --text, --action, --accent, ...), so the
+per-client branding served from /auth/v1/theme/ keeps working without changes.
+*/
+.ui-canvas {
+    --canvas-a: hsl(var(--action));
+    --canvas-b: hsl(var(--accent));
+    --card-radius: clamp(14px, calc(var(--border-radius) * 4), 26px);
+    --field-radius: clamp(8px, calc(var(--border-radius) * 2), 14px);
+    --ui-container: hsl(var(--bg));
+    --ui-surface: color-mix(in srgb, hsl(var(--bg)) 82%, transparent);
+    --ui-outline: hsl(var(--text) / 0.18);
+    --ui-field-height: 3rem;
+    --font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+    position: relative;
+    isolation: isolate;
+    background: hsl(var(--bg));
+}
+
+/* two drifting light fields in the brand colors */
+.ui-canvas::before {
+    content: '';
+    position: fixed;
+    inset: -20vmax;
+    z-index: -2;
+    pointer-events: none;
+    background:
+        radial-gradient(
+            closest-side at 28% 30%,
+            color-mix(in srgb, var(--canvas-a) 42%, transparent),
+            transparent
+        ),
+        radial-gradient(
+            closest-side at 74% 68%,
+            color-mix(in srgb, var(--canvas-b) 36%, transparent),
+            transparent
+        ),
+        radial-gradient(
+            closest-side at 70% 18%,
+            color-mix(in srgb, var(--canvas-a) 18%, var(--canvas-b) 12%),
+            transparent
+        );
+    filter: blur(48px) saturate(1.15);
+    opacity: 0.55;
+    animation: auroraDrift 26s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+/* a fine dot grid that fades out toward the edges */
+.ui-canvas::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(hsl(var(--text) / 0.22) 1px, transparent 1.4px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, black 10%, transparent 75%);
+}
+
+body.theme-dark .ui-canvas::before {
+    opacity: 0.6;
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not(.theme-light) .ui-canvas::before {
+        opacity: 0.6;
+    }
+}
+
+/*
+The card's backdrop-filter has to re-blur every frame while the aurora moves behind it, so the
+drift is skipped on small screens and for users who asked for less motion.
+*/
+@media (max-width: 40rem), (prefers-reduced-motion: reduce) {
+    .ui-canvas::before {
+        animation: none;
+        will-change: auto;
+    }
+}
+
+@media (forced-colors: active) {
+    .ui-canvas::before,
+    .ui-canvas::after {
+        display: none;
+    }
+}
+
+@keyframes auroraDrift {
+    0% {
+        transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1);
+    }
+    50% {
+        transform: translate3d(3%, 2%, 0) rotate(8deg) scale(1.08);
+    }
+    100% {
+        transform: translate3d(-1%, 4%, 0) rotate(-6deg) scale(1.02);
+    }
+}
+
+@keyframes cardRise {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes sheen {
+    from {
+        background-position: 0% 50%;
+    }
+    to {
+        background-position: 200% 50%;
+    }
+}
+
+.ui-canvas :is(h1, h2, h3) {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+}
+
+/* form fields: taller, softer, with a brand colored focus halo */
+body .ui-canvas.ui-shell .ui-text-input:not(.branding-preview *) {
+    min-height: var(--ui-field-height);
+    padding: 0 1rem;
+    border-radius: var(--field-radius);
+    background: color-mix(in srgb, hsl(var(--bg)) 70%, transparent);
+    font-size: 0.95rem;
+    transition:
+        border-color 160ms,
+        box-shadow 160ms,
+        background-color 160ms;
+}
+
+body .ui-canvas.ui-shell .ui-text-input:hover:not(.branding-preview *) {
+    border-color: hsl(var(--text) / 0.32);
+}
+
+body .ui-canvas.ui-shell .ui-text-input:focus:not(.branding-preview *) {
+    /* transparent, not none: forced-colors mode drops the box-shadow but paints this outline */
+    outline: 2px solid transparent;
+    border-color: var(--canvas-a);
+    background: hsl(var(--bg));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--canvas-a) 22%, transparent);
+}
+
+body .ui-canvas.ui-shell input.invalid:not(.branding-preview *) {
+    border-color: hsl(var(--error));
+    box-shadow: 0 0 0 4px hsl(var(--error) / 0.14);
+}
+
+body .ui-canvas.ui-shell .admin-field-label:not(.branding-preview *),
+body .ui-canvas.ui-shell .admin-password-field > .label > label {
+    margin-bottom: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* buttons */
+body .ui-canvas.ui-shell .admin-control:not(.branding-preview *) {
+    border-radius: var(--field-radius);
+    transition:
+        background-color 140ms,
+        border-color 140ms,
+        color 140ms,
+        box-shadow 200ms,
+        transform 140ms;
+}
+
+body .ui-canvas.ui-shell .admin-control:active:not(:disabled):not(.branding-preview *) {
+    transform: translateY(1px) scale(0.99);
+}
+
+body .ui-canvas.ui-shell .admin-control[data-variant='l1']:not(.branding-preview *),
+body .ui-canvas.ui-shell .admin-control[data-variant='l2']:not(.branding-preview *) {
+    height: var(--ui-button-height, 3rem);
+    min-height: var(--ui-button-min-height, 3rem);
+}
+
+body .ui-canvas.ui-shell .admin-control[data-variant='l1']:not(.branding-preview *) {
+    background-image: linear-gradient(
+        110deg,
+        var(--canvas-a) 0%,
+        color-mix(in srgb, var(--canvas-a) 70%, var(--canvas-b)) 45%,
+        var(--canvas-a) 55%,
+        color-mix(in srgb, var(--canvas-a) 80%, var(--canvas-b)) 100%
+    );
+    background-size: 200% 100%;
+    box-shadow:
+        0 1px 0 hsl(0 0% 100% / 0.25) inset,
+        0 8px 22px -10px var(--canvas-a);
+}
+
+body
+    .ui-canvas.ui-shell
+    .admin-control[data-variant='l1']:hover:not(:disabled):not(.branding-preview *) {
+    animation: sheen 1.6s linear infinite;
+    box-shadow:
+        0 1px 0 hsl(0 0% 100% / 0.25) inset,
+        0 12px 28px -10px var(--canvas-a);
+}
+
+body .ui-canvas.ui-shell .admin-control[data-variant='l2']:not(.branding-preview *) {
+    background: color-mix(in srgb, hsl(var(--bg)) 60%, transparent);
+    color: var(--ui-text);
+}
+
+body .ui-canvas.ui-shell .admin-control[data-variant='l2']:hover:not(.branding-preview *) {
+    border-color: color-mix(in srgb, var(--canvas-a) 55%, transparent);
+    background: color-mix(in srgb, var(--canvas-a) 8%, hsl(var(--bg)));
+}
+
+.ui-canvas .public-divider {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+body .ui-canvas .section {
+    border-radius: var(--card-radius);
+    backdrop-filter: blur(18px) saturate(1.3);
+    box-shadow: 0 24px 60px -36px color-mix(in srgb, var(--canvas-a) 40%, hsl(var(--text) / 0.3));
+}
+
+body .ui-canvas.ui-shell .admin-control[data-variant='l1']:disabled:not(.branding-preview *) {
+    opacity: 1;
+    background: hsl(var(--text) / 0.12);
+    color: hsl(var(--text) / 0.7);
+    box-shadow: none;
 }

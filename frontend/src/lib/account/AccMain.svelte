@@ -140,7 +140,7 @@
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
-<div class="account-shell ui-shell">
+<div class="account-shell ui-shell ui-canvas">
     <div class="account">
         <h1>{t.account.account}</h1>
         <EntityHeader {title} subtitle={user.email}>
@@ -205,7 +205,6 @@
         min-width: 0;
         min-height: 100%;
         align-self: flex-start;
-        background: var(--ui-container);
         color: var(--ui-text);
         padding: clamp(1rem, 4vw, 3rem);
     }
@@ -217,8 +216,11 @@
 
     h1 {
         margin: 0 0 var(--ui-space);
-        font-size: 1rem;
-        font-weight: 600;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
         color: var(--ui-muted);
     }
 
@@ -234,7 +236,6 @@
         justify-content: space-between;
         margin-top: var(--ui-space);
         padding-block: 0.5rem;
-        border-top: 1px solid var(--ui-outline);
-        background: var(--ui-container);
+        border-top: 1px dashed var(--ui-outline);
     }
 </style>
