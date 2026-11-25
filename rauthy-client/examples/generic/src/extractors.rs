@@ -1,6 +1,6 @@
+use actix_web::HttpRequest;
 use actix_web::error::ErrorUnauthorized;
 use actix_web::http::header::AUTHORIZATION;
-use actix_web::HttpRequest;
 use rauthy_client::principal::PrincipalOidc;
 
 /// This is the same as `principal_opt_from_req`, but it just returns a Result to make extracting
@@ -39,11 +39,7 @@ pub async fn principal_opt_from_req(req: &HttpRequest) -> Option<PrincipalOidc> 
                 // This just makes sure, that at least the user_claim is satisfied.
                 // You might skip this, if just any user from Rauthy should have access
                 // to this app. no matter what groups / roles he is assigned to.
-                if p.is_user {
-                    Some(p)
-                } else {
-                    None
-                }
+                if p.is_user { Some(p) } else { None }
             }
             Err(_err) => None,
         }

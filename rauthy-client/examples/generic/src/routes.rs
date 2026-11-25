@@ -1,8 +1,8 @@
 use crate::config::Config;
-use crate::{extractors, templates, DEV_MODE};
+use crate::{DEV_MODE, extractors, templates};
 use actix_web::http::header::{CONTENT_TYPE, LOCATION, SET_COOKIE};
 use actix_web::web::Query;
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
 use rauthy_client::cookie_state::OidcCookieState;
 use rauthy_client::handler::{OidcCallbackParams, OidcCookieInsecure};
 
@@ -36,7 +36,7 @@ pub async fn get_auth_check(config: ConfigExt, req: HttpRequest) -> HttpResponse
         OidcCookieInsecure::No
     };
 
-    match rauthy_client::handler::validate_principal_generic(principal, enc_key, insecure).await {
+    match rauthy_client::handler::validate_principal_generic(principal, enc_key, insecure) {
         Ok(()) => HttpResponse::Accepted().finish(),
         Err(header_values) => match header_values {
             // we return HTTP 406 to not trigger default browser behavior from 401
@@ -89,7 +89,7 @@ pub async fn get_callback(
     let (cookie_str, token_set, _id_claims) = match callback_res {
         Ok(res) => res,
         Err(err) => {
-            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {err}"))
+            return HttpResponse::BadRequest().body(format!("Invalid OIDC Callback: {err}"));
         }
     };
 
