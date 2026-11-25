@@ -224,7 +224,7 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 
     UserAttrConfigEntity::find_all().await.map(|values| {
         HttpResponse::Ok().json(UserAttrConfigResponse {
-            values: values.into_iter().map(|v| v.into()).collect(),
+            values: values.into_iter().map(Into::into).collect(),
         })
     })
 }
@@ -1632,10 +1632,12 @@ async fn user_revoke_handle(
     let user = User::find(revoke.user_id).await?;
     UserRevoke::delete(user.id).await?;
 
-    let location = ipgeo::get_location_from_db(bad_ip)?;
-    Event::user_login_revoke(&user.email, bad_ip, location)
-        .send()
-        .await?;
+    {
+        let location = ipgeo::get_location_from_db(bad_ip)?;
+        Event::user_login_revoke(&user.email, bad_ip, location.as_deref())
+    }
+    .send()
+    .await?;
 
     Ok(())
 }
@@ -3233,7 +3235,7 @@ mod tests {
                 remote_ip: None,
             }),
             api_key: None,
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
         }
     }
 

@@ -261,7 +261,7 @@ mod tests {
 
         let fwd = ForwardAuthSession {
             client_id: "my_client".to_string(),
-            inner: Session::new(std::time::Duration::from_secs(60), None),
+            inner: Session::new(std::time::Duration::from_mins(1), None),
         };
         let (cookie, _) = fwd.build_cookies(true).unwrap();
         let value = ApiCookie::cookie_into_value(Some(cookie)).unwrap();

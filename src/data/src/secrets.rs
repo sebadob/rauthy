@@ -101,7 +101,7 @@ impl RauthySecrets {
             "MIGRATE_PG_PASSWORD",
         );
 
-        check_table_empty(table, "secrets: database");
+        check_table_empty(&table, "secrets: database");
     }
 
     fn parse_dynamic_clients(&mut self, table: &mut toml::Table) {
@@ -114,7 +114,7 @@ impl RauthySecrets {
             "DYN_CLIENT_REG_TOKEN",
         );
 
-        check_table_empty(table, "secrets: dynamic_clients");
+        check_table_empty(&table, "secrets: dynamic_clients");
     }
 
     fn parse_email(&mut self, table: &mut toml::Table) {
@@ -135,7 +135,7 @@ impl RauthySecrets {
             "SMTP_XOAUTH2_CLIENT_SECRET",
         );
 
-        check_table_empty(table, "secrets: email");
+        check_table_empty(&table, "secrets: email");
     }
 
     fn parse_encryption(&mut self, table: &mut toml::Table) {
@@ -148,7 +148,7 @@ impl RauthySecrets {
             self.encryption.keys = v;
         }
 
-        check_table_empty(table, "secrets: encryption");
+        check_table_empty(&table, "secrets: encryption");
     }
 
     fn parse_events(&mut self, table: &mut toml::Table) {
@@ -175,7 +175,7 @@ impl RauthySecrets {
         self.events.slack_webhook =
             t_str(&mut table, "events", "slack_webhook", "EVENT_SLACK_WEBHOOK");
 
-        check_table_empty(table, "secrets: events");
+        check_table_empty(&table, "secrets: events");
     }
 
     fn parse_geo(&mut self, table: &mut toml::Table) {
@@ -194,7 +194,7 @@ impl RauthySecrets {
             "GEO_MAXMIND_LICENSE",
         );
 
-        check_table_empty(table, "secrets: geolocation");
+        check_table_empty(&table, "secrets: geolocation");
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table) {
@@ -204,6 +204,6 @@ impl RauthySecrets {
         self.user_pictures.s3_secret =
             t_str(&mut table, "user_pictures", "s3_secret", "PIC_S3_SECRET");
 
-        check_table_empty(table, "secrets: user_pictures");
+        check_table_empty(&table, "secrets: user_pictures");
     }
 }

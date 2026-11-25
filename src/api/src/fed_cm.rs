@@ -482,7 +482,7 @@ mod tests {
     use super::*;
     use actix_web::ResponseError;
 
-    fn assert_consent_required(err: ErrorResponse) {
+    fn assert_consent_required(err: &ErrorResponse) {
         assert_eq!(
             err.error,
             ErrorResponseType::WWWAuthenticate("consent-required".to_string())
@@ -492,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_consent_required_as_www_authenticate() {
-        assert_consent_required(consent_required_as_www_authenticate(ErrorResponse::new(
+        assert_consent_required(&consent_required_as_www_authenticate(ErrorResponse::new(
             ErrorResponseType::ConsentRequired,
             "no consent grant for this client",
         )));

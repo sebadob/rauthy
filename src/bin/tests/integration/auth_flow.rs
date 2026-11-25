@@ -32,11 +32,10 @@ use ring::digest;
 use std::error::Error;
 use std::fmt::Write;
 use std::net::TcpStream;
-use std::ops::Sub;
 use std::sync::OnceLock;
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 use tokio::time;
 
 /// a `state` that would inject its own `iss` if the server did not encode it
@@ -56,7 +55,7 @@ fn assert_not_consent_exempt(refresh_token: &str) {
 // This is a very long running test - run it manually as a single test
 // maybe moving it into its own module would work, so it does not block the others
 #[tokio::test]
-#[ignore]
+#[ignore = "long-running JWK rotation test that invalidates tokens of other tests"]
 async fn test_certs() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     eprintln!("backend_url: {}", backend_url);
@@ -581,7 +580,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
             .iter()
             .any(|(k, v)| k == "state" && v == INJECTING_STATE)
     );
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     println!("Extracted code: {:?}", code);
 
     // Step 4: POST /token with extracted values + CSRF cookie
@@ -612,7 +611,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     )
     .await;
     let res = expect_status!(res, 202);
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     req_token.code = Some(code);
 
     req_token.code_verifier = Some("IAmSoWrong1337".to_string());
@@ -634,7 +633,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     )
     .await;
     let res = expect_status!(res, 202);
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     req_token.code = Some(code);
 
     req_token.code_verifier = Some(challenge_plain.to_string());
@@ -732,7 +731,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     res = expect_status!(res, 202);
-    let (code, state) = code_state_from_headers(res)?;
+    let (code, state) = code_state_from_headers(&res)?;
     assert!(state.is_none());
 
     let res = reqwest::Client::new()
@@ -836,7 +835,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     res = expect_status!(res, 202);
-    let (code, state_check) = code_state_from_headers(res)?;
+    let (code, state_check) = code_state_from_headers(&res)?;
     println!("1");
     assert_eq!(state, state_check.unwrap());
 
@@ -913,7 +912,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
 /// measurement, not a pass/fail test, and it is heavy on a CI runner, so it stays `#[ignore]` and
 /// runs manually with `cargo test -p rauthy --test integration -- --ignored test_concurrent_logins`.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore]
+#[ignore = "manual load measurement ending in a deliberate failure"]
 async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
 
@@ -977,11 +976,10 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         });
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
     assert_eq!(logins.len(), fail_count + success_count);
     futures::future::join_all(logins).await;
-    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let total = end.sub(start).as_millis();
+    let total = start.elapsed().as_millis();
     println!("Total time taken: {}", total);
 
     assert_eq!(1, 2);
@@ -1328,7 +1326,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     req_login.pow = get_solved_pow().await;
     let res = send_login(&client, &url_auth, &headers, req_login).await;
     assert!(res.status().is_success());
-    let (code, state) = code_state_from_headers(res)?;
+    let (code, state) = code_state_from_headers(&res)?;
     assert!(state.is_none());
     println!("Extracted code: {:?}", code);
 

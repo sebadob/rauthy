@@ -46,7 +46,7 @@ const POW_DIFFICULTY_MAX: u8 = 99;
 
 /// How long rolling log files are kept when `logging.log_file` is set. Changing this changes how
 /// much disk space the default log file cleanup will occupy.
-const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_hours(30 * 24);
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -260,8 +260,8 @@ impl RauthyConfig {
             self.vars.encryption.keys.clone(),
         ) else {
             panic!(
-                r#"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
-    https://sebadob.github.io/rauthy/config/encryption.html"#
+                r"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
+    https://sebadob.github.io/rauthy/config/encryption.html"
             );
         };
 
@@ -371,7 +371,7 @@ impl Default for Vars {
                 danger_allow_insecure: false,
                 token_lifetime: Duration::from_secs(30),
                 allow_clock_skew: Duration::from_secs(5),
-                allowed_token_lifetime: Duration::from_secs(120),
+                allowed_token_lifetime: Duration::from_mins(2),
             },
             bootstrap: VarsBootstrap {
                 admin_email: "admin@localhost".to_string(),
@@ -381,7 +381,7 @@ impl Default for Vars {
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
                 generated_secrets_file: String::new().into(),
-                generated_secrets_ttl: Duration::from_secs(600),
+                generated_secrets_ttl: Duration::from_mins(10),
                 reconcile: false,
             },
             consent: VarsConsent {
@@ -391,9 +391,9 @@ impl Default for Vars {
             },
             cred_stuff_detect: VarsCredStuff {
                 enable: true,
-                blacklist_duration: Duration::from_secs(24 * 3600),
+                blacklist_duration: Duration::from_hours(24),
                 blacklist_threshold: 15,
-                scan_window: Duration::from_secs(3 * 3600),
+                scan_window: Duration::from_hours(3),
             },
             database: VarsDatabase {
                 hiqlite: true,
@@ -412,19 +412,19 @@ impl Default for Vars {
                 migrate_pg_user: None,
                 migrate_pg_password: None,
                 migrate_pg_db_name: "rauthy".into(),
-                sched_user_exp: Duration::from_secs(3600),
+                sched_user_exp: Duration::from_hours(1),
                 sched_user_exp_delete: None,
             },
             device_grant: VarsDeviceGrant {
-                code_lifetime: Duration::from_secs(5 * 60),
+                code_lifetime: Duration::from_mins(5),
                 user_code_length: 8,
                 rate_limit: None,
                 poll_interval: Duration::from_secs(5),
-                refresh_token_lifetime: Duration::from_secs(3 * 24 * 3600),
+                refresh_token_lifetime: Duration::from_hours(3 * 24),
             },
             dpop: VarsDpop {
                 force_nonce: true,
-                nonce_exp: Duration::from_secs(15 * 60),
+                nonce_exp: Duration::from_mins(15),
             },
             dynamic_clients: VarsDynamicClients {
                 enable: false,
@@ -436,12 +436,12 @@ impl Default for Vars {
                 ],
                 default_scopes: vec!["openid".into()],
                 reg_token: None,
-                default_token_lifetime: Duration::from_secs(30 * 60),
+                default_token_lifetime: Duration::from_mins(30),
                 secret_auto_rotate: true,
-                cleanup_interval: Duration::from_secs(3600),
-                cleanup_threshold: Duration::from_secs(3600),
+                cleanup_interval: Duration::from_hours(1),
+                cleanup_threshold: Duration::from_hours(1),
                 cleanup_inactive_threshold: None,
-                rate_limit_reg: Duration::from_secs(3600),
+                rate_limit_reg: Duration::from_hours(1),
                 allowed_resources: Vec::default(),
             },
             email: VarsEmail {
@@ -455,8 +455,8 @@ impl Default for Vars {
                 smtp_tls_mode: EmailTlsMode::Tls,
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
-                    orphaned_pickup: Duration::from_secs(5 * 60),
-                    scheduler_interval: Duration::from_secs(5 * 60),
+                    orphaned_pickup: Duration::from_mins(5),
+                    scheduler_interval: Duration::from_mins(5),
                     batch_size: 3,
                     batch_delay: Duration::from_secs(2),
                 },
@@ -485,7 +485,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
-                password_exp: Duration::from_secs(10 * 24 * 3600),
+                password_exp: Duration::from_hours(10 * 24),
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -504,7 +504,7 @@ impl Default for Vars {
                     "webid".into(),
                 ],
                 default_scopes: None,
-                cache_lifetime: Duration::from_secs(3600),
+                cache_lifetime: Duration::from_hours(1),
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
                 allowed_resources: Vec::default(),
@@ -526,7 +526,7 @@ impl Default for Vars {
                 notify_level_matrix: EventLevel::Notice,
                 notify_level_slack: EventLevel::Notice,
                 persist_level: EventLevel::Info,
-                cleanup_threshold: Duration::from_secs(60 * 24 * 3600),
+                cleanup_threshold: Duration::from_hours(60 * 24),
                 generate_token_issued: true,
                 level_new_user: EventLevel::Info,
                 level_user_email_change: EventLevel::Notice,
@@ -561,8 +561,8 @@ impl Default for Vars {
             },
             fedcm: ConfigVarsFedCM {
                 experimental_enable: false,
-                session_lifetime: 2592000,
-                session_timeout: 259200,
+                session_lifetime: 2_592_000,
+                session_timeout: 259_200,
             },
             geo: ConfigVarsGeo {
                 block_is_whitelist: None,
@@ -576,7 +576,7 @@ impl Default for Vars {
                 maxmind_update_cron: "0 0 5 * * * *".into(),
             },
             hashing: VarsHashing {
-                argon2_m_cost: 131072,
+                argon2_m_cost: 131_072,
                 argon2_t_cost: 4,
                 argon2_p_cost: 8,
                 max_hash_threads: 2,
@@ -586,7 +586,7 @@ impl Default for Vars {
                 connect_timeout: Duration::from_secs(10),
                 request_timeout: Duration::from_secs(10),
                 min_tls: "1.3".into(),
-                idle_timeout: Duration::from_secs(15 * 60),
+                idle_timeout: Duration::from_mins(15),
                 danger_unencrypted: false,
                 danger_insecure: false,
                 root_ca_bundle: None,
@@ -628,12 +628,12 @@ impl Default for Vars {
             },
             lifetimes: VarsLifetimes {
                 refresh_token_grace_time: Duration::from_secs(5),
-                refresh_token_lifetime: Duration::from_secs(48 * 3600),
-                session_lifetime: Duration::from_secs(10 * 3600),
+                refresh_token_lifetime: Duration::from_hours(48),
+                session_lifetime: Duration::from_hours(10),
                 session_renew_mfa: false,
-                session_timeout: Duration::from_secs(90 * 60),
-                magic_link_pwd_reset: Duration::from_secs(30 * 60),
-                magic_link_pwd_first: Duration::from_secs(3 * 24 * 3600),
+                session_timeout: Duration::from_mins(90),
+                magic_link_pwd_reset: Duration::from_mins(30),
+                magic_link_pwd_first: Duration::from_hours(3 * 24),
                 jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
             logging: VarsLogging {
@@ -655,8 +655,8 @@ impl Default for Vars {
             otp: VarsOtp {
                 enable: false,
                 length: 6,
-                exp: Duration::from_secs(5 * 60),
-                renew_exp: Duration::from_secs(30 * 24 * 3600),
+                exp: Duration::from_mins(5),
+                renew_exp: Duration::from_hours(30 * 24),
                 digest_len_default: 512,
                 email: VarsOtpEmail {
                     enable: true,
@@ -675,14 +675,14 @@ impl Default for Vars {
             },
             pam: VarsPam {
                 remote_password_len: 24,
-                remote_password_ttl: Duration::from_secs(120),
+                remote_password_ttl: Duration::from_mins(2),
                 authorized_keys: VarsPamAuthorizedKeys {
                     authorized_keys_enable: true,
                     auth_required: true,
                     blacklist_used_keys: true,
-                    blacklist_cleanup_threshold: Duration::from_secs(730 * 24 * 3600),
+                    blacklist_cleanup_threshold: Duration::from_hours(730 * 24),
                     include_comments: true,
-                    forced_key_expiry: Duration::from_secs(365 * 24 * 3600),
+                    forced_key_expiry: Duration::from_hours(365 * 24),
                 },
             },
             pow: VarsPow {
@@ -717,7 +717,7 @@ impl Default for Vars {
                 email_reminder_disable: false
             },
             suspicious_requests: VarsSuspiciousRequests {
-                blacklist: Duration::from_secs(24 * 3600),
+                blacklist: Duration::from_hours(24),
                 log: false,
             },
             templates: VarsTemplates {
@@ -1123,12 +1123,12 @@ impl Default for Vars {
                     cs: VarsTemplate {
                         subject: "E-mail je již registrován".into(),
                         header: "E-mail je již registrován – ".into(),
-                        text: Some(r#"Někdo se pokusil zaregistrovat nový účet s vaší e-mailovou adresou,
+                        text: Some(r"Někdo se pokusil zaregistrovat nový účet s vaší e-mailovou adresou,
 ačkoli účet s touto adresou již existuje. Pokud jste to byli vy a šlo o omyl,
 můžete tuto zprávu ignorovat. Pokud jste zapomněli heslo, můžete si ho
 obnovit pomocí odkazu níže.
 Pokud jste se registrovat nepokoušeli, nemusíte se obávat.
-Váš účet nebyl napaden a žádná data neunikla."#.into()),
+Váš účet nebyl napaden a žádná data neunikla.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1139,12 +1139,12 @@ Váš účet nebyl napaden a žádná data neunikla."#.into()),
                     de: VarsTemplate {
                         subject: "E-Mail bereits registriert".into(),
                         header: "E-Mail bereits registriert - ".into(),
-                        text: Some(r#"Es wurde versucht einen neuen Account mit dieser E-Mail Adresse zu registrieren,
+                        text: Some(r"Es wurde versucht einen neuen Account mit dieser E-Mail Adresse zu registrieren,
 während diese Adresse bereits registriert war. Falls dies ein Fehler war, kann diese
 E-Mail ignoriert werden. Sollte jedoch das Passwort verloren gegangen sein und ein
 neues wird benötigt, so kann der unten stehende Link dafür genutzt werden.
 Falls diese Nachricht durch jemand Anderen ausgelöst wurde - keine Sorge, der Account
-is sicher und es gab keinerlei Datenlecks."#.into()),
+is sicher und es gab keinerlei Datenlecks.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1155,12 +1155,12 @@ is sicher und es gab keinerlei Datenlecks."#.into()),
                     en: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1171,12 +1171,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     es: VarsTemplate {
                         subject: "Correo electrónico ya registrado".into(),
                         header: "Correo electrónico ya registrado - ".into(),
-                        text: Some(r#"Alguien ha intentado registrar una cuenta nueva con su dirección de correo electrónico,
+                        text: Some(r"Alguien ha intentado registrar una cuenta nueva con su dirección de correo electrónico,
 pero ya existe una cuenta con esa dirección. Si fue usted y se trató de un error,
 puede ignorar este mensaje. Sin embargo, si ha olvidado su contraseña, puede usar
 el enlace de abajo para restablecerla.
 Si no fue usted quien intentó registrar la nueva cuenta, no se preocupe.
-Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato."#.into()),
+Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1187,12 +1187,12 @@ Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato."#.into()
                     fr: VarsTemplate {
                         subject: "e-mail déjà enregistré".into(),
                         header: "e-mail déjà enregistré - ".into(),
-                        text: Some(r#"Quelqu'un a essayé d'enregistrer un nouveau compte avec votre adresse e-mail
+                        text: Some(r"Quelqu'un a essayé d'enregistrer un nouveau compte avec votre adresse e-mail
 alors qu'un compte existe déjà. Si c'était vous et que c'était une erreur, vous pouvez ignorer ce message.
 Cependant, si vous avez oublié votre mot de passe,
 vous pouvez utiliser le lien ci-dessous pour le réinitialiser.
 Si ce n'est pas vous qui essayez d'enregistrer le nouveau compte, ne vous inquiétez pas.
-Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.into()),
+Votre compte n'a pas été compromis et aucune donnée n'a été divulguée.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1203,12 +1203,12 @@ Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.i
                     it: VarsTemplate {
                         subject: "Indirizzo email già registrato".into(),
                         header: "Indirizzo email già registrato –".into(),
-                        text: Some(r#"Qualcuno ha provato a registrare un nuovo account con il tuo indirizzo email,
+                        text: Some(r"Qualcuno ha provato a registrare un nuovo account con il tuo indirizzo email,
 ma esiste già un account associato a questo indirizzo. Se sei stato tu e si è
 trattato di un errore, puoi ignorare questo messaggio. Se hai dimenticato la
 password, puoi reimpostarla usando il link qui sotto.
 Se non hai richiesto tu la registrazione, il tuo account è al sicuro e nessun
-dato è stato divulgato."#.into()),
+dato è stato divulgato.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1219,11 +1219,11 @@ dato è stato divulgato."#.into()),
                     ja: VarsTemplate {
                         subject: "このメールアドレスは登録済みです".into(),
                         header: "このメールアドレスは登録済みです -".into(),
-                        text: Some(r#"すでにアカウントがあるメールアドレスで、新しいアカウントの登録が試みられました。
+                        text: Some(r"すでにアカウントがあるメールアドレスで、新しいアカウントの登録が試みられました。
 ご自身の操作ミスであれば、このメッセージは無視してかまいません。
 パスワードを忘れた場合は、下のリンクからリセットできます。
 ご自身による登録でない場合も、心配はいりません。
-アカウントは侵害されておらず、情報も漏れていません。"#.into()),
+アカウントは侵害されておらず、情報も漏れていません。".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1234,12 +1234,12 @@ dato è stato divulgato."#.into()),
                     ko: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1250,12 +1250,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     nb: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1266,12 +1266,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     nl: VarsTemplate {
                         subject: "E-Mail al geregistreerd".into(),
                         header: "E-Mail al geregistreerd - ".into(),
-                        text: Some(r#"Iemand heeft geprobeerd een nieuw account te registreren met uw e-mailadres,
+                        text: Some(r"Iemand heeft geprobeerd een nieuw account te registreren met uw e-mailadres,
 terwijl er al een account bestaat. Als u dat zelf was en het een vergissing was, kunt u
 dit bericht negeren. Als u echter uw wachtwoord bent vergeten, kunt u
 de onderstaande link gebruiken om het te resetten.
 Als u zelf niet probeerde een nieuw account te registreren - geen zorgen.
-Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
+Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1282,12 +1282,12 @@ Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
                     pl: VarsTemplate {
                         subject: "Adres e-mail jest już zarejestrowany".into(),
                         header: "Adres e-mail jest już zarejestrowany - ".into(),
-                        text: Some(r#"Ktoś próbował założyć nowe konto na Twój adres e-mail,
+                        text: Some(r"Ktoś próbował założyć nowe konto na Twój adres e-mail,
 chociaż konto już istnieje. Jeśli to Ty i zrobiłeś to przez pomyłkę, możesz
 zignorować tę wiadomość. Jeśli jednak nie pamiętasz hasła, możesz je zresetować
 za pomocą poniższego linku.
 Jeśli to nie Ty próbowałeś założyć nowe konto, nie musisz się martwić.
-Twoje konto nie zostało naruszone i żadne dane nie wyciekły."#.into()),
+Twoje konto nie zostało naruszone i żadne dane nie wyciekły.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1298,12 +1298,12 @@ Twoje konto nie zostało naruszone i żadne dane nie wyciekły."#.into()),
                     pt: VarsTemplate {
                         subject: "E-mail já registado".into(),
                         header: "E-mail já registado - ".into(),
-                        text: Some(r#"Alguém tentou registar uma nova conta com o seu endereço de e-mail,
+                        text: Some(r"Alguém tentou registar uma nova conta com o seu endereço de e-mail,
 mas já existe uma conta com este endereço. Se a tentativa foi sua e se tratou de um engano,
 pode ignorar esta mensagem. No entanto, se se esqueceu da sua palavra-passe, pode usar
 a ligação abaixo para a redefinir.
 Se a tentativa de registo não foi sua, não precisa de se preocupar.
-A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
+A sua conta não foi comprometida e nenhum dado foi divulgado.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1314,12 +1314,12 @@ A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
                     ru: VarsTemplate {
                         subject: "E-Mail уже зарегистрирован".into(),
                         header: "E-Mail уже зарегистрирован - ".into(),
-                        text: Some(r#"Кто-то попытался зарегистрировать новый аккаунт с вашим адресом E-Mail,
+                        text: Some(r"Кто-то попытался зарегистрировать новый аккаунт с вашим адресом E-Mail,
 в то время как аккаунт уже существует. Если это были вы и произошла ошибка,
 можете проигнорировать это сообщение. Однако если вы забыли пароль, вы можете
 воспользоваться ссылкой ниже для его сброса.
 Если регистрацию пытался выполнить кто-то другой — не беспокойтесь.
-Ваш аккаунт не был скомпрометирован и утечки данных не произошло."#.into()),
+Ваш аккаунт не был скомпрометирован и утечки данных не произошло.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1330,12 +1330,12 @@ A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
                     uk: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1346,12 +1346,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     zhhans: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1535,7 +1535,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 poll_watch_interval: None,
             },
             tos: VarsToS {
-                accept_timeout: Duration::from_secs(15 * 60),
+                accept_timeout: Duration::from_mins(15),
             },
             user_delete: VarsUserDelete {
                 enable_self_delete: false,
@@ -1589,9 +1589,9 @@ Your account has not been compromised and no data was leaked."#.into()),
                 rp_id: String::default(),
                 rp_origin: String::default(),
                 rp_name: "Rauthy IAM".into(),
-                req_exp: Duration::from_secs(60),
+                req_exp: Duration::from_mins(1),
                 data_exp: Duration::from_secs(90),
-                renew_exp: Duration::from_secs(90 * 24 * 3600),
+                renew_exp: Duration::from_hours(90 * 24),
                 force_uv: false,
                 no_password_exp: true,
                 optimistic_attestation: false,
@@ -1703,7 +1703,7 @@ impl Vars {
         let node_config = slf.parse_hiqlite_config(&mut table, secrets).await;
         slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
-        check_table_empty(table, "<root>");
+        check_table_empty(&table, "<root>");
 
         (slf, node_config)
     }
@@ -1741,7 +1741,7 @@ impl Vars {
             self.dev.provider_callback_url = Some(v);
         }
 
-        check_table_empty(table, "dev");
+        check_table_empty(&table, "dev");
     }
 
     fn parse_atproto(&mut self, table: &mut toml::Table) {
@@ -1751,7 +1751,7 @@ impl Vars {
             self.atproto.enable = v;
         }
 
-        check_table_empty(table, "atproto");
+        check_table_empty(&table, "atproto");
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
@@ -1867,7 +1867,7 @@ impl Vars {
             self.access.redirect_root_to_account = v;
         }
 
-        check_table_empty(table, "access");
+        check_table_empty(&table, "access");
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
@@ -1942,7 +1942,7 @@ impl Vars {
             self.auth_headers.preferred_username = v.into();
         }
 
-        check_table_empty(table, "auth_headers");
+        check_table_empty(&table, "auth_headers");
     }
 
     fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
@@ -1997,7 +1997,7 @@ impl Vars {
             self.backchannel_logout.allowed_token_lifetime = v;
         }
 
-        check_table_empty(table, "backchannel_logout");
+        check_table_empty(&table, "backchannel_logout");
     }
 
     fn parse_bootstrap(&mut self, table: &mut toml::Table) {
@@ -2061,7 +2061,7 @@ impl Vars {
             self.bootstrap.reconcile = v;
         }
 
-        check_table_empty(table, "bootstrap");
+        check_table_empty(&table, "bootstrap");
     }
 
     fn resolve_bootstrap_generated_secrets_file(&mut self, node_config: &NodeConfig) {
@@ -2104,7 +2104,7 @@ impl Vars {
                     .expect("`source` is mandatory for `[[consent.sources]]`");
                 let name = t_str(&mut table, "consent.sources", "name", "")
                     .expect("`name` is mandatory for `[[consent.sources]]`");
-                check_table_empty(table, "consent.sources");
+                check_table_empty(&table, "consent.sources");
 
                 let entry = match VarsConsentSource::new(resource, &source, name) {
                     Ok(entry) => entry,
@@ -2122,7 +2122,7 @@ impl Vars {
             }
         }
 
-        check_table_empty(table, "consent");
+        check_table_empty(&table, "consent");
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -2161,7 +2161,7 @@ impl Vars {
             self.cred_stuff_detect.scan_window = v;
         }
 
-        check_table_empty(table, "cred_stuff_detection");
+        check_table_empty(&table, "cred_stuff_detection");
     }
 
     fn parse_database(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2272,7 +2272,7 @@ impl Vars {
             self.database.sched_user_exp_delete = Some(v);
         }
 
-        check_table_empty(table, "database");
+        check_table_empty(&table, "database");
     }
 
     fn parse_device_grant(&mut self, table: &mut toml::Table) {
@@ -2319,7 +2319,7 @@ impl Vars {
             self.device_grant.refresh_token_lifetime = v;
         }
 
-        check_table_empty(table, "device_grant");
+        check_table_empty(&table, "device_grant");
     }
 
     fn parse_dpop(&mut self, table: &mut toml::Table) {
@@ -2332,7 +2332,7 @@ impl Vars {
             self.dpop.nonce_exp = v;
         }
 
-        check_table_empty(table, "dpop");
+        check_table_empty(&table, "dpop");
     }
 
     fn parse_dynamic_clients(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2430,7 +2430,7 @@ impl Vars {
             self.dynamic_clients.allowed_resources = v;
         }
 
-        check_table_empty(table, "dynamic_clients");
+        check_table_empty(&table, "dynamic_clients");
     }
 
     fn parse_email(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2572,7 +2572,7 @@ impl Vars {
         ) {
             self.email.jobs.batch_delay = v;
         }
-        check_table_empty(jobs, "email.jobs");
+        check_table_empty(&jobs, "email.jobs");
 
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
@@ -2626,9 +2626,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
             self.email.tz_fmt.tz_fallback = v.into();
         }
-        check_table_empty(tz_fmt, "email.tz_fmt");
+        check_table_empty(&tz_fmt, "email.tz_fmt");
 
-        check_table_empty(table, "email");
+        check_table_empty(&table, "email");
     }
 
     fn parse_encryption(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2642,14 +2642,14 @@ impl Vars {
             }
         }
         if let Some(v) = t_str_vec(&mut table, "encryption", "keys", "ENC_KEYS") {
-            if v.first().map(|v| v.as_str()) == Some(FROM_SECRETS) {
+            if v.first().map(String::as_str) == Some(FROM_SECRETS) {
                 self.encryption.keys = mem::take(&mut secrets.encryption.keys);
             } else {
                 self.encryption.keys = v;
             }
         }
 
-        check_table_empty(table, "encryption");
+        check_table_empty(&table, "encryption");
     }
 
     fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
@@ -2770,7 +2770,7 @@ impl Vars {
             self.ephemeral_clients.danger_allow_private_addresses = v;
         }
 
-        check_table_empty(table, "ephemeral_clients");
+        check_table_empty(&table, "ephemeral_clients");
     }
 
     fn parse_events(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -3188,7 +3188,7 @@ impl Vars {
             self.events.disable_app_version_check = v;
         }
 
-        check_table_empty(table, "events");
+        check_table_empty(&table, "events");
     }
 
     fn parse_fedcm(&mut self, table: &mut toml::Table) {
@@ -3219,7 +3219,7 @@ impl Vars {
             self.fedcm.session_timeout = v;
         }
 
-        check_table_empty(table, "fedcm");
+        check_table_empty(&table, "fedcm");
     }
 
     fn parse_geo(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -3311,7 +3311,7 @@ impl Vars {
             self.geo.maxmind_update_cron = v.into();
         }
 
-        check_table_empty(table, "geolocation");
+        check_table_empty(&table, "geolocation");
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -3344,7 +3344,7 @@ impl Vars {
             self.hashing.hash_await_warn_time = v;
         }
 
-        check_table_empty(table, "hashing");
+        check_table_empty(&table, "hashing");
     }
 
     async fn parse_hiqlite_config(
@@ -3409,8 +3409,8 @@ impl Vars {
             self.otp.email.enable = v;
         }
 
-        check_table_empty(table, "otp");
-        check_table_empty(table_email, "otp.email");
+        check_table_empty(&table, "otp");
+        check_table_empty(&table_email, "otp.email");
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -3468,7 +3468,7 @@ impl Vars {
             self.http_client.root_ca_bundle = Some(v);
         }
 
-        check_table_empty(table, "http_client");
+        check_table_empty(&table, "http_client");
     }
 
     fn parse_i18n(&mut self, table: &mut toml::Table) {
@@ -3486,7 +3486,7 @@ impl Vars {
             self.i18n.filter_lang_admin = v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
 
-        check_table_empty(table, "i18n");
+        check_table_empty(&table, "i18n");
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
@@ -3557,7 +3557,7 @@ impl Vars {
             self.lifetimes.jwk_autorotate_cron = v.into();
         }
 
-        check_table_empty(table, "lifetimes");
+        check_table_empty(&table, "lifetimes");
     }
 
     fn parse_logging(&mut self, table: &mut toml::Table) {
@@ -3608,7 +3608,7 @@ impl Vars {
             self.logging.log_fmt = v.into();
         }
 
-        check_table_empty(table, "logging");
+        check_table_empty(&table, "logging");
     }
 
     fn parse_matrix(&mut self, table: &mut toml::Table) {
@@ -3623,7 +3623,7 @@ impl Vars {
             self.matrix.msc3861_enable = v;
         }
 
-        check_table_empty(table, "matrix");
+        check_table_empty(&table, "matrix");
     }
 
     fn parse_mfa(&mut self, table: &mut toml::Table) {
@@ -3633,7 +3633,7 @@ impl Vars {
             self.mfa.admin_force_mfa = v;
         }
 
-        check_table_empty(table, "mfa");
+        check_table_empty(&table, "mfa");
     }
 
     fn parse_ldap(&mut self, table: &mut toml::Table) {
@@ -3688,7 +3688,7 @@ impl Vars {
             self.ldap.max_connections = v;
         }
 
-        check_table_empty(table, "ldap");
+        check_table_empty(&table, "ldap");
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
@@ -3762,9 +3762,9 @@ impl Vars {
         ) {
             self.pam.authorized_keys.forced_key_expiry = v;
         }
-        check_table_empty(auth_keys, "pam.authorized_keys");
+        check_table_empty(&auth_keys, "pam.authorized_keys");
 
-        check_table_empty(table, "pam");
+        check_table_empty(&table, "pam");
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
@@ -3777,7 +3777,7 @@ impl Vars {
             self.pow.exp = v;
         }
 
-        check_table_empty(table, "pow");
+        check_table_empty(&table, "pow");
     }
 
     fn parse_scim(&mut self, table: &mut toml::Table) {
@@ -3803,7 +3803,7 @@ impl Vars {
             self.scim.retry_count = v;
         }
 
-        check_table_empty(table, "scim");
+        check_table_empty(&table, "scim");
     }
 
     fn parse_server(&mut self, table: &mut toml::Table) {
@@ -3880,7 +3880,7 @@ impl Vars {
             self.server.instance_label = Some(v);
         }
 
-        check_table_empty(table, "server");
+        check_table_empty(&table, "server");
     }
 
     fn parse_sponsor(&mut self, table: &mut toml::Table) {
@@ -3895,7 +3895,7 @@ impl Vars {
             self.sponsor.email_reminder_disable = v;
         }
 
-        check_table_empty(table, "sponsor");
+        check_table_empty(&table, "sponsor");
     }
 
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
@@ -3918,7 +3918,7 @@ impl Vars {
             self.suspicious_requests.log = v;
         }
 
-        check_table_empty(table, "suspicious_requests");
+        check_table_empty(&table, "suspicious_requests");
     }
 
     fn parse_templates(&mut self, table: &mut toml::Table) {
@@ -4196,7 +4196,7 @@ impl Vars {
                 }
             }
 
-            check_table_empty(table, "[[templates]]");
+            check_table_empty(&table, "[[templates]]");
         }
     }
 
@@ -4225,7 +4225,7 @@ impl Vars {
             "TLS_POLL_WATCH_INTERVAL",
         );
 
-        check_table_empty(table, "tls");
+        check_table_empty(&table, "tls");
     }
 
     fn parse_tos(&mut self, table: &mut toml::Table) {
@@ -4235,7 +4235,7 @@ impl Vars {
             self.tos.accept_timeout = v;
         }
 
-        check_table_empty(table, "tos");
+        check_table_empty(&table, "tos");
     }
 
     fn parse_user_delete(&mut self, table: &mut toml::Table) {
@@ -4250,7 +4250,7 @@ impl Vars {
             self.user_delete.enable_self_delete = v;
         }
 
-        check_table_empty(table, "user_delete");
+        check_table_empty(&table, "user_delete");
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -4315,7 +4315,7 @@ impl Vars {
             self.user_pictures.public = v;
         }
 
-        check_table_empty(table, "user_pictures");
+        check_table_empty(&table, "user_pictures");
     }
 
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
@@ -4384,7 +4384,7 @@ impl Vars {
             self.user_registration.danger_reg_acc_init_immediate = v;
         }
 
-        check_table_empty(table, "user_registration");
+        check_table_empty(&table, "user_registration");
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
@@ -4518,8 +4518,8 @@ impl Vars {
         // linux username regex as fallback
         let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
 
-        check_table_empty(pref_username, "user_values.preferred_username");
-        check_table_empty(table, "user_values");
+        check_table_empty(&pref_username, "user_values.preferred_username");
+        check_table_empty(&table, "user_values");
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
@@ -4615,7 +4615,7 @@ impl Vars {
             self.webauthn.passkey_reg_type = parse_passkey_reg_type(&v);
         }
 
-        check_table_empty(table, "webauthn");
+        check_table_empty(&table, "webauthn");
     }
 
     pub fn validate(&self) {
@@ -5696,7 +5696,7 @@ impl VarsWebauthn {
     pub fn passkey_reg_type_str(&self) -> String {
         self.passkey_reg_type
             .iter()
-            .map(|t| t.as_str())
+            .map(PasskeyRegType::as_str)
             .collect::<Vec<_>>()
             .join(" ")
     }
@@ -5737,7 +5737,7 @@ pub struct VarsAtproto {
     pub enable: bool,
 }
 
-pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
+pub fn check_table_empty(table: &toml::Table, tbl_name: &str) {
     if !table.is_empty() {
         panic!("Unknown data in section: '{tbl_name}': {table:#?}");
     }
@@ -6100,7 +6100,7 @@ mod tests {
         assert!(!vars.consent.missing_required_resource(&ephemeral, None));
 
         let vars = parse_consent(
-            r#"
+            r"
 [consent]
 enable = true
 content_cache_ttl = 600
@@ -6114,7 +6114,7 @@ name = 'Example API'
 resource = 'urn:example:data'
 source = 'https://consent.example.com/data'
 name = 'Data'
-"#,
+",
         );
         assert_eq!(vars.consent.content_cache_ttl, Duration::from_secs(600));
         assert_eq!(
@@ -6153,12 +6153,12 @@ name = 'Data'
 
         // without `consent.enable` no `resource` is required
         let vars = parse_consent(
-            r#"
+            r"
 [[consent.sources]]
 resource = 'https://api.example.com'
 source = 'local'
 name = 'Example API'
-"#,
+",
         );
         assert!(!vars.consent.missing_required_resource(&ephemeral, None));
     }
@@ -6213,7 +6213,7 @@ name = 'Example API'
     #[should_panic(expected = "duplicate `resource` 'https://api.example.com'")]
     fn consent_sources_duplicate_panics() {
         parse_consent(
-            r#"
+            r"
 [[consent.sources]]
 resource = 'https://api.example.com'
 source = 'local'
@@ -6223,7 +6223,7 @@ name = 'A'
 resource = 'https://api.example.com'
 source = 'local'
 name = 'B'
-"#,
+",
         );
     }
 
@@ -6255,11 +6255,11 @@ name = 'B'
     #[should_panic(expected = "`name` is mandatory")]
     fn consent_sources_missing_name_panics() {
         parse_consent(
-            r#"
+            r"
 [[consent.sources]]
 resource = 'https://api.example.com'
 source = 'local'
-"#,
+",
         );
     }
 
@@ -6267,13 +6267,13 @@ source = 'local'
     #[should_panic(expected = "Unknown data in section: 'consent.sources'")]
     fn consent_sources_unknown_key_panics() {
         parse_consent(
-            r#"
+            r"
 [[consent.sources]]
 resource = 'https://api.example.com'
 source = 'local'
 name = 'A'
 url = 'https://consent.example.com'
-"#,
+",
         );
     }
 
@@ -6458,33 +6458,21 @@ url = 'https://consent.example.com'
     fn test_parse_duration() {
         assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
         assert_eq!(parse_duration("2s").unwrap(), Duration::from_secs(2));
-        assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
-        assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
-        assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
-        assert_eq!(parse_duration("2h").unwrap(), Duration::from_secs(2 * 3600));
-        assert_eq!(
-            parse_duration("1d").unwrap(),
-            Duration::from_secs(24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2d").unwrap(),
-            Duration::from_secs(2 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("1w").unwrap(),
-            Duration::from_secs(7 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2w").unwrap(),
-            Duration::from_secs(14 * 24 * 3600)
-        );
+        assert_eq!(parse_duration("1m").unwrap(), Duration::from_mins(1));
+        assert_eq!(parse_duration("2m").unwrap(), Duration::from_mins(2));
+        assert_eq!(parse_duration("1h").unwrap(), Duration::from_hours(1));
+        assert_eq!(parse_duration("2h").unwrap(), Duration::from_hours(2));
+        assert_eq!(parse_duration("1d").unwrap(), Duration::from_hours(24));
+        assert_eq!(parse_duration("2d").unwrap(), Duration::from_hours(2 * 24));
+        assert_eq!(parse_duration("1w").unwrap(), Duration::from_hours(7 * 24));
+        assert_eq!(parse_duration("2w").unwrap(), Duration::from_hours(14 * 24));
         assert_eq!(
             parse_duration("1y").unwrap(),
-            Duration::from_secs(365 * 24 * 3600)
+            Duration::from_hours(365 * 24)
         );
         assert_eq!(
             parse_duration("2y").unwrap(),
-            Duration::from_secs(2 * 365 * 24 * 3600)
+            Duration::from_hours(2 * 365 * 24)
         );
     }
 
@@ -6548,10 +6536,10 @@ url = 'https://consent.example.com'
     #[test]
     fn ephemeral_default_scopes_fall_back_to_allowed_when_absent() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile', 'email']
-"#,
+",
         );
         assert_eq!(
             vars.ephemeral_clients.allowed_scopes,
@@ -6563,21 +6551,21 @@ allowed_scopes = ['openid', 'profile', 'email']
     #[test]
     fn ephemeral_default_scopes_empty_falls_back_to_allowed() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile']
 default_scopes = []
-"#,
+",
         );
         assert_eq!(vars.ephemeral_clients.default_scopes, None);
 
         // all-blank entries count as empty as well
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile']
 default_scopes = ['', '  ']
-"#,
+",
         );
         assert_eq!(vars.ephemeral_clients.default_scopes, None);
     }
@@ -6585,11 +6573,11 @@ default_scopes = ['', '  ']
     #[test]
     fn ephemeral_default_scopes_explicit_value_is_kept() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile', 'email']
 default_scopes = ['openid', ' email ']
-"#,
+",
         );
         assert_eq!(
             vars.ephemeral_clients.default_scopes,
@@ -6600,12 +6588,12 @@ default_scopes = ['openid', ' email ']
     #[test]
     fn ephemeral_allowed_scopes_are_trimmed() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = ['openid', ' email ', '  ']
 default_scopes = ['openid', 'email']
-"#,
+",
         );
         assert_eq!(
             vars.ephemeral_clients.allowed_scopes,
@@ -6617,22 +6605,22 @@ default_scopes = ['openid', 'email']
     #[test]
     fn validate_ephemeral_default_scopes_fallback_without_openid_is_accepted() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = ['profile', 'email']
-"#,
+",
         );
         assert_eq!(vars.ephemeral_clients.default_scopes, None);
         vars.validate_ephemeral_clients();
 
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = []
 default_scopes = []
-"#,
+",
         );
         vars.validate_ephemeral_clients();
     }
@@ -6641,12 +6629,12 @@ default_scopes = []
     #[should_panic(expected = "must contain `openid`")]
     fn validate_ephemeral_default_scopes_explicit_without_openid_panics() {
         parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = ['openid', 'profile', 'email']
 default_scopes = ['profile']
-"#,
+",
         )
         .validate_ephemeral_clients();
     }

@@ -3,6 +3,7 @@ use crate::fido_mds::dataset::MdsDataset;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
+use crate::shutdown;
 use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
 use rauthy_common::constants::CACHE_INVALIDATION_DELAY;
@@ -83,6 +84,9 @@ impl DB {
         // This means, even if Postgres is configured, this will still create and start the Hiqlite
         // DB, but it simply won't do anything else than heartbeats between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
+        // From here on, a fatal error must go through `shutdown::fatal()` or be returned to
+        // `main()`, so the node is shut down cleanly before the process exits.
+        shutdown::init(client.clone());
 
         if is_postgres() {
             Self::init_connect_postgres().await?;
@@ -196,12 +200,18 @@ impl DB {
                 for res in CertificateDer::pem_slice_iter(root_ca.as_bytes()) {
                     match res {
                         Ok(cert) => {
-                            root_store
-                                .add(cert)
-                                .expect("Invalid `database.pg_tls_root_ca`");
+                            if let Err(err) = root_store.add(cert) {
+                                shutdown::fatal(format!(
+                                    "Invalid `database.pg_tls_root_ca`: {err}"
+                                ))
+                                .await;
+                            }
                         }
                         Err(err) => {
-                            panic!("Cannot parse `database.pg_tls_root_ca`: {err:?}")
+                            shutdown::fatal(format!(
+                                "Cannot parse `database.pg_tls_root_ca`: {err:?}"
+                            ))
+                            .await;
                         }
                     }
                 }
@@ -225,7 +235,7 @@ impl DB {
         let pool: deadpool_postgres::Pool = deadpool_postgres::Pool::builder(mgr)
             .max_size(db_max_conn as usize)
             .create_timeout(Some(Duration::from_secs(10)))
-            .recycle_timeout(Some(Duration::from_secs(3600)))
+            .recycle_timeout(Some(Duration::from_hours(1)))
             .runtime(deadpool::Runtime::Tokio1)
             .build()?;
 
@@ -288,16 +298,16 @@ impl DB {
             if config.is_ha_cluster {
                 // TODO does this error make sense or might we be able to do it anyway?
                 error!(
-                    r#"
+                    r"
     You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
     You need to change your config to only have a single node in `HQL_NODES`, before you can then
     activate 'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
     After the migration has been done, you remove the 'MIGRATE_DB_FROM' and add more nodes again.
-                "#
+                "
                 );
             } else {
                 warn!(
-                    r#"
+                    r"
 
     Migrating data from 'MIGRATE_DB_FROM'
     This will overwrite possibly existing data in the current database!
@@ -305,7 +315,7 @@ impl DB {
 
     Proceeding in 10 seconds...
 
-                "#
+                "
                 );
 
                 sleep(Duration::from_secs(10)).await;

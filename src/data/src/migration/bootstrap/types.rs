@@ -100,10 +100,10 @@ impl Validate for ApiKey {
         }
 
         if let Some(exp) = self.exp
-            && exp < 1719784800
+            && exp < 1_719_784_800
         {
             let mut err = ValidationError::new("range");
-            err.add_param(std::borrow::Cow::from("min"), &1719784800);
+            err.add_param(std::borrow::Cow::from("min"), &1_719_784_800);
             err.add_param(std::borrow::Cow::from("value"), &exp);
             errors.add("exp", err);
         }
@@ -305,7 +305,7 @@ pub struct User {
     pub enabled: bool,
     pub email_verified: bool,
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub user_expires: Option<i64>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,

@@ -516,7 +516,7 @@ pub async fn login_session(target: &LoginTarget) -> (HeaderMap, TokenSet) {
     let res = send_login(&client, &url_auth, &headers, req_login).await;
     let res = expect_status!(res, 202);
 
-    let (code, _state) = code_state_from_headers(res).unwrap();
+    let (code, _state) = code_state_from_headers(&res).unwrap();
     let req_token = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
         code: Some(code),
@@ -831,8 +831,8 @@ pub fn authorization_response_params_decoded(
         .collect())
 }
 
-pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>), Box<dyn Error>> {
-    let params = authorization_response_params(&res)?;
+pub fn code_state_from_headers(res: &Response) -> Result<(String, Option<String>), Box<dyn Error>> {
+    let params = authorization_response_params(res)?;
     let get = |key: &str| {
         params
             .iter()

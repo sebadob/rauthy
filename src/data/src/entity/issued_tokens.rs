@@ -65,10 +65,10 @@ impl IssuedToken {
 
     #[inline]
     async fn insert(&self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO issued_tokens (jti, user_id, did, sid, exp)
 VALUES ($1, $2, $3, $4, $5)
-"#;
+";
         if is_hiqlite() {
             DB::hql()
                 .execute(

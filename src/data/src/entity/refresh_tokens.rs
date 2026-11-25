@@ -12,10 +12,10 @@ use tokio_postgres::IsolationLevel;
 
 pub(crate) const SQL_RT_DELETE_BY_USER_CLIENT: &str =
     "DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id = $2";
-pub(crate) const SQL_RTD_DELETE_BY_USER_CLIENT: &str = r#"
+pub(crate) const SQL_RTD_DELETE_BY_USER_CLIENT: &str = r"
 DELETE FROM refresh_tokens_devices
 WHERE user_id = $1
-  AND device_id IN (SELECT id FROM devices WHERE client_id = $2)"#;
+  AND device_id IN (SELECT id FROM devices WHERE client_id = $2)";
 
 pub(crate) const SQL_PG_IT_REVOKE_JTIS: &str =
     "UPDATE issued_tokens SET revoked = true WHERE jti = ANY($1)";
@@ -26,9 +26,9 @@ pub(crate) const SQL_PG_IT_REVOKE_JTIS: &str =
 /// token with a subselect. hiqlite applies the transaction as one raft log entry, so the order of
 /// the tables does not matter there. Both statements are idempotent.
 pub(crate) const SQL_RT_DISCARD_HQL: [&str; 2] = [
-    r#"
+    r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)"#,
+WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)",
     "DELETE FROM refresh_tokens WHERE id = $1",
 ];
 
@@ -112,14 +112,14 @@ impl RefreshToken {
     ) -> Result<(), ErrorResponse> {
         match grant {
             RefreshTokenGrant::Unchecked => {
-                let sql = r#"
+                let sql = r"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
 client_created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
-    client_id = $9, client_created_micros = $10"#;
+    client_id = $9, client_created_micros = $10";
 
                 if is_hiqlite() {
                     DB::hql()
@@ -161,14 +161,14 @@ SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_
             RefreshTokenGrant::Required { resource } => {
                 let resource = resource_key(resource);
                 let rows = if is_hiqlite() {
-                    let sql = r#"
+                    let sql = r"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
 client_created_micros)
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 WHERE EXISTS (
     SELECT 1 FROM user_consents WHERE user_id = $2 AND client_id = $9 AND resource = $11
-)"#;
+)";
 
                     DB::hql()
                         .execute(
@@ -192,7 +192,7 @@ WHERE EXISTS (
                     // `$11` / `$12` repeat `$2` / `$9`: Postgres deduces `text` for them from the
                     // `SELECT` list and `varchar` from the `WHERE`, and rejects one bind for both.
                     // `FOR KEY SHARE` makes a concurrent consent revoke wait for this insert.
-                    let sql = r#"
+                    let sql = r"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
 client_created_micros)
@@ -200,7 +200,7 @@ SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 WHERE EXISTS (
     SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
     FOR KEY SHARE
-)"#;
+)";
 
                     DB::pg_execute(
                         sql,
@@ -734,7 +734,7 @@ mod tests {
         assert!(!rt.is_for_client(&client("client_2", Some(1))));
     }
 
-    const DISCARD_ROWS: &str = r#"
+    const DISCARD_ROWS: &str = r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -743,25 +743,25 @@ VALUES ('rt_1', 'u1', 1, 2, 'j_1'), ('rt_2', 'u1', 1, 2, 'j_2'),
        ('rt_no_jti', 'u1', 1, 2, NULL);
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_1', 'u1', 2), ('j_2', 'u1', 2), ('j_other', 'u1', 2);
-"#;
+";
     const SELECT_RT_IDS: &str = "SELECT id FROM refresh_tokens ORDER BY id";
     const SELECT_REVOKED: &str = "SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti";
 
     /// Rows for the fault injection of [`DISCARD_FAIL_SQLITE`] / [`DISCARD_FAIL_PG`]: a refresh
     /// token whose discard fails in its second statement (`*_fail`). Run after [`DISCARD_ROWS`].
-    const DISCARD_FAIL_ROWS: &str = r#"
+    const DISCARD_FAIL_ROWS: &str = r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti)
 VALUES ('rt_fail', 'u1', 1, 2, 'j_fail');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_fail', 'u1', 2);
-"#;
+";
     /// The delete of a `*_fail` row aborts: the second statement of the hiqlite discard.
-    const DISCARD_FAIL_SQLITE: &str = r#"
+    const DISCARD_FAIL_SQLITE: &str = r"
 CREATE TRIGGER rt_fail BEFORE DELETE ON refresh_tokens
 WHEN OLD.id LIKE '%_fail' BEGIN SELECT RAISE(ABORT, 'injected'); END;
-"#;
+";
     /// The revoke of the access token of a `*_fail` row aborts: the second statement of the
     /// Postgres discard.
-    const DISCARD_FAIL_PG: &str = r#"
+    const DISCARD_FAIL_PG: &str = r"
 CREATE FUNCTION fail_revoke() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.jti LIKE '%\_fail' THEN RAISE EXCEPTION 'injected'; END IF;
@@ -769,7 +769,7 @@ BEGIN
 END $$;
 CREATE TRIGGER it_fail BEFORE UPDATE ON issued_tokens
 FOR EACH ROW EXECUTE FUNCTION fail_revoke();
-"#;
+";
 
     /// An in-memory database with all hiqlite migrations and [`DISCARD_ROWS`].
     fn sqlite_db() -> rusqlite::Connection {

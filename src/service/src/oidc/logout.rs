@@ -31,7 +31,7 @@ use tokio::task::JoinSet;
 use tracing::{debug, error, info};
 
 // Allow a small clock-skew margin for logout token validation.
-const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_secs(600);
+const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_mins(10);
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(

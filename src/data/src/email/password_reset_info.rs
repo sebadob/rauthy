@@ -90,7 +90,7 @@ pub async fn send_pwd_reset_info(user: User) {
         .tx_email
         .send_timeout(
             (req, EMailCallback::PasswordExp { user_id: user.id }),
-            Duration::from_secs(60),
+            Duration::from_mins(1),
         )
         .await;
     match res {

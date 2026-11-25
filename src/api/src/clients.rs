@@ -204,7 +204,7 @@ pub async fn post_clients_dyn(
         .headers()
         .get(ORIGIN)
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
+        .map(ToString::to_string);
 
     Client::create_dynamic(payload, origin_header)
         .await

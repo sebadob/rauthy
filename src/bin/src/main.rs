@@ -34,19 +34,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .parse::<bool>()
                 .expect("Cannot parse LOCAL_TEST as bool");
 
-            if local_test {
+            let res = if local_test {
                 server::run(
                     "config-local-test.toml".to_string(),
                     args.secrets_file,
                     false,
                 )
-                .await?;
+                .await
             } else {
                 #[cfg(any(debug_assertions, feature = "profiling"))]
                 let test_mode = args.test;
                 #[cfg(not(any(debug_assertions, feature = "profiling")))]
                 let test_mode = false;
-                server::run(args.config_file, args.secrets_file, test_mode).await?;
+                server::run(args.config_file, args.secrets_file, test_mode).await
+            };
+            if let Err(err) = res {
+                // shuts down the database / cache layer cleanly, if it was started already
+                rauthy_data::shutdown::fatal(err).await;
             }
         }
         Args::Bootstrap(args) => utils::bootstrap::run(args).await?,

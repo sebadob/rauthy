@@ -10,7 +10,7 @@ pub async fn watch_health() {
 
     // Rolling releases can take quite a while in some environments.
     // We don't want false-positive notifications during these.
-    tokio::time::sleep(Duration::from_secs(60)).await;
+    tokio::time::sleep(Duration::from_mins(1)).await;
 
     let mut interval = tokio::time::interval(Duration::from_secs(30));
     let mut was_healthy_after_startup = false;

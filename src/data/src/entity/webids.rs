@@ -76,11 +76,11 @@ impl WebId {
     }
 
     pub async fn upsert(web_id: WebId) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO webids (user_id, custom_triples, expose_email)
 VALUES ($1, $2, $3)
 ON CONFLICT(user_id) DO UPDATE
-SET custom_triples = $2, expose_email = $3"#;
+SET custom_triples = $2, expose_email = $3";
 
         if is_hiqlite() {
             DB::hql()
@@ -255,18 +255,18 @@ mod tests {
     #[rstest]
     #[case(None)]
     #[case(Some(
-        r#"
+        r"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1> .
-"#
+"
     ))]
     #[case(Some(
-        r#"
+        r"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1>; .
-"#
+"
     ))]
     fn test_custom_triple_validation(#[case] custom_data_turtle: Option<&str>) {
         let user_id = "SomeId123".to_owned();
@@ -280,16 +280,16 @@ mod tests {
     #[rstest]
     #[case(
         Some(
-            r#"
+            r"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1> .
-"#
+"
         ),
         // `oxttl` writes `rdf:type` with the Turtle keyword `a`.
         "<http://localhost:8081/auth/SomeId123/profile> a <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\ta <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
     )]
-    #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
+    #[ignore = "setting PUB_URL here interferes with other tests in CI"]
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
         let resp = WebIdResponse {
             webid: WebId::try_new(

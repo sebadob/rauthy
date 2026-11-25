@@ -7,7 +7,7 @@ use tokio::time;
 use tracing::{debug, error};
 
 pub async fn refresh_tokens_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 3));
+    let mut interval = tokio::time::interval(Duration::from_hours(3));
 
     loop {
         interval.tick().await;

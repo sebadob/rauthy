@@ -376,7 +376,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
     };
     let res = send_login(&http, &url_auth, &session_headers, req_login).await;
     let res = expect_status!(res, 202);
-    let (code, _state) = code_state_from_headers(res)?;
+    let (code, _state) = code_state_from_headers(&res)?;
 
     let token_req = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
@@ -419,7 +419,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .send()
         .await?;
     let res = expect_status!(res, 202);
-    let (code_refresh, _state) = code_state_from_headers(res)?;
+    let (code_refresh, _state) = code_state_from_headers(&res)?;
 
     let token_req = TokenRequest {
         grant_type: GrantType::AuthorizationCode,

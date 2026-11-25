@@ -310,7 +310,7 @@ mod tests {
 
         let chunks = drain(rx).await;
         assert!(
-            chunks.iter().all(|c| c.is_ok()),
+            chunks.iter().all(Result::is_ok),
             "a healthy read must not produce a stream error"
         );
         let streamed: Vec<u8> = chunks
@@ -333,7 +333,7 @@ mod tests {
         ));
 
         let chunks = drain(rx).await;
-        assert!(chunks.iter().all(|c| c.is_ok()), "no error is warranted");
+        assert!(chunks.iter().all(Result::is_ok), "no error is warranted");
         let streamed: usize = chunks.into_iter().map(|c| c.unwrap().len()).sum();
         assert_eq!(streamed, 12 * 1024);
     }

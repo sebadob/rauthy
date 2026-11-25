@@ -219,12 +219,12 @@ impl ThemeCssFull {
         let light = light.as_bytes();
         let dark = dark.as_bytes();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (client_id) DO UPDATE
 SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
-"#;
+";
 
         if is_hiqlite() {
             DB::hql()

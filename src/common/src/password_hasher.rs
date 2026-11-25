@@ -166,9 +166,8 @@ mod tests {
     use std::time::{Duration, Instant};
     use tokio::time;
 
-    // pretty intensive test -> ignored by default
     #[tokio::test]
-    #[ignore]
+    #[ignore = "CPU-intensive Argon2 timing test"]
     async fn test_limiter() {
         let argon2_params = argon2::Params::new(32768, 3, 2, None).unwrap();
         let _ = ARGON2_PARAMS.set(argon2_params);

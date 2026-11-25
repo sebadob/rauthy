@@ -113,9 +113,9 @@ impl OneTimePassword {
             is_active: false,
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO one_time_password (id, user_id, name, secret, last_used, kind, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
         if is_hiqlite() {
             DB::hql()
@@ -279,7 +279,15 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
 impl OneTimePassword {
     const DIGITS_POWER: [u32; 9] = [
-        1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
+        1,
+        10,
+        100,
+        1_000,
+        10_000,
+        100_000,
+        1_000_000,
+        10_000_000,
+        100_000_000,
     ];
 
     fn generate_otp(secret: &OtpSecret, step: i64, digest_len: u16, code_len: u8) -> String {
@@ -816,7 +824,7 @@ mod tests {
             "90693936"
         );
 
-        t = 1111111109 / steps;
+        t = 1_111_111_109 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "68084774"
@@ -826,7 +834,7 @@ mod tests {
             "25091201"
         );
 
-        t = 1111111111 / steps;
+        t = 1_111_111_111 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "67062674"
@@ -836,7 +844,7 @@ mod tests {
             "99943326"
         );
 
-        t = 1234567890 / steps;
+        t = 1_234_567_890 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "91819424"
@@ -846,7 +854,7 @@ mod tests {
             "93441116"
         );
 
-        t = 2000000000 / steps;
+        t = 2_000_000_000 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "90698825"
@@ -856,7 +864,7 @@ mod tests {
             "38618901"
         );
 
-        t = 20000000000 / steps;
+        t = 20_000_000_000 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "77737706"

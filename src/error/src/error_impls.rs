@@ -312,24 +312,22 @@ impl From<hiqlite::Error> for ErrorResponse {
             hiqlite::Error::ClientWriteError(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
-            hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.clone().into()),
-            hiqlite::Error::ConstraintViolation(err) => {
-                (ErrorResponseType::BadRequest, err.clone().into())
-            }
+            hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.into()),
+            hiqlite::Error::ConstraintViolation(err) => (ErrorResponseType::BadRequest, err.into()),
             hiqlite::Error::LeaderChange(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
             hiqlite::Error::QueryReturnedNoRows(err) => {
                 (ErrorResponseType::NotFound, err.to_string().into())
             }
-            hiqlite::Error::Request(err) => (ErrorResponseType::Connection, err.clone().into()),
-            hiqlite::Error::S3(err) => (ErrorResponseType::Connection, err.clone().into()),
+            hiqlite::Error::Request(err) => (ErrorResponseType::Connection, err.into()),
+            hiqlite::Error::S3(err) => (ErrorResponseType::Connection, err.into()),
             hiqlite::Error::Sqlite(err) => (ErrorResponseType::Database, err.to_string().into()),
-            hiqlite::Error::Timeout(err) => (ErrorResponseType::Connection, err.clone().into()),
+            hiqlite::Error::Timeout(err) => (ErrorResponseType::Connection, err.into()),
             hiqlite::Error::Transaction(err) => {
                 (ErrorResponseType::Database, err.to_string().into())
             }
-            hiqlite::Error::WebSocket(err) => (ErrorResponseType::Connection, err.clone().into()),
+            hiqlite::Error::WebSocket(err) => (ErrorResponseType::Connection, err.into()),
             err => (ErrorResponseType::Database, err.to_string().into()),
         };
 

@@ -518,7 +518,7 @@ mod tests {
         let path = JsonPath::parse(path).expect("valid test path");
         let mut nodes = ClaimNodes::default();
         path.eval(&json, &mut nodes);
-        nodes.selected().iter().map(|v| v.to_string()).collect()
+        nodes.selected().iter().map(ToString::to_string).collect()
     }
 
     /// The **order** of selected nodes follows `serde_json`'s object key order, which the build's
@@ -654,7 +654,7 @@ mod tests {
             let mut nodes = ClaimNodes::default();
             parsed.eval(&json, &mut nodes);
             assert_eq!(
-                nodes.selected().first().map(|v| v.to_string()),
+                nodes.selected().first().map(ToString::to_string),
                 Some(expected.to_string()),
                 "path {path}"
             );

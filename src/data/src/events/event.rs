@@ -567,9 +567,9 @@ impl Event {
         let level = self.level.value();
         let typ = self.typ.value();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
         if is_hiqlite() {
             DB::hql()
@@ -620,10 +620,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
         let res = if let Some(typ) = typ {
             let typ = typ.value();
-            let sql = r#"
+            let sql = r"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-ORDER BY timestamp DESC"#;
+ORDER BY timestamp DESC";
 
             if is_hiqlite() {
                 DB::hql()
@@ -633,10 +633,10 @@ ORDER BY timestamp DESC"#;
                 DB::pg_query(sql, &[&from, &until, &level, &typ], 32).await?
             }
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-ORDER BY timestamp DESC"#;
+ORDER BY timestamp DESC";
 
             if is_hiqlite() {
                 DB::hql()
@@ -701,7 +701,7 @@ impl Event {
             _ => events.level_failed_login.clone(),
         };
         Self::new(
-            level.clone(),
+            level,
             EventType::InvalidLogins,
             Some(ip),
             Some(i64::from(failed_logins)),
@@ -885,12 +885,8 @@ impl Event {
         )
     }
 
-    pub fn user_login_revoke(
-        user_email: &str,
-        bad_ip: IpAddr,
-        bad_location: Option<String>,
-    ) -> Self {
-        let loc = bad_location.as_deref().unwrap_or("Unknown Location");
+    pub fn user_login_revoke(user_email: &str, bad_ip: IpAddr, bad_location: Option<&str>) -> Self {
+        let loc = bad_location.unwrap_or("Unknown Location");
         let text = format!("User `{user_email}` revoked illegal login from {bad_ip} ({loc})");
 
         Self::new(
@@ -988,8 +984,8 @@ impl Event {
         )
     }
 
-    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<String>) -> Self {
-        let loc = location.as_deref().unwrap_or("Unknown Location");
+    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<&str>) -> Self {
+        let loc = location.unwrap_or("Unknown Location");
         let text = format!("Suspicious request to '{path}' from {ip} ({loc})");
 
         Self::new(

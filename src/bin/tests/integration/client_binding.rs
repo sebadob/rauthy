@@ -159,7 +159,7 @@ async fn auth_code(client_id: &str, user_email: &str) -> Result<String, Box<dyn 
     let res = send_login(&http, &url_auth, &headers, req).await;
     let res = expect_status!(res, 202);
 
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     Ok(code)
 }
 

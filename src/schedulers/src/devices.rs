@@ -10,7 +10,7 @@ use tracing::{debug, error};
 /// Cleans up fully expired devices. These need to do a full re-authentication anyway.
 /// All devices that are expired for at least 1 day will be removed.
 pub async fn devices_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(24 * 3600));
+    let mut interval = tokio::time::interval(Duration::from_hours(24));
 
     loop {
         interval.tick().await;
@@ -23,10 +23,10 @@ pub async fn devices_cleanup() {
         debug!("Running devices_cleanup scheduler");
 
         let threshold = Utc::now().sub(chrono::Duration::days(1)).timestamp();
-        let sql = r#"
+        let sql = r"
 DELETE FROM devices
 WHERE access_exp < $1
-AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
+AND (refresh_exp IS NULL OR refresh_exp < $1)";
 
         if is_hiqlite() {
             let res = DB::hql().execute(sql, params!(threshold)).await;
