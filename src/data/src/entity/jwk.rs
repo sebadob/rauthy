@@ -55,9 +55,9 @@ impl Debug for Jwk {
 impl Jwk {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()
@@ -699,11 +699,11 @@ impl JwkKeyPair {
         .as_str()
         .to_string();
 
-        let sql = r#"
+        let sql = r"
 SELECT * FROM jwks
 WHERE signature = $1
 ORDER BY created_at DESC
-LIMIT 1"#;
+LIMIT 1";
 
         let jwk_latest: Jwk = if is_hiqlite() {
             client.query_as_one(sql, params!(signature)).await?

@@ -178,11 +178,11 @@ impl KVValue {
             value.as_bytes().to_vec()
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO kv_values (ns, key, encrypted, value)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
-"#;
+";
 
         if is_hiqlite() {
             DB::hql()
@@ -221,11 +221,11 @@ ON CONFLICT (ns, key) DO UPDATE SET encrypted = $3, value = $4
         let limit = params.limit.unwrap_or(u32::MAX);
 
         let res = if let Some(search) = params.search {
-            let sql = r#"
+            let sql = r"
 SELECT * FROM kv_values
 WHERE ns = $1 AND key LIKE $2
 ORDER BY key
-LIMIT $3"#;
+LIMIT $3";
             let like = format!("%{}%", search);
             if is_hiqlite() {
                 DB::hql().query_map(sql, params!(ns, like, limit)).await?
@@ -260,12 +260,12 @@ LIMIT $3"#;
         let limit = params.limit.unwrap_or(u32::MAX);
 
         let res = if let Some(search) = params.search {
-            let sql = r#"
+            let sql = r"
 SELECT key FROM kv_values
 WHERE ns = $1 AND key LIKE $2
 ORDER BY key
 LIMIT $3
-"#;
+";
             let like = format!("%{}%", search);
             if is_hiqlite() {
                 DB::hql()
@@ -282,12 +282,12 @@ LIMIT $3
                     .collect()
             }
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT key FROM kv_values
 WHERE ns = $1
 ORDER BY key
 LIMIT $2
-"#;
+";
 
             if is_hiqlite() {
                 DB::hql()

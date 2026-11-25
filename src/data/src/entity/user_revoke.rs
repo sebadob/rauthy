@@ -49,11 +49,11 @@ impl UserRevoke {
     #[inline]
     pub async fn upsert(user_id: String) -> Result<Self, ErrorResponse> {
         let code = secure_random_alnum(48);
-        let sql = r#"
+        let sql = r"
 INSERT INTO user_revoke (user_id, code)
 VALUES ($1, $2)
 ON CONFLICT (user_id) DO NOTHING
-RETURNING *"#;
+RETURNING *";
 
         let slf = if is_hiqlite() {
             let mut row = DB::hql()

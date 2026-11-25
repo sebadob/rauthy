@@ -83,12 +83,12 @@ impl PasskeyEntity {
         let user_email = user.as_ref().map(|u| u.email.clone());
         let client = DB::hql();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO passkeys (
     user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified,
     resident_key, aaguid
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -429,10 +429,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
     pub async fn update_passkey(&self) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let sql = r#"
+        let sql = r"
 UPDATE passkeys
 SET passkey = $1, last_used = $2
-WHERE user_id = $3 AND name = $4"#;
+WHERE user_id = $3 AND name = $4";
 
         if is_hiqlite() {
             client

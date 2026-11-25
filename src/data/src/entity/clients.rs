@@ -44,16 +44,16 @@ use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
 
-pub const SQL_INSERT: &str = r#"
+pub const SQL_INSERT: &str = r"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
 default_aud, created_micros, consent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24, $25, $26)"#;
+$18, $19, $20, $21, $22, $23, $24, $25, $26)";
 
-static SQL_SAVE: &str = r#"
+static SQL_SAVE: &str = r"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
@@ -62,7 +62,7 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
     claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26,
     actor_same_client = $27
-WHERE id = $28"#;
+WHERE id = $28";
 
 /**
 # OIDC Client
@@ -277,10 +277,10 @@ impl Client {
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        let sql_2 = r#"
+        let sql_2 = r"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
         if is_hiqlite() {
             DB::hql()
@@ -804,10 +804,10 @@ VALUES ($1, $2, $3, $4)"#;
         new_kid: String,
         old_kid: &str,
     ) -> Result<bool, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 UPDATE clients
 SET secret = $1, secret_kid = $2
-WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
+WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -859,10 +859,10 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             client_dyn.registration_token = registration_token;
         }
 
-        let sql = r#"
+        let sql = r"
 UPDATE clients_dyn
 SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
-WHERE id = $4"#;
+WHERE id = $4";
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -1850,10 +1850,10 @@ pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens_devices
 WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
             true,
         ),
     ];
@@ -1879,34 +1879,34 @@ pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, boo
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
         (
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
 WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens_devices
     WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-)"#,
+)",
             true,
         ),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens_devices
-WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#,
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)",
             true,
         ),
     ];
     if drop_legacy {
         stmts.push((
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#,
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)",
             false,
         ));
         stmts.push(("DELETE FROM refresh_tokens WHERE client_id IS NULL", false));
     }
     stmts.push((
-        r#"
+        r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#,
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)",
         true,
     ));
     stmts.push(("DELETE FROM refresh_tokens WHERE client_id = $1", true));
@@ -2592,7 +2592,7 @@ pub(crate) mod tests {
         for drop_legacy in [false, true] {
             let mut conn = sqlite_full_schema();
             conn.execute_batch(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -2619,7 +2619,7 @@ VALUES ('rtd_c1', 'd1', 'u1', 1, 2, 'j_d1'),
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
        ('j_d1', 'u1', 2), ('j_d2', 'u1', 2);
-"#,
+",
             )
             .unwrap();
 

@@ -9,12 +9,12 @@ use tracing::info;
 pub async fn insert_dummy_data(amount: u32) -> Result<(), ErrorResponse> {
     tokio::time::sleep(Duration::from_secs(1)).await;
     info!(
-        r#"
+        r"
 
 Preparing to insert dummy data into the Database.
 CAUTION: Do not do this on a production database!
 Will go on in 10 seconds...
-        "#
+        "
     );
     tokio::time::sleep(Duration::from_secs(10)).await;
     info!("Generating and inserting dummy data now");

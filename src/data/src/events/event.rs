@@ -557,9 +557,9 @@ impl Event {
         let level = self.level.value();
         let typ = self.typ.value();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
         if is_hiqlite() {
             DB::hql()
@@ -610,10 +610,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
         let res = if let Some(typ) = typ {
             let typ = typ.value();
-            let sql = r#"
+            let sql = r"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-ORDER BY timestamp DESC"#;
+ORDER BY timestamp DESC";
 
             if is_hiqlite() {
                 DB::hql()
@@ -623,10 +623,10 @@ ORDER BY timestamp DESC"#;
                 DB::pg_query(sql, &[&from, &until, &level, &typ], 32).await?
             }
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-ORDER BY timestamp DESC"#;
+ORDER BY timestamp DESC";
 
             if is_hiqlite() {
                 DB::hql()

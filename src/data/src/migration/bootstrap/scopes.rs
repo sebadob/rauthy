@@ -125,9 +125,9 @@ fn build_values(attr_names: &[String], scope: &Scope) -> (Option<String>, Option
 }
 
 async fn insert(attr_names: &[String], scope: Scope) -> Result<(), ErrorResponse> {
-    let sql = r#"
+    let sql = r"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     let (attr_include_access, attr_include_id, claims_at_root) = build_values(attr_names, &scope);
     let id = scope.id.unwrap_or_else(new_store_id);

@@ -78,11 +78,11 @@ impl ClientScim {
     ) -> Result<(), ErrorResponse> {
         let bearer_encrypted = EncValue::encrypt(bearer_token.as_bytes())?.into_bytes();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO clients_scim (client_id, bearer_token, base_endpoint, sync_groups, group_sync_prefix)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (client_id) DO UPDATE
-SET bearer_token = $2, base_endpoint = $3, sync_groups = $4, group_sync_prefix = $5"#;
+SET bearer_token = $2, base_endpoint = $3, sync_groups = $4, group_sync_prefix = $5";
 
         if is_hiqlite() {
             DB::hql()

@@ -112,9 +112,9 @@ impl OneTimePassword {
             is_active: false,
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO one_time_password (id, user_id, name, secret, last_used, kind, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
         if is_hiqlite() {
             DB::hql()

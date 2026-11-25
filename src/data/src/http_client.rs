@@ -23,19 +23,19 @@ fn tls_config(vars: &Vars) -> (tls::Version, Vec<Certificate>) {
         "1.2" => tls::Version::TLS_1_2,
         "1.1" => {
             warn!(
-                r#"
+                r"
     You are allowing TLS 1.1 for the global HTTP client.
     Only do this, if you know what you are doing!
-    "#
+    "
             );
             tls::Version::TLS_1_1
         }
         "1.0" => {
             warn!(
-                r#"
+                r"
     You are allowing TLS 1.0 for the global HTTP client.
     Only do this, if you know what you are doing!
-    "#
+    "
             );
             tls::Version::TLS_1_0
         }

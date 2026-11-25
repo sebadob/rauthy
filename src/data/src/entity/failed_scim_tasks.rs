@@ -75,11 +75,11 @@ pub struct FailedScimTask {
 
 impl FailedScimTask {
     pub async fn upsert(action: &ScimAction, client_id: &str) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO failed_scim_tasks (client_id, action, retry_count)
 VALUES ($1, $2, 0)
 ON CONFLICT (client_id, action)
-DO UPDATE SET retry_count = retry_count + 1"#;
+DO UPDATE SET retry_count = retry_count + 1";
 
         if is_hiqlite() {
             DB::hql()

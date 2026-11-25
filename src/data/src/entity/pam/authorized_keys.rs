@@ -70,9 +70,9 @@ impl AuthorizedKey {
             None
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO ssh_auth_keys (pam_uid, ts_added, expires, typ, data, comment)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         let now = Utc::now().timestamp();
         if is_hiqlite() {
@@ -92,11 +92,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
     /// Note: If you already know the `PamUser.id`, use `find_by_pam_uid()`
     pub async fn find_by_username(username: String) -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM ssh_auth_keys WHERE pam_uid = (
     SELECT id FROM pam_users WHERE name = $1
 )
-"#;
+";
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(username)).await?
@@ -157,11 +157,11 @@ SELECT * FROM ssh_auth_keys WHERE pam_uid = (
             && self.expires.is_some();
 
         // a conflict may happen if config for blacklisting has changed in the meantime
-        let sql_blacklist = r#"
+        let sql_blacklist = r"
 INSERT INTO ssh_auth_keys_used (used_key_hash, ts_added)
 VALUES ($1, $2)
 ON CONFLICT (used_key_hash) DO NOTHING
-"#;
+";
         let sql_delete = "DELETE FROM ssh_auth_keys WHERE pam_uid = $1 AND ts_added = $2";
 
         if is_hiqlite() {

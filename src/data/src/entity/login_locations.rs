@@ -39,9 +39,9 @@ impl LoginLocation {
         let ip = ip.to_string();
         let browser_id = browser_id.inner().unwrap_or_default();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO login_locations (user_id, browser_id, ip, last_seen, user_agent, location)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         if is_hiqlite() {
             DB::hql()
@@ -118,10 +118,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         let now = Utc::now().timestamp();
         let ip = ip_new.to_string();
 
-        let sql = r#"
+        let sql = r"
 UPDATE login_locations
 SET last_seen = $1, ip = $2, location = $3
-WHERE user_id = $4 AND browser_id = $5"#;
+WHERE user_id = $4 AND browser_id = $5";
 
         if is_hiqlite() {
             DB::hql()
@@ -143,10 +143,10 @@ WHERE user_id = $4 AND browser_id = $5"#;
 
     pub async fn update_by_ip(self, location: Option<String>) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-        let sql = r#"
+        let sql = r"
 UPDATE login_locations
 SET last_seen = $1, location = $2
-WHERE user_id = $3 AND browser_id = $4 AND ip = $5"#;
+WHERE user_id = $3 AND browser_id = $4 AND ip = $5";
 
         if is_hiqlite() {
             DB::hql()
