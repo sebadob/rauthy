@@ -15,6 +15,7 @@
     import UserMfa from './UserMfa.svelte';
     import Devices from '#lib/devices/Devices.svelte';
     import UserForceLogout from './UserForceLogout.svelte';
+    import UserConsentsAdmin from './UserConsentsAdmin.svelte';
     import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
@@ -41,7 +42,7 @@
     let ta = useI18nAdmin();
 
     let session = useSession('admin');
-    // Group admins get a reduced tab set: profile (restricted), password, MFA reset
+    // Group admins get a reduced tab set: profile (restricted), password, MFA reset, consents
     // and force-logout. Attributes, devices and delete stay full-admin only, matching the
     // backend, which rejects those actions for a group admin anyway. The principal acts as a
     // delegated group admin when it reached the admin UI without the full `rauthy_admin` role.
@@ -52,6 +53,7 @@
     const TAB_PASSWORD = t.common.password;
     const TAB_MFA = t.account.navMfa;
     const TAB_DEVICES = t.account.devices;
+    const TAB_CONSENTS = ta.users.consents.title;
     const TAB_LOGOUT = t.account.navLogout;
     const sections = [
         { id: 'info', label: TAB_INFO, fullAdmin: false },
@@ -59,6 +61,7 @@
         { id: 'password', label: TAB_PASSWORD, fullAdmin: false },
         { id: 'mfa', label: TAB_MFA, fullAdmin: false },
         { id: 'devices', label: TAB_DEVICES, fullAdmin: true },
+        { id: 'consents', label: TAB_CONSENTS, fullAdmin: false },
         { id: 'logout', label: TAB_LOGOUT, fullAdmin: false },
     ];
     const sectionParam = useParam('userTab');
@@ -172,6 +175,8 @@
         <UserMfa {user} {onSave} />
     {:else if selected === TAB_DEVICES}
         <Devices {userId} />
+    {:else if selected === TAB_CONSENTS}
+        <UserConsentsAdmin {userId} />
     {:else if selected === TAB_LOGOUT}
         <UserForceLogout {userId} />
     {/if}

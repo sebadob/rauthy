@@ -146,10 +146,15 @@ export const I18nJa: I18n = {
             connectedApps: '連携中のアプリ',
             connectedAppsDesc: 'アカウントへのアクセスに同意したアプリケーション。',
             granted: '許可日時',
+            logoutWarning:
+                'これにより、すべてのデバイスのすべてのセッションからもログアウトされます。再度ログインする必要があります。',
             noConnectedApps: 'まだどのアプリケーションにもアクセスを許可していません。',
             privacy: 'プライバシー',
             resource: 'リソース',
             revoke: 'アクセスを取り消す',
+            revokeAll: 'すべてのアクセスを取り消す',
+            revokeAllDesc:
+                'ここに表示されているすべてのアプリケーションへの同意を取り消します。各アプリケーションは再度同意を求める必要があります。',
             revokeDesc:
                 '取り消すと同意が削除され、アプリケーションはアクセスを更新できなくなります。削除された Refresh Token で発行された Access Token は、userinfo と introspection で無効になります。Token を自分で検証するアプリケーションは、有効期限が切れるまでそれを受け入れる場合があります。アプリケーションは改めて同意を求める必要があります。',
             scopes: 'Scope',
@@ -181,9 +186,32 @@ export const I18nJa: I18n = {
         zip: '郵便番号',
     },
     authorize: {
+        busy: 'サーバーが混み合っています。しばらくしてからもう一度お試しください。',
         clientForceMfa:
             'このログインでは、安全性を高めるため多要素認証が必須です。\nアクセスするには、アカウントにログインして Passkey を少なくとも1つ追加してください',
         clientGroupPrefixForbidden: 'このログインに必要なグループに所属していません',
+        consent: {
+            agree: '[データの送信]に同意します',
+            changed: '同意の内容が変更されました。もう一度確認してください。',
+            continue: '続行',
+            details: '詳細',
+            intro: '{{ CLIENT }} が次へのアクセスを求めています:',
+            introResource: '{{ CLIENT }} が {{ RESOURCE }} へのアクセスを求めています:',
+            required: '常に',
+            scopes: {
+                address: '郵便住所',
+                email: 'メールアドレス',
+                groups: 'グループのメンバーシップ',
+                openid: 'ログイン用のユーザー ID とロール',
+                phone: '電話番号',
+                profile:
+                    '名前、ユーザー名（メールアドレスの場合があります）、画像、言語、生年月日、タイムゾーン',
+                webid: 'WebID',
+            },
+            terms: '利用条件',
+            title: '同意',
+            warning: 'よくお読みください',
+        },
         email: 'メールアドレス',
         emailBadFormat: 'メールアドレスの形式が正しくありません',
         emailRequired: 'メールアドレスを入力してください',

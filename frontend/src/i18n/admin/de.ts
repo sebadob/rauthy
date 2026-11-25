@@ -605,6 +605,17 @@ export let I18nAdminDe: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin Rolle kann nicht entfernt werden',
         },
         attributes: 'Attribute',
+        consents: {
+            title: 'Zustimmungen',
+            desc: 'Zustimmungen, die dieser Benutzer Anwendungen erteilt hat. Zeiten werden in Ihrer lokalen Zeitzone angezeigt; fahren Sie über eine Zeit, um sie in UTC zu sehen.',
+            none: 'Dieser Benutzer hat noch keiner Anwendung eine Zustimmung erteilt.',
+            revokeDesc:
+                'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff für diesen Benutzer nicht mehr erneuern. Die Anwendung muss den Benutzer erneut um Zustimmung bitten.',
+            revokeAllDesc:
+                'Widerruft alle Zustimmungen dieses Benutzers. Jede Anwendung muss den Benutzer erneut um Zustimmung bitten.',
+            sessionsWarning:
+                'Alle Sitzungen des Benutzers werden ebenfalls gelöscht, der Benutzer wird überall abgemeldet.',
+        },
         deleteUser: 'Soll dieser Benutzer wirklich gelöscht werden?',
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare
             werden als String / JSON Wert gehandhabt.`,

@@ -2,36 +2,39 @@
 //! with an empty `secret` has a code that is a public function of the server time, and anyone with
 //! the account password completes the ceremony without ever reading the mailbox.
 //!
-//! These tests need `otp.enable` on (the default `config-test.toml` keeps it disabled) plus the
-//! bootstrap API key, which is also how the `mfa_assurance` suite is run, so one env block covers
-//! both:
+//! These tests need `otp.enable` and the bootstrap API key, both of which `config-test.toml` sets.
+//! Only the key's secret stays outside the config, because the test process needs it to use the
+//! key, and its presence is what makes this suite run instead of skipping itself. The `just test*`
+//! recipes set it, by hand it is:
 //!
 //! ```sh
-//! OTP_ENABLE=true \
-//! BOOTSTRAP_API_KEY=eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0= \
 //! BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec \
 //! just test-hiqlite otp_secret
 //! ```
 //!
-//! Without them, every test skips itself and the plain `just test-hiqlite` run stays green. The
+//! Without it, every test skips itself and a plain `cargo test` run stays green. The
 //! code the dev-only reveal endpoint returns is the very code the backend has emailed, which is the
 //! only way a test can ever get one, because emails go nowhere during tests.
-use crate::common::{cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow};
+use crate::common::{
+    accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_backend_url,
+    get_solved_pow, send_login, stale_consent,
+};
 use crate::{expect_status, expect_status_json};
 use rauthy_api_types::generic::Language;
-use rauthy_api_types::oidc::LoginRequest;
+use rauthy_api_types::oidc::{LoginConsent, LoginRequest};
 use rauthy_api_types::users::{
     MfaModTokenRequest, MfaModTokenResponse, MfaPurpose, NewUserRequest, OtpActivateRequest,
     OtpAuthFinishRequest, OtpAuthStartRequest, OtpCreateRequest, OtpGetResponse, OtpKind,
-    UpdateUserRequest, UserResponseSimple,
+    UpdateUserRequest, UserConsentResponse, UserResponseSimple,
 };
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, new_store_id};
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
+use reqwest::header::{AUTHORIZATION, COOKIE, HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Client, StatusCode};
 use ring::hmac;
 use std::error::Error;
 use std::sync::LazyLock;
+use std::time::Duration;
 
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 /// The password of the user these tests create. The seeded password policy has a minimum length,
@@ -110,36 +113,41 @@ async fn init_session() -> Result<HeaderMap, Box<dyn Error>> {
     cookie_csrf_headers_from_res_direct(res).await
 }
 
-/// Password login of a user on an existing session, as the raw `POST /oidc/authorize` response.
-async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Response {
-    let backend = get_backend_url();
-    let challenge = base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()));
-    let req = LoginRequest {
+/// The `POST /oidc/authorize` of `email` to the `rauthy` client. Without a `password`, as a login
+/// with a valid MFA cookie sends it.
+async fn login_request(
+    email: &str,
+    password: Option<&str>,
+    consent: Option<LoginConsent>,
+) -> LoginRequest {
+    LoginRequest {
         email: Some(email.to_string()),
-        password: Some(password.to_string()),
+        password: password.map(String::from),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
-        redirect_uri: format!("{backend}/oidc/callback"),
+        redirect_uri: format!("{}/oidc/callback", get_backend_url()),
         scopes: None,
         state: None,
         nonce: Some("OtpSecretNonce".to_string()),
-        code_challenge: Some(challenge.clone()),
+        code_challenge: Some(base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()))),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
         resident_key_token: None,
         fwda: None,
-    };
+        consent,
+    }
+}
 
-    Client::new()
-        .post(format!(
-            "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
-            &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
-        ))
-        .headers(session.clone())
-        .json(&req)
-        .send()
-        .await
-        .unwrap()
+/// Password login of a user on an existing session, as the raw `POST /oidc/authorize` response.
+async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Response {
+    let backend = get_backend_url();
+    let challenge = base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()));
+    let url_auth = format!(
+        "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
+        &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+    );
+    let req = login_request(email, Some(password), None).await;
+    send_login(&Client::new(), &url_auth, session, req).await
 }
 
 /// Creates the test user with a password, re-using and re-setting a left-over of a prior run,
@@ -410,6 +418,115 @@ async fn test_otp_secret_mailed_code_completes_login() -> Result<(), Box<dyn Err
     let code = dev_otp_code(&user_id).await?;
     let res = otp_finish(&session, &start_code, &code).await?;
     expect_status!(res, 202);
+
+    Ok(())
+}
+
+/// The user these consent tests create, apart from [`OTP_USER`] to not race its tests.
+static OTP_CONSENT_USER: LazyLock<String> =
+    LazyLock::new(|| format!("otp-consent-user-{}@localhost", *SUFFIX));
+
+/// The user's consents, as the fixture API key sees them.
+async fn consents(user_id: &str) -> Result<Vec<UserConsentResponse>, Box<dyn Error>> {
+    let res = Client::new()
+        .get(format!("{}/users/{user_id}/consents", get_backend_url()))
+        .headers(fixture_headers()?)
+        .send()
+        .await?;
+    Ok(expect_status_json!(res, 200, Vec<UserConsentResponse>))
+}
+
+/// `POST /oidc/authorize` with only the email, as a login with a valid MFA cookie sends it, and
+/// the given consent.
+async fn login_mfa_cookie(
+    session: &HeaderMap,
+    consent: Option<LoginConsent>,
+) -> Result<reqwest::Response, Box<dyn Error>> {
+    let req = login_request(OTP_CONSENT_USER.as_str(), None, consent).await;
+    Ok(Client::new()
+        .post(format!("{}/oidc/authorize", get_backend_url()))
+        .headers(session.clone())
+        .json(&req)
+        .send()
+        .await?)
+}
+
+/// A consent given with the password or with a valid MFA cookie alone is written only after the
+/// OTP ceremony proved the user, and a login that has proven no factor yet sees nothing of the
+/// grant.
+#[tokio::test]
+async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>> {
+    if !gated_suite_ready().await? {
+        return Ok(());
+    }
+    let user_id = create_test_user(OTP_CONSENT_USER.as_str()).await?;
+    ensure_otp(&user_id, OTP_CONSENT_USER.as_str()).await?;
+    let res = Client::new()
+        .delete(format!(
+            "{}/users/{user_id}/consents?client_id=rauthy",
+            get_backend_url()
+        ))
+        .headers(fixture_headers()?)
+        .send()
+        .await?;
+    expect_status!(res, 200);
+    assert!(consents(&user_id).await?.is_empty());
+
+    // --- the password and a consent: no grant before the OTP
+    let session = init_session().await?;
+    let res = login(OTP_CONSENT_USER.as_str(), PASSWORD_ONLY, &session).await;
+    let mfa_cookie = res
+        .headers()
+        .get_all(SET_COOKIE)
+        .iter()
+        .filter_map(|c| c.to_str().ok()?.split_once(';').map(|(c, _)| c.to_string()))
+        .find(|c| c.contains("RauthyMfa="));
+    expect_status_json!(res, 200, [OtpChallenge; 1]);
+    let mfa_cookie = mfa_cookie.expect("the MFA cookie of the OTP step");
+    assert!(consents(&user_id).await?.is_empty());
+
+    // --- a valid MFA cookie without a password: no grant before the OTP either
+    let mut session = init_session().await?;
+    let cookie = session.get(COOKIE).unwrap().to_str()?.to_string();
+    session.insert(
+        COOKIE,
+        HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
+    );
+    let content = consent_required(login_mfa_cookie(&session, None).await?).await;
+    let consent = accept_all(&content);
+    let mut accepted = consent.accepted_scopes.clone();
+    accepted.sort_unstable();
+    let res = login_mfa_cookie(&session, Some(consent)).await?;
+    let [challenge] = expect_status_json!(res, 200, [OtpChallenge; 1]);
+    assert!(consents(&user_id).await?.is_empty());
+
+    // --- the finished ceremony writes the grant
+    let start_code = otp_start(&session, &challenge).await?;
+    let code = dev_otp_code(&user_id).await?;
+    expect_status!(otp_finish(&session, &start_code, &code).await?, 202);
+    let grants = consents(&user_id).await?;
+    assert_eq!(grants.len(), 1);
+    assert_eq!(grants[0].client_id, "rauthy");
+    assert_eq!(grants[0].resource, None);
+    assert_eq!(grants[0].scopes, accepted);
+
+    // --- without a proven factor, the grant is neither used nor shown
+    let mut session = init_session().await?;
+    let cookie = session.get(COOKIE).unwrap().to_str()?.to_string();
+    session.insert(
+        COOKIE,
+        HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
+    );
+    let content = consent_required(login_mfa_cookie(&session, None).await?).await;
+    assert!(content.granted_scopes.is_empty(), "{content:?}");
+    // nor shown with a refused consent, which writes nothing: a write would change `updated`
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let stale = stale_consent(&content);
+    let content = consent_required(login_mfa_cookie(&session, Some(stale)).await?).await;
+    assert!(content.granted_scopes.is_empty(), "{content:?}");
+    let after = consents(&user_id).await?;
+    assert_eq!(after.len(), 1);
+    assert_eq!(after[0].updated, grants[0].updated);
 
     Ok(())
 }

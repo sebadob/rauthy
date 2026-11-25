@@ -10,6 +10,7 @@
         TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
         TPL_CLIENT_URL,
+        TPL_CONSENT_CONTENT,
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION,
@@ -30,6 +31,7 @@
     import type {
         ActiveOtp,
         CodeChallengeMethod,
+        LoginConsent as LoginConsentData,
         LoginRefreshRequest,
         LoginRequest,
         LoginResponse,
@@ -37,7 +39,7 @@
     } from '#api/types/authorize.ts';
     import Form from '#lib/form/Form.svelte';
     import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import type { SessionInfoResponse } from '#api/types/session.ts';
     import ClientLogo from '#lib/ClientLogo.svelte';
     import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
@@ -52,6 +54,8 @@
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import type { OtpAdditionalData } from '#mfa/otp/types.ts';
     import IconKey from '#icons/IconKey.svelte';
+    import LoginConsent from '#lib/LoginConsent.svelte';
+    import type { ConsentContentTemplate } from '#api/templates/ConsentContent.ts';
     import MfaSelection from '#lib/MfaSelection.svelte';
 
     const inputWidth = '100%';
@@ -138,9 +142,18 @@
             !(resetLinkAlways ? showReset : showResetRequest),
     );
 
+    // the consent to ask for before the login, if any
+    let consent: undefined | ConsentContentTemplate = $state();
+    let consentAccepted: string[] = $state([]);
+    let consentConfirmed = $state(false);
+    let consentChoicesFor: undefined | ConsentContentTemplate = $state.raw();
+    let consentNotice = $state('');
+    let isConsentPending = $derived(!!consent && !consentConfirmed);
+
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
 
+    let hintProvider = $derived(idpHint ? providers.find(p => p.id === idpHint) : undefined);
     let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
 
@@ -152,7 +165,8 @@
             redirectUri &&
             redirectUri.length > 0
         ) {
-            onRefresh();
+            // untracked, so that a `consent_required` answer setting `consent` does not send it again
+            untrack(onRefresh);
         }
     });
 
@@ -196,13 +210,12 @@
         }
     });
 
+    // With a consent block, the `idp_hint` login waits for "Continue", so that optional scopes can
+    // be unchecked first.
     $effect(() => {
-        if (idpHint && providers.length > 0 && !isLoading && !err && !hasAutoLoggedIn) {
-            const provider = providers.find(p => p.id === idpHint);
-            if (provider) {
-                hasAutoLoggedIn = true;
-                providerLogin(provider.id);
-            }
+        if (hintProvider && !consent && !isLoading && !err && !hasAutoLoggedIn) {
+            hasAutoLoggedIn = true;
+            providerLogin(hintProvider.id);
         }
     });
 
@@ -247,6 +260,13 @@
         }
     }
 
+    function loginConsent(): undefined | LoginConsentData {
+        if (!consent || !consentConfirmed) {
+            return undefined;
+        }
+        return { content_hash: consent.content_hash, accepted_scopes: consentAccepted };
+    }
+
     function handleShowReset() {
         err = '';
         showReset = true;
@@ -273,6 +293,7 @@
             nonce: nonce,
             scopes,
             fwda,
+            consent: loginConsent(),
         };
         if (
             challenge &&
@@ -290,7 +311,7 @@
             '/auth/v1/oidc/authorize/refresh',
             payload,
         );
-        await handleAuthRes(res);
+        await handleAuthRes(res, true);
     }
 
     function onPasskeyDiscover() {
@@ -311,6 +332,7 @@
         }
 
         err = '';
+        consentNotice = '';
 
         if (!clientId) {
             console.error('clientId is undefined');
@@ -335,6 +357,7 @@
             scopes,
             resident_key_token: residentKeyToken,
             fwda,
+            consent: loginConsent(),
         };
         if (
             challenge &&
@@ -378,6 +401,7 @@
 
     async function handleAuthRes(
         res?: IResponse<undefined | LoginResponse[] | ToSAwaitLoginResponse>,
+        isRefresh = false,
     ) {
         isLoading = false;
         isAutoRefreshing = false;
@@ -385,6 +409,17 @@
         if (!res) {
             console.error('no result in handleAuthRes');
             return;
+        }
+
+        if (
+            loginAction === 'RefreshConsent' &&
+            (res.status === 0 || res.status >= 400) &&
+            res.status !== 503 &&
+            res.error?.error !== 'consent_required'
+        ) {
+            // The refresh failed for another reason, the login form is the way on. A busy server
+            // keeps the consent view, so that Continue can be retried.
+            loginAction = '';
         }
 
         if (res.status === 202) {
@@ -423,7 +458,9 @@
             tosAcceptCode = body.tos_await_code;
             await fetchTos();
         } else if (res.status === 400) {
-            if (res.error?.error === 'PasswordRequired') {
+            if (res.error?.error === 'consent_required') {
+                showConsentRequired(res.error.message, isRefresh);
+            } else if (res.error?.error === 'PasswordRequired') {
                 needsPassword = true;
                 emailAfterSubmit = email;
             } else if (res.error?.error === 'InvalidCredentials') {
@@ -468,6 +505,9 @@
                 tooManyRequests = false;
                 err = '';
             }, diff);
+        } else if (res.status === 503) {
+            // the server is busy, e.g. fetching the consent content, the credentials stay
+            err = t.authorize.busy;
         } else if (res.status === 0 || res.status >= 500) {
             // network or server error -> not a credentials problem
             err = res.error?.message || '';
@@ -482,6 +522,25 @@
             }
         } else {
             err = res.error?.message || `HTTP ${res.status}`;
+        }
+    }
+
+    // The consent is missing or the content changed: shows the content the answer carries. The
+    // automatic refresh of a valid session continues with the consent block only.
+    function showConsentRequired(message: string, isRefresh = false) {
+        let sentConsent = !!loginConsent();
+        try {
+            consent = JSON.parse(message) as ConsentContentTemplate;
+        } catch {
+            err = message;
+            return;
+        }
+        if (isRefresh && loginAction === 'Refresh') {
+            loginAction = 'RefreshConsent';
+        } else {
+            // a confirmed consent that comes back refused means the content changed meanwhile; the
+            // first ask needs no message, the checkbox itself shows what is missing
+            consentNotice = sentConsent ? t.authorize.consent.changed : '';
         }
     }
 
@@ -547,11 +606,20 @@
             pkce_challenge: '',
             pow: '',
             fwda,
+            consent: loginConsent(),
             ...(isAtproto && { handle: atprotoHandle }),
         };
-        execProviderLogin(payload).then(errMsg => {
-            err = errMsg || '';
+        execProviderLogin(payload).then(res => {
             isLoading = false;
+            if (!res) {
+                err = '';
+            } else if (res.status === 503) {
+                err = t.authorize.busy;
+            } else if (res.error?.error === 'consent_required') {
+                showConsentRequired(res.error.message);
+            } else {
+                err = res.error?.message || `HTTP ${res.status}`;
+            }
         });
     }
 
@@ -654,6 +722,7 @@
 <Template id={TPL_ATPROTO_ID} bind:value={atprotoId} />
 <Template id={TPL_CLIENT_NAME} bind:value={clientName} />
 <Template id={TPL_CLIENT_URL} bind:value={clientUri} />
+<Template id={TPL_CONSENT_CONTENT} bind:value={consent} />
 <Template id={TPL_CLIENT_FAVICON_UPDATED} {clientId} bind:value={clientFaviconUpdated} />
 <Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
 <Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
@@ -661,6 +730,21 @@
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
 <Template id={TPL_PASSWORD_RESET_LINK_ALWAYS} bind:value={resetLinkAlways} />
 <Template id={TPL_PASSKEY_REG_TYPE} bind:value={passkeyRegType} />
+
+{#snippet consentRow()}
+    {#if consent}
+        <!-- the choices live in this page, so that every place of this row keeps them -->
+        <LoginConsent
+            {consent}
+            clientName={clientName || clientId || ''}
+            bind:accepted={consentAccepted}
+            bind:confirmed={consentConfirmed}
+            bind:choicesFor={consentChoicesFor}
+            disabled={isLoading || tooManyRequests}
+            notice={consentNotice}
+        />
+    {/if}
+{/snippet}
 
 <PublicPage>
     {#if isAutoRefreshing}
@@ -717,7 +801,20 @@
             {/if}
         {/if}
 
-        {#if !clientMfaForce}
+        {#if loginAction === 'RefreshConsent' && consent}
+            <!-- the session is still valid, only the consent is missing -->
+            {@render consentRow()}
+            <div class="btn flex-col">
+                <Button
+                    ariaLabel={t.authorize.consent.continue}
+                    onclick={onRefresh}
+                    isDisabled={isConsentPending}
+                    {isLoading}
+                >
+                    {t.authorize.consent.continue}
+                </Button>
+            </div>
+        {:else if !clientMfaForce}
             <Form action={authorizeUrl} {onSubmit}>
                 <div class:emailMinHeight={!showPasswordInput}>
                     {#if isAtproto}
@@ -778,6 +875,23 @@
                     </div>
                 {/if}
 
+                {#if !showReset}
+                    {@render consentRow()}
+                {/if}
+
+                {#if consent && hintProvider && !showReset}
+                    <div class="btn flex-col">
+                        <Button
+                            ariaLabel={t.authorize.consent.continue}
+                            onclick={() => hintProvider && providerLogin(hintProvider.id)}
+                            isDisabled={isConsentPending}
+                            {isLoading}
+                        >
+                            {t.authorize.consent.continue}
+                        </Button>
+                    </div>
+                {/if}
+
                 {#if !tooManyRequests && !clientMfaForce}
                     {#if showReset && !isAtproto}
                         <div class="btn flex-col">
@@ -790,7 +904,8 @@
                             <Button
                                 type="submit"
                                 ariaLabel={t.authorize.login}
-                                isDisabled={isAtproto ? !atprotoHandle : !email}
+                                isDisabled={(isAtproto ? !atprotoHandle : !email) ||
+                                    isConsentPending}
                                 {isLoading}
                             >
                                 {t.authorize.login}
@@ -860,7 +975,7 @@
             <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
         {/if}
 
-        {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives}
+        {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives && loginAction !== 'RefreshConsent'}
             <div class="providers flex-col gap-05">
                 <div class="public-divider">{t.authorize.orLoginWith}</div>
 
@@ -870,6 +985,7 @@
                             level={2}
                             ariaLabel={t.authorize.login}
                             onclick={onPasskeyDiscover}
+                            isDisabled={isConsentPending}
                             {isLoading}
                         >
                             <div class="flex gap-05">
@@ -885,6 +1001,7 @@
                         ariaLabel={`Login: ${provider.name}`}
                         {provider}
                         onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
+                        isDisabled={isConsentPending}
                         {isLoading}
                     />
                 {/each}

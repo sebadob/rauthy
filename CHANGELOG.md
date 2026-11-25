@@ -88,6 +88,24 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### User Consent
+
+- `consent.content_cache_ttl` is a Duration like `'10m'` or `'1h'` (default), an Integer is still
+  read as seconds.
+- Remote consent sources may resolve to non-public addresses: only an admin configures them. A
+  redirect from a source on a public address into the internal network is refused. The
+  `consent.danger_allow_private_addresses` switch is gone. Ephemeral client documents keep their
+  address checks and `ephemeral_clients.danger_allow_private_addresses`.
+- A consent revoke deletes all sessions of the user, with a backchannel logout, whoever revokes it:
+  the user itself on the account page, an admin, a group admin or an API key. The user has to sign
+  in again.
+- `DELETE /users/{id}/consents/all` revokes all consents of a user at once, each like a single
+  revoke with its refresh tokens and event, and deletes all sessions of the user. The same users,
+  admins, group admins and API keys as for a single revoke are allowed.
+- For local development, a debug build serves a custom consent document in `en` and `de` from
+  `GET /auth/v1/dev/consent`, which the dev `config.toml` uses as a `[[consent.sources]]` entry.
+  Debug builds accept a plain `http://localhost` consent source for it.
+
 #### Credential Stuffing Detection Can Be Disabled
 
 `cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config
@@ -583,6 +601,11 @@ passwords. The default password policy is untouched.
 
 ### Bugfix
 
+- `prompt=none` together with `prompt=login`, or with a `max_age` that is exceeded or has no
+  session to check, now redirects with `error=login_required`, as OIDC Core requires, instead of
+  showing the login page.
+- A busy fetcher of ephemeral client documents now answers `503` with the `x-retry-not-before`
+  and the standard `Retry-After` headers instead of `429`, which is the status of a lockout after failed logins.
 - Changing the password from the account page cleared the given and family name and all user
   values, like phone, address and timezone, because the request only contained the password and
   the self-update replaces the whole profile with the request. The password form now sends the

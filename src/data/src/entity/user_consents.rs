@@ -1,15 +1,25 @@
 use crate::database::DB;
+use crate::entity::clients::Client;
+use crate::entity::consent_sources::{ConsentContent, ConsentDocs};
 use crate::entity::refresh_tokens::{SQL_PG_IT_REVOKE_JTIS, SQL_RTD_DELETE_BY_USER_CLIENT};
+use crate::entity::users::User;
+use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
+use actix_web::HttpRequest;
+use actix_web::http::header;
 use chrono::Utc;
 use hiqlite::macros::params;
 use rauthy_api_types::users::UserConsentResponse;
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_derive::FromPgRow;
-use rauthy_error::ErrorResponse;
-use serde::Deserialize;
-use std::net::IpAddr;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
+use reqwest::Url;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use tokio_postgres::IsolationLevel;
+use tracing::{error, warn};
+use utoipa::ToSchema;
 
 const SQL_FIND: &str = r"
 SELECT * FROM user_consents
@@ -39,7 +49,8 @@ pub struct UserConsent {
     pub resource: String,
     /// comma separated
     pub scopes: String,
-    /// `None` for the built-in local consent
+    /// The `content_hash` of the consent content the grant was given for. `None` never matches
+    /// any content, see [`Self::is_content_current`].
     pub content_hash: Option<String>,
     pub created: i64,
     pub updated: i64,
@@ -84,54 +95,6 @@ impl UserConsent {
             DB::pg_query(SQL_FIND_FOR_USER, &[&user_id], 0).await?
         };
         Ok(res)
-    }
-
-    pub async fn upsert(
-        user_id: &str,
-        client_id: &str,
-        resource: &str,
-        scopes: &[String],
-        content_hash: Option<&str>,
-        ip: IpAddr,
-        user_agent: Option<&str>,
-    ) -> Result<(), ErrorResponse> {
-        let scopes = scopes.join(",");
-        let now = Utc::now().timestamp();
-        let ip = ip.to_string();
-
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    SQL_UPSERT,
-                    params!(
-                        user_id,
-                        client_id,
-                        resource,
-                        scopes,
-                        content_hash,
-                        now,
-                        ip,
-                        user_agent
-                    ),
-                )
-                .await?;
-        } else {
-            DB::pg_execute(
-                SQL_UPSERT,
-                &[
-                    &user_id,
-                    &client_id,
-                    &resource,
-                    &scopes,
-                    &content_hash,
-                    &now,
-                    &ip,
-                    &user_agent,
-                ],
-            )
-            .await?;
-        }
-        Ok(())
     }
 
     /// Revokes the consent together with all refresh tokens of the user for the client in a
@@ -466,6 +429,122 @@ impl UserConsent {
     pub fn scopes_vec(&self) -> Vec<String> {
         self.scopes().map(String::from).collect()
     }
+
+    /// `true` if the grant contains all `scopes` and [`Self::is_content_current`].
+    pub fn covers(&self, docs: &ConsentDocs, scopes: &[String]) -> bool {
+        scopes.iter().all(|s| self.scopes().any(|g| g == s)) && self.is_content_current(docs)
+    }
+
+    /// `true` if the consent content of all granted scopes in `docs` is still the one the grant
+    /// was given for: the same language, intro, terms and every scope. Never for a grant without
+    /// a `content_hash`.
+    pub fn is_content_current(&self, docs: &ConsentDocs) -> bool {
+        let Some(hash) = self.content_hash.as_deref() else {
+            return false;
+        };
+        ConsentContent::build(docs, &self.scopes_vec()).content_hash == hash
+    }
+}
+
+/// A consent given on the login page, written as the user's [`UserConsent`] for the client and
+/// `resource` once the last required factor of the login is verified: the password, or the
+/// WebAuthn or OTP ceremony that follows it or replaces it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct PendingConsent {
+    pub client_id: String,
+    /// The `created_micros` of the client the consent was given to, see
+    /// [`Self::upsert_for_unchanged_client`].
+    pub client_created_micros: Option<i64>,
+    pub resource: Option<String>,
+    /// The accepted scopes, with the scopes of the user's grant that the login did not request
+    pub scopes: Vec<String>,
+    /// The `content_hash` of the consent content of all `scopes`, which a later login compares,
+    /// see [`UserConsent::is_content_current`].
+    pub content_hash: String,
+}
+
+impl PendingConsent {
+    /// [`Self::upsert`] after a ceremony, unless the client was deleted, or deleted and created
+    /// again, since the consent was given: its grants were deleted with it. An ephemeral client
+    /// has no row to delete, so it is not looked up again, which could fetch its document.
+    pub async fn upsert_for_unchanged_client(
+        &self,
+        user: &User,
+        req: &HttpRequest,
+    ) -> Result<(), ErrorResponse> {
+        if Url::from_str(&self.client_id).is_ok() {
+            return self.upsert(user, req).await;
+        }
+        match Client::find_maybe_ephemeral(self.client_id.clone()).await {
+            Ok(client) if client.created_micros == self.client_created_micros => {
+                self.upsert(user, req).await
+            }
+            Ok(_)
+            | Err(ErrorResponse {
+                error: ErrorResponseType::NotFound,
+                ..
+            }) => {
+                warn!(
+                    client_id = self.client_id,
+                    "the client changed during the login ceremony, its consent is dropped"
+                );
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Inserts or replaces the user's grant with the IP and `User-Agent` of `req`, and sends the
+    /// `ConsentGranted` event. A failed event is logged, the grant is written.
+    pub async fn upsert(&self, user: &User, req: &HttpRequest) -> Result<(), ErrorResponse> {
+        let resource = resource_key(self.resource.as_deref());
+        let scopes = self.scopes.join(",");
+        let now = Utc::now().timestamp();
+        let ip = real_ip_from_req(req)?;
+        let ip_str = ip.to_string();
+        let user_agent = req
+            .headers()
+            .get(header::USER_AGENT)
+            .and_then(|v| v.to_str().ok());
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    SQL_UPSERT,
+                    params!(
+                        &user.id,
+                        &self.client_id,
+                        resource,
+                        &scopes,
+                        &self.content_hash,
+                        now,
+                        &ip_str,
+                        user_agent
+                    ),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(
+                SQL_UPSERT,
+                &[
+                    &user.id,
+                    &self.client_id,
+                    &resource,
+                    &scopes,
+                    &self.content_hash,
+                    &now,
+                    &ip_str,
+                    &user_agent,
+                ],
+            )
+            .await?;
+        }
+
+        if let Err(err) = Event::consent_granted(&user.email, self, ip).send().await {
+            error!(?err, "sending the ConsentGranted event");
+        }
+        Ok(())
+    }
 }
 
 // NOT a template for new tests. These `#[ignore]` tests open a real Postgres schema from
@@ -500,7 +579,7 @@ mod tests {
             content_hash: Some(format!("hash_{ts}")),
             created,
             updated: ts,
-            ip: "127.0.0.1".to_string(),
+            ip: format!("127.0.0.{ts}"),
             user_agent: Some(format!("ua_{ts}")),
         }
     }
@@ -578,16 +657,9 @@ mod tests {
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
-                let params = rusqlite::params![
-                    user_id,
-                    client_id,
-                    resource,
-                    scopes,
-                    hash,
-                    ts,
-                    "127.0.0.1",
-                    ua
-                ];
+                let ip = format!("127.0.0.{ts}");
+                let params =
+                    rusqlite::params![user_id, client_id, resource, scopes, hash, ts, ip, ua];
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
         }
@@ -633,7 +705,7 @@ mod tests {
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash, and a user agent may be missing
+        // a grant without a content hash, which a login never writes, and without a user agent
         let none = None::<String>;
         let params = rusqlite::params!["u1", "c3", "", "openid", none, 5, "127.0.0.1", none];
         conn.execute(SQL_UPSERT, params).unwrap();
@@ -935,15 +1007,9 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
+                let ip = format!("127.0.0.{ts}");
                 let params: [&(dyn ToSql + Sync); 8] = [
-                    &user_id,
-                    &client_id,
-                    &resource,
-                    &scopes,
-                    &hash,
-                    &ts,
-                    &"127.0.0.1",
-                    &ua,
+                    &user_id, &client_id, &resource, &scopes, &hash, &ts, &ip, &ua,
                 ];
                 cl.execute(SQL_UPSERT, &params).await.unwrap();
             }
@@ -994,7 +1060,7 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash, and a user agent may be missing
+        // a grant without a content hash, which a login never writes, and without a user agent
         let none: Option<&str> = None;
         let params: [&(dyn ToSql + Sync); 8] = [
             &"u1",

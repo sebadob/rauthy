@@ -1,12 +1,13 @@
 use crate::common::{
     USER_PASSWORD, code_state_from_headers, cookie_csrf_headers_from_res_direct, create_client,
     create_login_user, decode_claims, delete_client, delete_user, get_auth_headers,
-    get_backend_url, get_client, get_solved_pow, put_client, session_headers_with, update_request,
+    get_backend_url, get_client, get_solved_pow, put_client, send_login, session_headers_with,
+    update_request,
 };
 use crate::{expect_status, expect_status_json};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientSecretResponse, NewClientRequest, UpdateClientRequest};
-use rauthy_api_types::oidc::{GrantType, LoginRequest, TokenRequest};
+use rauthy_api_types::oidc::{GrantType, LoginRefreshRequest, LoginRequest, TokenRequest};
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, new_store_id};
 use rauthy_service::token_set::TokenSet;
@@ -371,13 +372,9 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         resource: Some(RES_REFRESH.to_string()),
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
-    let res = http
-        .post(&url_auth)
-        .headers(session_headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(&http, &url_auth, &session_headers, req_login).await;
     let res = expect_status!(res, 202);
     let (code, _state) = code_state_from_headers(&res)?;
 
@@ -402,16 +399,19 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         "initial access token `aud` must contain the requested resource"
     );
 
-    // silent re-auth via `POST /oidc/authorize/refresh` on the SAME session, same `resource`.
-    // `LoginRefreshRequest` is deserialize-only (no `Serialize`), so build the body as raw JSON.
-    let req_refresh = serde_json::json!({
-        "client_id": id,
-        "redirect_uri": redirect_uri,
-        "nonce": "MySuperNonce",
-        "code_challenge": challenge_s256,
-        "code_challenge_method": "S256",
-        "resource": RES_REFRESH,
-    });
+    // silent re-auth via `POST /oidc/authorize/refresh` on the SAME session, same `resource`
+    let req_refresh = LoginRefreshRequest {
+        client_id: id.clone(),
+        redirect_uri: redirect_uri.clone(),
+        scopes: None,
+        state: None,
+        nonce: Some("MySuperNonce".to_string()),
+        code_challenge: Some(challenge_s256),
+        code_challenge_method: Some("S256".to_string()),
+        resource: Some(RES_REFRESH.to_string()),
+        fwda: None,
+        consent: None,
+    };
     let res = http
         .post(format!("{backend_url}/oidc/authorize/refresh"))
         .headers(session_headers.clone())

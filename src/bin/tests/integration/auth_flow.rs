@@ -2,7 +2,7 @@ use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, code_state_from_headers, cookie_csrf_headers_from_res,
     decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri, refresh, session_headers,
+    init_client_bcl_uri, refresh, send_login, session_headers,
 };
 use crate::{expect_status, expect_status_json};
 use actix_web::{App, HttpResponse, HttpServer, http, web};
@@ -13,7 +13,7 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::generic::KeepAliveResponse;
 use rauthy_api_types::oidc::{
-    GrantType, JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest,
+    GrantType, JktClaim, JwkKeyPairAlg, LoginRefreshRequest, LoginRequest, TokenInfo, TokenRequest,
     TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_common::constants::{
@@ -245,6 +245,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     let bad_redirect_uri = format!("{good_redirect_uri}&iss=x");
@@ -270,12 +271,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
     // the same login without the reserved key succeeds
     let mut req_login = login(PASSWORD, &good_redirect_uri);
     req_login.pow = get_solved_pow().await;
-    let res = client
-        .post(&url_auth)
-        .headers(headers)
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(&client, &url_auth, &headers, req_login).await;
     let res = expect_status!(res, 202);
     let location = res
         .headers()
@@ -326,6 +322,7 @@ async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     // With a live `Init` session a rejected password is an interactive form error.
@@ -519,6 +516,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
     // An email-only submission must not expose whether the account exists.
     for email in [USERNAME, "nonexistent@example.test"] {
@@ -560,13 +558,14 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     req_login.password = Some(PASSWORD.to_string());
     req_login.pow = get_solved_pow().await;
-    let mut res = reqwest::Client::new()
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
-    res = expect_status!(res, 202);
+    let res = send_login(
+        &reqwest::Client::new(),
+        &url_auth,
+        &headers,
+        req_login.clone(),
+    )
+    .await;
+    let res = expect_status!(res, 202);
 
     // Step 3: extract values from callback location header
     let decoded = authorization_response_params_decoded(&res)?;
@@ -604,12 +603,13 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
-    let res = reqwest::Client::new()
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(
+        &reqwest::Client::new(),
+        &url_auth,
+        &headers,
+        req_login.clone(),
+    )
+    .await;
     let res = expect_status!(res, 202);
     let (code, _) = code_state_from_headers(&res)?;
     req_token.code = Some(code);
@@ -625,12 +625,13 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
-    let res = reqwest::Client::new()
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(
+        &reqwest::Client::new(),
+        &url_auth,
+        &headers,
+        req_login.clone(),
+    )
+    .await;
     let res = expect_status!(res, 202);
     let (code, _) = code_state_from_headers(&res)?;
     req_token.code = Some(code);
@@ -951,6 +952,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     // One future per login: on a multi-thread runtime all of them are in flight at the same time,
@@ -1268,6 +1270,21 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     );
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
 
+    // with `[[consent.sources]]`, an ephemeral client must request a `resource`
+    let no_redirect = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let res = no_redirect.get(&url_auth).send().await?;
+    let params = authorization_response_params(&expect_status!(res, 302))?;
+    assert!(
+        params
+            .iter()
+            .any(|(k, v)| k == "error" && v == "consent_required"),
+        "{params:?}"
+    );
+    let resource = "https://consent-test.example.com";
+    let url_auth = format!("{url_auth}&resource={resource}");
+
     // make s simple GET to extract the CSRF token
     let res = reqwest::get(&url_auth).await?;
     assert!(res.status().is_success());
@@ -1275,9 +1292,9 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
 
     // login and get an authorization code
     let nonce = get_rand(32);
-    let req_login = LoginRequest {
+    let mut req_login = LoginRequest {
         email: Some(USERNAME.to_string()),
-        password: Some(PASSWORD.to_string()),
+        password: Some("wrong password".to_string()),
         pow: get_solved_pow().await,
         client_id: client_id.clone(),
         redirect_uri: redirect_uri.to_owned(),
@@ -1289,13 +1306,25 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
+    // checked before the credentials, so the answer is the same for a wrong password
     let res = client
         .post(&url_auth)
         .headers(headers.clone())
         .json(&req_login)
         .send()
         .await?;
+    let err = expect_status!(res, 400).json::<ErrorResponse>().await?;
+    assert_eq!(
+        (err.error, err.message.as_ref()),
+        (ErrorResponseType::BadRequest, "a `resource` is required")
+    );
+
+    req_login.password = Some(PASSWORD.to_string());
+    req_login.resource = Some(resource.to_string());
+    req_login.pow = get_solved_pow().await;
+    let res = send_login(&client, &url_auth, &headers, req_login).await;
     assert!(res.status().is_success());
     let (code, state) = code_state_from_headers(&res)?;
     assert!(state.is_none());
@@ -1336,6 +1365,39 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     assert!(!ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
     assert!(new_ts.refresh_token.is_some());
+
+    // the silent re-auth with the now valid session must request a `resource` as well
+    let refresh_login = |resource: Option<&str>| LoginRefreshRequest {
+        client_id: client_id.clone(),
+        redirect_uri: redirect_uri.to_string(),
+        scopes: None,
+        state: None,
+        nonce: Some(nonce.clone()),
+        code_challenge: Some(base64_url_encode(hash.as_ref())),
+        code_challenge_method: Some("S256".to_string()),
+        resource: resource.map(String::from),
+        fwda: None,
+        consent: None,
+    };
+    let url_refresh = format!("{backend_url}/oidc/authorize/refresh");
+    let res = client
+        .post(&url_refresh)
+        .headers(headers.clone())
+        .json(&refresh_login(None))
+        .send()
+        .await?;
+    let err = expect_status!(res, 400).json::<ErrorResponse>().await?;
+    assert_eq!(
+        (err.error, err.message.as_ref()),
+        (ErrorResponseType::BadRequest, "a `resource` is required")
+    );
+    let res = client
+        .post(&url_refresh)
+        .headers(headers)
+        .json(&refresh_login(Some(resource)))
+        .send()
+        .await?;
+    expect_status!(res, 202);
 
     Ok(())
 }

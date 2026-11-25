@@ -91,6 +91,9 @@ impl ResponseError for ErrorResponse {
             ErrorResponseType::TooManyRequests(_not_before_timestamp) => {
                 StatusCode::TOO_MANY_REQUESTS
             }
+            ErrorResponseType::ServiceUnavailable(_not_before_timestamp) => {
+                StatusCode::SERVICE_UNAVAILABLE
+            }
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -107,6 +110,17 @@ impl ResponseError for ErrorResponse {
                     .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
                     .insert_header(HEADER_HTML)
                     .body(self.message.clone())
+            }
+
+            ErrorResponseType::ServiceUnavailable(not_before_timestamp) => {
+                // RFC 9110 delta-seconds, at least 1 so a past timestamp still asks for a pause
+                let retry_after =
+                    (*not_before_timestamp - OffsetDateTime::now_utc().unix_timestamp()).max(1);
+                HttpResponseBuilder::new(status)
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
+                    .insert_header((header::RETRY_AFTER, retry_after))
+                    .content_type(APPLICATION_JSON)
+                    .body(serde_json::to_string(self).unwrap())
             }
 
             ErrorResponseType::DPoP(header_origin) => {
@@ -622,6 +636,32 @@ mod tests {
             serde_json::to_value(&err.error).unwrap(),
             serde_json::json!("consent_required")
         );
+    }
+
+    /// Consent fetcher back pressure: a 503 that tells the client when to retry.
+    #[test]
+    fn test_service_unavailable_retry_header() {
+        let err = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(1_700_000_000), "busy");
+        let resp = err.error_response();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let retry = resp
+            .headers()
+            .get(HEADER_RETRY_NOT_BEFORE)
+            .map(|v| v.to_str().unwrap());
+        assert_eq!(retry, Some("1700000000"), "headers {:?}", resp.headers());
+        let retry_after = |resp: &HttpResponse| {
+            resp.headers()
+                .get(header::RETRY_AFTER)
+                .map(|v| v.to_str().unwrap().parse::<i64>().unwrap())
+        };
+        // a timestamp in the past still asks to wait at least a second
+        assert_eq!(retry_after(&resp), Some(1), "headers {:?}", resp.headers());
+
+        let not_before = OffsetDateTime::now_utc().unix_timestamp() + 30;
+        let err = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(not_before), "busy");
+        let resp = err.error_response();
+        let secs = retry_after(&resp).expect("Retry-After header");
+        assert!((29..=30).contains(&secs), "Retry-After {secs}");
     }
 
     /// bincode encodes the variant index. A new variant goes at the end to keep the indices

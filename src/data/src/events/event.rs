@@ -2,6 +2,7 @@ use crate::database::DB;
 use crate::email::mailer;
 use crate::entity::failed_scim_tasks::ScimAction;
 use crate::entity::login_locations::LoginLocation;
+use crate::entity::user_consents::PendingConsent;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
@@ -167,6 +168,7 @@ pub enum EventType {
     EmailSendError,
     ConsentRevoked,
     LdapLogin,
+    ConsentGranted,
 }
 
 impl Display for EventType {
@@ -198,6 +200,7 @@ impl Display for EventType {
             Self::EmailSendError => write!(f, "E-Mail send error"),
             Self::ConsentRevoked => write!(f, "User consent revoked"),
             Self::LdapLogin => write!(f, "LDAP login"),
+            Self::ConsentGranted => write!(f, "User consent granted"),
         }
     }
 }
@@ -233,6 +236,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::EmailSendError => Self::EmailSendError,
             rauthy_api_types::events::EventType::ConsentRevoked => Self::ConsentRevoked,
             rauthy_api_types::events::EventType::LdapLogin => Self::LdapLogin,
+            rauthy_api_types::events::EventType::ConsentGranted => Self::ConsentGranted,
         }
     }
 }
@@ -266,6 +270,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::EmailSendError => Self::EmailSendError,
             EventType::ConsentRevoked => Self::ConsentRevoked,
             EventType::LdapLogin => Self::LdapLogin,
+            EventType::ConsentGranted => Self::ConsentGranted,
         }
     }
 }
@@ -299,6 +304,7 @@ impl EventType {
             Self::EmailSendError => "EmailSendError",
             Self::ConsentRevoked => "ConsentRevoked",
             Self::LdapLogin => "LdapLogin",
+            Self::ConsentGranted => "ConsentGranted",
         }
     }
 
@@ -333,6 +339,7 @@ impl EventType {
             EventType::EmailSendError => 23,
             EventType::ConsentRevoked => 24,
             EventType::LdapLogin => 25,
+            EventType::ConsentGranted => 26,
         }
     }
 }
@@ -366,6 +373,7 @@ impl From<String> for EventType {
             "EmailSendError" => Self::EmailSendError,
             "ConsentRevoked" => Self::ConsentRevoked,
             "LdapLogin" => Self::LdapLogin,
+            "ConsentGranted" => Self::ConsentGranted,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -410,6 +418,7 @@ impl From<i64> for EventType {
             23 => EventType::EmailSendError,
             24 => EventType::ConsentRevoked,
             25 => EventType::LdapLogin,
+            26 => EventType::ConsentGranted,
             _ => EventType::Test,
         }
     }
@@ -523,6 +532,7 @@ impl From<&Event> for Notification {
             EventType::EmailSendError => value.text.clone(),
             EventType::ConsentRevoked => value.text.clone(),
             EventType::LdapLogin => value.text.clone(),
+            EventType::ConsentGranted => value.text.clone(),
         };
 
         Self {
@@ -727,12 +737,11 @@ impl Event {
     /// an API key by name (see [`ConsentRevokedBy`]).
     pub fn consent_revoked(
         user_email: &str,
-        client_id: &str,
-        resource: &str,
+        target: ConsentTarget<'_>,
         revoked_by: ConsentRevokedBy<'_>,
         ip: IpAddr,
     ) -> Self {
-        let text = consent_revoked_text(user_email, client_id, resource, revoked_by);
+        let text = consent_revoked_text(user_email, target, revoked_by);
         Self::new(
             RauthyConfig::get()
                 .vars
@@ -740,6 +749,22 @@ impl Event {
                 .level_consent_revoked
                 .clone(),
             EventType::ConsentRevoked,
+            Some(ip.to_string()),
+            None,
+            Some(text),
+        )
+    }
+
+    /// A consent given on the login page, with its granted scopes.
+    pub fn consent_granted(user_email: &str, grant: &PendingConsent, ip: IpAddr) -> Self {
+        let text = consent_granted_text(user_email, grant);
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_consent_granted
+                .clone(),
+            EventType::ConsentGranted,
             Some(ip.to_string()),
             None,
             Some(text),
@@ -1110,6 +1135,7 @@ impl Event {
             EventType::EmailSendError => self.text.clone().unwrap_or_default(),
             EventType::ConsentRevoked => self.text.clone().unwrap_or_default(),
             EventType::LdapLogin => self.text.clone().unwrap_or_default(),
+            EventType::ConsentGranted => self.text.clone().unwrap_or_default(),
         }
     }
 
@@ -1152,24 +1178,43 @@ pub enum ConsentRevokedBy<'a> {
     ApiKey(&'a str),
 }
 
+/// The client, and the RFC 8707 `resource` if any, of a consent, as event texts name it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConsentTarget<'a> {
+    pub client_id: &'a str,
+    pub resource: Option<&'a str>,
+}
+
+impl Display for ConsentTarget<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.resource {
+            None => write!(f, "client `{}`", self.client_id),
+            Some(resource) => write!(f, "client `{}` / `{resource}`", self.client_id),
+        }
+    }
+}
+
 /// The text of [`Event::consent_revoked`].
 fn consent_revoked_text(
     user_email: &str,
-    client_id: &str,
-    resource: &str,
+    target: ConsentTarget<'_>,
     revoked_by: ConsentRevokedBy<'_>,
 ) -> String {
-    let target = if resource.is_empty() {
-        format!("`{client_id}`")
-    } else {
-        format!("`{client_id}` / `{resource}`")
-    };
     let by = match revoked_by {
         ConsentRevokedBy::User => "the user".to_string(),
         ConsentRevokedBy::Admin(admin) => format!("admin `{admin}`"),
         ConsentRevokedBy::ApiKey(name) => format!("API key `{name}`"),
     };
-    format!("Consent of `{user_email}` for client {target} revoked by {by}")
+    format!("Consent of `{user_email}` for {target} revoked by {by}")
+}
+
+fn consent_granted_text(user_email: &str, grant: &PendingConsent) -> String {
+    let target = ConsentTarget {
+        client_id: &grant.client_id,
+        resource: grant.resource.as_deref(),
+    };
+    let scopes = grant.scopes.join(" ");
+    format!("Consent of `{user_email}` for {target} granted: {scopes}")
 }
 
 #[cfg(test)]
@@ -1178,34 +1223,76 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn consent_revoked_round_trip() {
-        let typ = EventType::ConsentRevoked;
-        assert_eq!(typ.value(), 24);
-        assert_eq!(EventType::from(typ.value()), typ);
-        assert_eq!(EventType::from(i64::from(typ.value())), typ);
-        assert_eq!(typ.as_str(), "ConsentRevoked");
-        assert_eq!(EventType::from(typ.as_str().to_string()), typ);
-        assert_eq!(typ.to_string(), "User consent revoked");
+    fn consent_event_types_round_trip() {
+        for (typ, value, name, text) in [
+            (
+                EventType::ConsentRevoked,
+                24,
+                "ConsentRevoked",
+                "User consent revoked",
+            ),
+            (
+                EventType::ConsentGranted,
+                26,
+                "ConsentGranted",
+                "User consent granted",
+            ),
+        ] {
+            assert_eq!(typ.value(), value);
+            assert_eq!(EventType::from(typ.value()), typ);
+            assert_eq!(EventType::from(i64::from(typ.value())), typ);
+            assert_eq!(typ.as_str(), name);
+            assert_eq!(EventType::from(typ.as_str().to_string()), typ);
+            assert_eq!(typ.to_string(), text);
+            assert_eq!(
+                EventType::from(rauthy_api_types::events::EventType::from(typ.clone())),
+                typ
+            );
+        }
+    }
+
+    #[test]
+    fn consent_granted_text_by_target() {
+        let mut grant = PendingConsent {
+            client_id: "c1".to_string(),
+            client_created_micros: None,
+            resource: None,
+            scopes: vec!["email".to_string(), "openid".to_string()],
+            content_hash: String::default(),
+        };
         assert_eq!(
-            EventType::from(rauthy_api_types::events::EventType::from(typ.clone())),
-            typ
+            consent_granted_text("u@example.com", &grant),
+            "Consent of `u@example.com` for client `c1` granted: email openid"
+        );
+        grant.resource = Some("https://api.example.com".to_string());
+        assert_eq!(
+            consent_granted_text("u@example.com", &grant),
+            "Consent of `u@example.com` for client `c1` / `https://api.example.com` granted: \
+            email openid"
         );
     }
+
+    const C1: ConsentTarget = ConsentTarget {
+        client_id: "c1",
+        resource: None,
+    };
 
     #[test]
     fn consent_revoked_text_by_target() {
         assert_eq!(
-            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::User),
+            consent_revoked_text("u@example.com", C1, ConsentRevokedBy::User),
             "Consent of `u@example.com` for client `c1` revoked by the user"
         );
         assert_eq!(
-            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::ApiKey("k1")),
+            consent_revoked_text("u@example.com", C1, ConsentRevokedBy::ApiKey("k1")),
             "Consent of `u@example.com` for client `c1` revoked by API key `k1`"
         );
         let text = consent_revoked_text(
             "u@example.com",
-            "c1",
-            "https://api.example.com",
+            ConsentTarget {
+                client_id: "c1",
+                resource: Some("https://api.example.com"),
+            },
             ConsentRevokedBy::Admin("admin@example.com"),
         );
         assert_eq!(

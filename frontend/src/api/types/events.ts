@@ -24,7 +24,8 @@ export type EventType =
     | 'SuspiciousApiScan'
     | 'TokenIssued'
     | 'ConsentRevoked'
-    | 'LdapLogin';
+    | 'LdapLogin'
+    | 'ConsentGranted';
 
 export interface EventsRequest {
     /// Unix timestamp in seconds

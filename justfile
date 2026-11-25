@@ -19,6 +19,9 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
+# The API key itself lives in `config-test.toml`. The test process needs the secret to use it, and
+# its presence is what makes the suites that need it run instead of skipping themselves.
+test_api_key_secret := "BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec"
 test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081"
 jemalloc_conf := "MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
@@ -252,7 +255,10 @@ test-backend-heaptrack: test-backend-stop delete-hiqlite
     #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     # samply currently needs: echo '-1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
-    {{ test_env_vars }} heaptrack ./target/profiling/rauthy serve -c config-test.toml --test
+    # the dev consent source at the end of the test config is `http://localhost`, which only debug
+    # builds accept
+    sed '/^# debug builds only/,$d' config-test.toml > target/config-test-profiling.toml
+    {{ test_env_vars }} heaptrack ./target/profiling/rauthy serve -c target/config-test-profiling.toml --test
     #{{ test_env_vars }} samply record ./target/profiling/dorn -w 4
 
 
@@ -272,7 +278,7 @@ test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo test {{ test }}
+    {{ test_api_key_secret }} cargo test {{ test }}
 
 # runs the full set of tests with sqlite
 test-hiqlite *test: test-backend-stop delete-hiqlite
@@ -288,7 +294,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if cargo test {{ test }}; then
+    if {{ test_api_key_secret }} cargo test {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
     else
@@ -312,7 +318,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if {{ postgres }} cargo test {{ test }}; then
+    if {{ test_api_key_secret }} {{ postgres }} cargo test {{ test }}; then
       echo "All Postgres tests successful"
       just test-backend-stop
     else

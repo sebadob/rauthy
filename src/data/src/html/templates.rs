@@ -1,3 +1,4 @@
+use crate::entity::consent_sources::LoginConsentContent;
 use crate::entity::password::PasswordPolicy;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
@@ -14,6 +15,8 @@ use std::fmt::{Debug, Display, Formatter};
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
     Refresh,
+    /// The session is still valid, but the user has to give consent before the refresh.
+    RefreshConsent,
     MfaLogin(String),
     None,
 }
@@ -22,6 +25,7 @@ impl Display for FrontendAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             FrontendAction::Refresh => write!(f, "Refresh"),
+            FrontendAction::RefreshConsent => write!(f, "RefreshConsent"),
             FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {s}"),
             FrontendAction::None => write!(f, "None"),
         }
@@ -67,6 +71,7 @@ pub enum HtmlTemplate {
     ClientUrl(String),
     ClientFaviconUpdated(Option<i64>),
     ClientLogoUpdated(Option<i64>),
+    ConsentContent(LoginConsentContent),
     CsrfToken(String),
     EmailOld(String),
     EmailNew(String),
@@ -97,6 +102,7 @@ impl HtmlTemplate {
             Self::ClientUrl(_) => "tpl_client_url",
             Self::ClientFaviconUpdated(_) => "tpl_client_favicon_updated",
             Self::ClientLogoUpdated(_) => "tpl_client_logo_updated",
+            Self::ConsentContent(_) => "tpl_consent_content",
             Self::CsrfToken(_) => "tpl_csrf_token",
             Self::EmailOld(_) => "tpl_email_old",
             Self::EmailNew(_) => "tpl_email_new",
@@ -128,6 +134,7 @@ impl HtmlTemplate {
             Self::ClientUrl(i) => i.clone(),
             Self::ClientFaviconUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
             Self::ClientLogoUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
+            Self::ConsentContent(i) => i.to_json_escaped(),
             Self::CsrfToken(i) => i.clone(),
             Self::EmailOld(i) => i.clone(),
             Self::EmailNew(i) => i.clone(),
@@ -1051,6 +1058,7 @@ impl UserRegisterHtml<'_> {
         theme_ts: i64,
         acc_init: HtmlTemplate,
         auth_providers: HtmlTemplate,
+        client_name: String,
     ) -> String {
         UserRegisterHtml {
             lang: lang.html_lang(),
@@ -1058,6 +1066,7 @@ impl UserRegisterHtml<'_> {
             theme_ts,
             templates: &[
                 acc_init,
+                HtmlTemplate::ClientName(client_name),
                 HtmlTemplate::RestrictedEmailDomain(
                     RauthyConfig::get()
                         .vars
@@ -1122,6 +1131,19 @@ impl UserPasswordResetHtml<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The consent template is the escaped JSON of the content, see
+    /// [`LoginConsentContent::to_json_escaped`].
+    #[test]
+    fn consent_content_template_is_escaped() {
+        let json = r#"{"source":"remote","content_hash":"h","name":null,"scopes":[],
+            "intro":"</template>","terms_url":null,"default_scopes":[],"granted_scopes":[]}"#;
+        let content = serde_json::from_str::<LoginConsentContent>(json).unwrap();
+        let escaped = content.to_json_escaped();
+        let tpl = HtmlTemplate::ConsentContent(content);
+        assert_eq!(tpl.id(), "tpl_consent_content");
+        assert_eq!(tpl.inner(), escaped);
+    }
 
     #[test]
     fn admin_kv_does_not_render_the_groups_page() {

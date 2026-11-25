@@ -27,6 +27,13 @@ export interface LoginRequest {
     /// Validation: max 64
     resident_key_token?: string;
     fwda?: boolean;
+    consent?: LoginConsent;
+}
+
+/// The consent given on the login page for the content that was shown.
+export interface LoginConsent {
+    content_hash: string;
+    accepted_scopes: string[];
 }
 
 export interface LoginRefreshRequest {
@@ -47,6 +54,7 @@ export interface LoginRefreshRequest {
     /// Validation: PATTERN_RESOURCE
     resource?: string;
     fwda?: boolean;
+    consent?: LoginConsent;
 }
 
 export interface RequestResetRequest {

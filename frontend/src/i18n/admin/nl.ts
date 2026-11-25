@@ -83,7 +83,7 @@ export let I18nAdminNl: I18nAdmin = {
         config: 'Clientconfiguratie',
         consent: {
             builtIn: 'Ingebouwd',
-            desc: `Waar de inhoud van het toestemmingsscherm vandaan komt, wanneer 'consent.enable' is ingesteld. Ingebouwd toont de gevraagde scopes. Een URL moet de toestemmingsinhoud als JSON leveren. Een '[[consent.sources]]'-vermelding voor de gevraagde resource heeft voorrang. Nog niet actief: de waarde wordt alleen opgeslagen tot het toestemmingsscherm er is.`,
+            desc: `Waar de inhoud van het toestemmingsscherm vandaan komt, wanneer 'consent.enable' is ingesteld. Ingebouwd toont de gevraagde scopes. Een URL moet de toestemmingsinhoud als JSON leveren. Een '[[consent.sources]]'-vermelding voor de gevraagde resource heeft voorrang.`,
             source: 'Toestemmingsbron',
         },
         delete1: 'Weet u zeker dat u deze client wilt verwijderen?',
@@ -593,6 +593,17 @@ export let I18nAdminNl: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin-rol kan niet worden verwijderd',
         },
         attributes: 'Attributen',
+        consents: {
+            title: 'Toestemmingen',
+            desc: 'Toestemmingen die deze gebruiker aan applicaties heeft gegeven. Tijden worden in uw lokale tijdzone getoond; beweeg over een tijd om deze in UTC te zien.',
+            none: 'Deze gebruiker heeft nog aan geen enkele applicatie toestemming gegeven.',
+            revokeDesc:
+                'Intrekken verwijdert de toestemming en de applicatie kan haar toegang voor deze gebruiker niet meer vernieuwen. De applicatie moet de gebruiker opnieuw om toestemming vragen.',
+            revokeAllDesc:
+                'Trekt alle toestemmingen van deze gebruiker in. Elke applicatie moet de gebruiker opnieuw om toestemming vragen.',
+            sessionsWarning:
+                'Alle sessies van de gebruiker worden ook verwijderd, de gebruiker wordt overal afgemeld.',
+        },
         deleteUser: 'Weet u zeker dat u deze gebruiker wilt verwijderen?',
         descAttr: `Stel aangepaste gebruikersattributen in. Alle sleutel/waarde-paren worden verwerkt als tekenreeks/JSON-waarde.`,
         forceLogout: `Weet u zeker dat u alle bestaande sessies wilt ongeldig maken en alle vernieuwingstokens

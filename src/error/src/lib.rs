@@ -71,6 +71,9 @@ pub enum ErrorResponseType {
     PasswordRequired,
     /// The credentials submitted through the interactive sign-in form were rejected.
     InvalidCredentials,
+    /// A bounded outbound fetcher has no free slot, to be retried after the contained unix
+    /// timestamp. Unlike `TooManyRequests`, it says nothing about the caller's own requests.
+    ServiceUnavailable(i64),
 }
 
 impl Display for ErrorResponseType {

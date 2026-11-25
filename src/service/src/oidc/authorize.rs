@@ -1,8 +1,9 @@
+use crate::oidc::consent_grant::{ConsentAsk, ConsentRequest, consent_to_ask, consented_docs};
 use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::oidc::{GrantType, LoginRefreshRequest, LoginRequest};
+use rauthy_api_types::oidc::{GrantType, LoginConsent, LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::sha256;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
@@ -11,15 +12,18 @@ use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::consent_sources::ConsentContent;
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::{MfaAssurance, Session};
+use rauthy_data::entity::user_consents::{PendingConsent, UserConsent};
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
+use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{
     AuthStep, AuthStepAwaitMfa, AuthStepLoggedIn, AwaitToSAccept, MfaMethod, MfaMethods,
@@ -46,6 +50,7 @@ static TIME_TAKEN_FAST_PATH_MICROS: AtomicU64 = AtomicU64::new(100);
 pub async fn post_authorize(
     req: &HttpRequest,
     req_data: LoginRequest,
+    client: Client,
     mut session: Session,
     has_password_been_hashed: &mut bool,
     add_login_delay: &mut bool,
@@ -57,6 +62,26 @@ pub async fn post_authorize(
     debug_assert!(!*has_password_been_hashed);
     debug_assert!(!*user_needs_mfa);
     debug_assert!(user_failed_logins.is_none());
+
+    // These depend on the client only and leak nothing about an account, so they run before a
+    // password may be hashed: a request no client of ours would ever accept must not buy the work
+    // of an Argon2id hash. Their failure is a request error and not a login attempt, so it gets
+    // no login delay either.
+    let client_checks = client
+        .validate_enabled()
+        .and_then(|()| client.validate_redirect_uri(&req_data.redirect_uri))
+        .and_then(|()| client.validate_flow(GrantType::AuthorizationCode))
+        .and_then(|()| client.get_validated_origin_header(req));
+    let header_origin = match client_checks {
+        Ok(origin) => origin,
+        Err(err) => {
+            *add_login_delay = false;
+            if let Some(mut pwd) = req_data.password {
+                pwd.zeroize();
+            }
+            return Err(err);
+        }
+    };
 
     let (user_res, is_rk_authenticated) = if let Some(code) = req_data.resident_key_token {
         let user_id = ResidentKeyToken::get_validated_user_id(&code, &session, &browser_id).await?;
@@ -115,6 +140,11 @@ pub async fn post_authorize(
     };
 
     let account_type = user.account_type();
+    let first_factor = if is_rk_authenticated || req_data.password.is_some() {
+        FirstFactor::Proven
+    } else {
+        FirstFactor::Pending
+    };
 
     // Only allow an empty password, if the user has a passkey only account or a valid MFA cookie.
     let user_must_provide_password = !is_rk_authenticated
@@ -180,13 +210,6 @@ pub async fn post_authorize(
     user.check_enabled()?;
     user.check_expired()?;
 
-    // client validations
-    let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
-    client.validate_enabled()?;
-    client.validate_redirect_uri(&req_data.redirect_uri)?;
-    client.validate_flow(GrantType::AuthorizationCode)?;
-    let header_origin = client.get_validated_origin_header(req)?;
-
     // If we had a Resident Key authentication already, there is no need for another MFA request.
     let mfa_methods = if is_rk_authenticated {
         MfaMethods::empty()
@@ -199,6 +222,7 @@ pub async fn post_authorize(
     }
 
     finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -210,6 +234,8 @@ pub async fn post_authorize(
             code_challenge: req_data.code_challenge,
             code_challenge_method: req_data.code_challenge_method,
             resource: req_data.resource,
+            consent: req_data.consent,
+            first_factor,
             header_origin,
             mfa_methods,
             is_forward_auth: req_data.fwda,
@@ -237,6 +263,7 @@ fn update_time_taken_fp(start: Instant) {
 }
 
 pub async fn post_authorize_refresh(
+    req: &HttpRequest,
     mut session: Session,
     client: Client,
     header_origin: Option<(HeaderName, HeaderValue)>,
@@ -259,6 +286,7 @@ pub async fn post_authorize_refresh(
     };
 
     finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -272,6 +300,8 @@ pub async fn post_authorize_refresh(
             // the silent re-auth authorize request still carries the RFC 8707 `resource`,
             // thread it through so audience-bound tokens survive subsequent logins
             resource: req_data.resource,
+            consent: req_data.consent,
+            first_factor: FirstFactor::Proven,
             header_origin,
             mfa_methods,
             is_forward_auth: req_data.fwda,
@@ -290,15 +320,36 @@ pub(crate) struct AuthorizeData {
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
     pub resource: Option<String>,
+    pub consent: Option<LoginConsent>,
+    pub first_factor: FirstFactor,
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub mfa_methods: MfaMethods,
     pub is_forward_auth: Option<bool>,
 }
 
+/// Whether a factor has proven the user before [`finish_authorize`]. Until one has, the user's
+/// consent grant is neither shown nor used.
+pub(crate) enum FirstFactor {
+    /// The password, a resident key, an upstream provider or a valid session of the user.
+    Proven,
+    /// Only the WebAuthn or OTP ceremony proves the user: a passkey-only account, or a valid MFA
+    /// cookie without the password.
+    Pending,
+}
+
 /// Expects the user checks already been done, but does all the necessary client validations.
 /// `user_needs_mfa` is used to add a login delay during `POST /authorize` and not necessary
 /// otherwise.
+///
+/// With `consent.enable`, fails with `ConsentRequired` carrying the `LoginConsentContent` JSON
+/// as message when `data.consent` is missing and the user's grant does not cover the request
+/// (always for [`FirstFactor::Pending`], whose grant is not used), or when `data.consent` is for
+/// other content or not valid for the client, and with `ServiceUnavailable` for the back pressure
+/// of the consent fetcher. A valid consent is written as the user's grant after the last required
+/// factor: right away, or after the WebAuthn or OTP ceremony. The auth code gets only its
+/// accepted scopes.
 pub(crate) async fn finish_authorize(
+    req: &HttpRequest,
     user: User,
     client: Client,
     session: &mut Session,
@@ -335,7 +386,85 @@ pub(crate) async fn finish_authorize(
         client.validate_resource_request(resource)?;
     }
 
-    let scopes = client.sanitize_login_scopes(&data.scopes)?;
+    let mut scopes = client.sanitize_login_scopes(data.scopes.as_deref());
+
+    let resource = data.resource.as_deref();
+    if RauthyConfig::get()
+        .vars
+        .consent
+        .missing_required_resource(&client, resource)
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "a `resource` is required",
+        ));
+    }
+    let user_id = match data.first_factor {
+        FirstFactor::Proven => Some(user.id.as_str()),
+        FirstFactor::Pending => None,
+    };
+    let consent_req = ConsentRequest {
+        client: &client,
+        resource,
+        scopes: &scopes,
+        lang: Language::try_from(req).unwrap_or_default(),
+    };
+    let pending_consent = match data.consent {
+        None => {
+            if let Some(content) =
+                consent_to_ask(&consent_req, user_id, ConsentAsk::IfNotCovered).await?
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::ConsentRequired,
+                    content.to_json_escaped(),
+                ));
+            }
+            None
+        }
+        Some(_) if !RauthyConfig::get().vars.consent.enable => None,
+        Some(consent) => {
+            // Read before a factor may have proven the user to keep its scopes, but only shown
+            // once one has.
+            let grant = UserConsent::find(&user.id, &client.id, resource).await?;
+            let shown = user_id.and(grant.as_ref());
+            match consented_docs(&consent_req, Some(&consent), shown).await? {
+                None => None,
+                Some(docs) => {
+                    let accepted = &consent.accepted_scopes;
+
+                    // The scopes of the grant this login did not request stay granted only while
+                    // the content of the whole grant is unchanged: the same language, intro,
+                    // terms and every scope. Of the requested ones, only the accepted stay.
+                    let kept = grant
+                        .as_ref()
+                        .filter(|grant| grant.is_content_current(&docs))
+                        .map(|grant| {
+                            grant
+                                .scopes()
+                                .filter(|g| !scopes.iter().any(|s| s == g))
+                                .map(String::from)
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
+                    scopes.retain(|s| accepted.contains(s));
+                    let mut grant_scopes = Vec::with_capacity(scopes.len() + kept.len());
+                    // the auth code owns the requested scopes
+                    grant_scopes.extend(scopes.iter().cloned());
+                    grant_scopes.extend(kept);
+                    grant_scopes.sort_unstable();
+                    // the content of the granted scopes, from the documents the user confirmed
+                    let content_hash = ConsentContent::build(&docs, &grant_scopes).content_hash;
+                    Some(PendingConsent {
+                        client_id: client.id.clone(),
+                        client_created_micros: client.created_micros,
+                        resource: data.resource.clone(),
+                        scopes: grant_scopes,
+                        content_hash,
+                    })
+                }
+            }
+        }
+    };
 
     let config = RauthyConfig::get();
     let mut code_lifetime = Duration::from_secs(client.auth_code_lifetime as u64);
@@ -398,6 +527,15 @@ pub(crate) async fn finish_authorize(
     // safe downcase - originated from u32 and then only added tiny amounts
     code.save(code_lifetime.as_secs() as i64).await?;
 
+    // a ceremony may be the only factor, the grant waits for the last one
+    let pending_consent = match pending_consent {
+        Some(pending) if data.mfa_methods.is_empty() => {
+            pending.upsert(&user, req).await?;
+            None
+        }
+        pending => pending,
+    };
+
     // We don't need another location check - we can only get here with an already authenticated
     // session and no auth-check is being performed.
 
@@ -440,6 +578,7 @@ pub(crate) async fn finish_authorize(
                         }),
                         needs_user_update,
                         session_id: session.id.clone(),
+                        pending_consent: pending_consent.clone(),
                     }
                     .save()
                     .await?;
@@ -456,6 +595,7 @@ pub(crate) async fn finish_authorize(
                         }),
                         needs_user_update,
                         session_id: session.id.clone(),
+                        pending_consent: pending_consent.clone(),
                     }
                     .save()
                     .await?;

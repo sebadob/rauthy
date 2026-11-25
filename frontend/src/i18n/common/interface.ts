@@ -128,10 +128,13 @@ export interface I18n {
             connectedApps: string;
             connectedAppsDesc: string;
             granted: string;
+            logoutWarning: string;
             noConnectedApps: string;
             privacy: string;
             resource: string;
             revoke: string;
+            revokeAll: string;
+            revokeAllDesc: string;
             revokeDesc: string;
             scopes: string;
             updated: string;
@@ -158,8 +161,31 @@ export interface I18n {
         zip: string;
     };
     authorize: {
+        busy: string;
         clientForceMfa: string;
         clientGroupPrefixForbidden: string;
+        consent: {
+            // the part in [brackets] opens the full consent content
+            agree: string;
+            changed: string;
+            continue: string;
+            details: string;
+            intro: string;
+            introResource: string;
+            required: string;
+            scopes: {
+                address: string;
+                email: string;
+                groups: string;
+                openid: string;
+                phone: string;
+                profile: string;
+                webid: string;
+            };
+            terms: string;
+            title: string;
+            warning: string;
+        };
         email: string;
         emailBadFormat: string;
         emailRequired: string;

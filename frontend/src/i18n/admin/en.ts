@@ -84,7 +84,7 @@ export let I18nAdminEn: I18nAdmin = {
         config: 'Client Configuration',
         consent: {
             builtIn: 'Built-in',
-            desc: `Where the content of the consent screen comes from, when 'consent.enable' is set. Built-in shows the requested scopes. A URL must serve the consent content as JSON. A '[[consent.sources]]' entry for the requested resource takes precedence. Not active yet: it is only stored until the consent screen lands.`,
+            desc: `Where the content of the consent screen comes from, when 'consent.enable' is set. Built-in shows the requested scopes. A URL must serve the consent content as JSON. A '[[consent.sources]]' entry for the requested resource takes precedence.`,
             source: 'Consent Source',
         },
         delete1: 'Are you sure you want to delete this client?',
@@ -601,6 +601,17 @@ export let I18nAdminEn: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin rule cannot be removed',
         },
         attributes: 'Attributes',
+        consents: {
+            title: 'Consents',
+            desc: 'Consents this user has given to applications. Times are shown in your local time zone; hover a time to see it in UTC.',
+            none: 'This user has not given consent to any application.',
+            revokeDesc:
+                'Revoking removes the consent and the application can no longer renew its access for this user. The application has to ask the user for consent again.',
+            revokeAllDesc:
+                'Revokes all consents of this user. Each application has to ask the user for consent again.',
+            sessionsWarning:
+                'All sessions of the user are deleted as well, the user is logged out everywhere.',
+        },
         deleteUser: 'Are you sure you want to delete this user?',
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens

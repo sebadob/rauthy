@@ -2,7 +2,7 @@ use crate::common::{
     TestClient, TestClientSetup, USER_PASSWORD, code_state_from_headers,
     cookie_csrf_headers_from_res_direct, create_client, create_login_user, create_test_client,
     delete_client, delete_test_client, delete_user, get_auth_headers, get_backend_url, get_client,
-    get_solved_pow, password_token_set_for, put_client, update_request,
+    get_solved_pow, password_token_set_for, put_client, send_login, update_request,
 };
 use crate::{expect_status, expect_status_json};
 use pretty_assertions::assert_eq;
@@ -140,26 +140,23 @@ async fn auth_code(client_id: &str, user_email: &str) -> Result<String, Box<dyn 
         "{backend_url}/oidc/authorize?client_id={client_id}&redirect_uri={REDIRECT_URI}\
         &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
     );
-    let res = http
-        .post(&url_auth)
-        .headers(headers)
-        .json(&LoginRequest {
-            email: Some(user_email.to_string()),
-            password: Some(USER_PASSWORD.to_string()),
-            pow: get_solved_pow().await,
-            client_id: client_id.to_string(),
-            redirect_uri: REDIRECT_URI.to_string(),
-            scopes: None,
-            state: None,
-            nonce: None,
-            code_challenge: Some(challenge),
-            code_challenge_method: Some("S256".to_string()),
-            resource: None,
-            resident_key_token: None,
-            fwda: None,
-        })
-        .send()
-        .await?;
+    let req = LoginRequest {
+        email: Some(user_email.to_string()),
+        password: Some(USER_PASSWORD.to_string()),
+        pow: get_solved_pow().await,
+        client_id: client_id.to_string(),
+        redirect_uri: REDIRECT_URI.to_string(),
+        scopes: None,
+        state: None,
+        nonce: None,
+        code_challenge: Some(challenge),
+        code_challenge_method: Some("S256".to_string()),
+        resource: None,
+        resident_key_token: None,
+        fwda: None,
+        consent: None,
+    };
+    let res = send_login(&http, &url_auth, &headers, req).await;
     let res = expect_status!(res, 202);
 
     let (code, _) = code_state_from_headers(&res)?;

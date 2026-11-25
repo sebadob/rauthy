@@ -1,6 +1,7 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
+use crate::entity::clients::Client;
 use crate::entity::consent_sources::ConsentSource;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
@@ -251,18 +252,6 @@ impl RauthyConfig {
                 slf.vars.consent.sources.len()
             );
         }
-        if slf.vars.consent.enable {
-            warn!(
-                "`consent.enable` is `true`, but there is no consent screen yet: no consent grant \
-                can be given, so every `authorization_code` login, the Admin UI included, and \
-                every FedCM login fails, and every non-exempt refresh token is deleted and its \
-                access token revoked on its next refresh - disabling `consent.enable` later does \
-                not restore them"
-            );
-        }
-        if slf.vars.consent.danger_allow_private_addresses {
-            warn!("`consent.danger_allow_private_addresses` is enabled");
-        }
     }
 
     pub fn init_static(self) {
@@ -397,8 +386,7 @@ impl Default for Vars {
             },
             consent: VarsConsent {
                 enable: false,
-                content_cache_ttl: 3600,
-                danger_allow_private_addresses: false,
+                content_cache_ttl: Duration::from_hours(1),
                 sources: BTreeMap::default(),
             },
             cred_stuff_detect: VarsCredStuff {
@@ -555,6 +543,7 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
+                level_consent_granted: EventLevel::Notice,
                 level_consent_revoked: EventLevel::Notice,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
@@ -2090,24 +2079,16 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "consent", "enable", "CONSENT_ENABLE") {
             self.consent.enable = v;
         }
-        if let Some(v) = t_u32(
+        if let Some(v) = t_duration(
             &mut table,
             "consent",
             "content_cache_ttl",
             "CONSENT_CONTENT_CACHE_TTL",
         ) {
-            if v == 0 {
-                panic!("`consent.content_cache_ttl` must be at least 1");
+            if v.is_zero() {
+                panic!("`consent.content_cache_ttl` must be at least 1s");
             }
             self.consent.content_cache_ttl = v;
-        }
-        if let Some(v) = t_bool(
-            &mut table,
-            "consent",
-            "danger_allow_private_addresses",
-            "CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES",
-        ) {
-            self.consent.danger_allow_private_addresses = v;
         }
 
         if let Some(value) = table.remove("sources") {
@@ -3080,6 +3061,15 @@ impl Vars {
         ) {
             self.events.level_user_login_revoke =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for user_login_revoke");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_consent_granted",
+            "EVENT_LEVEL_CONSENT_GRANTED",
+        ) {
+            self.events.level_consent_granted =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for consent_granted");
         }
         if let Some(v) = t_str(
             &mut table,
@@ -4965,11 +4955,8 @@ pub struct VarsBootstrap {
 #[derive(Debug)]
 pub struct VarsConsent {
     pub enable: bool,
-    /// At least 1.
-    pub content_cache_ttl: u32,
-    /// Allows remote consent sources on non-public addresses. Independent of
-    /// `ephemeral_clients.danger_allow_private_addresses`.
-    pub danger_allow_private_addresses: bool,
+    /// At least 1s.
+    pub content_cache_ttl: Duration,
     /// `[[consent.sources]]` registry, keyed by `resource`.
     pub sources: BTreeMap<String, VarsConsentSource>,
 }
@@ -4980,10 +4967,10 @@ impl VarsConsent {
         self.sources.get(resource)
     }
 
-    /// `true` if an ephemeral client must request a `resource`: `consent.enable` is set and
-    /// `[[consent.sources]]` is not empty.
-    pub fn requires_resource(&self) -> bool {
-        self.enable && !self.sources.is_empty()
+    /// `true` if `client` is ephemeral and must request a `resource` but `resource` is `None`:
+    /// `consent.enable` is set and `[[consent.sources]]` is not empty.
+    pub fn missing_required_resource(&self, client: &Client, resource: Option<&str>) -> bool {
+        self.enable && !self.sources.is_empty() && client.is_ephemeral() && resource.is_none()
     }
 }
 
@@ -5299,6 +5286,7 @@ pub struct VarsEvents {
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
+    pub level_consent_granted: EventLevel,
     pub level_consent_revoked: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_email_send_error: EventLevel,
@@ -6052,6 +6040,7 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entity::clients::tests::redirect_test_client;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -6124,9 +6113,11 @@ mod tests {
     #[test]
     fn consent_sources() {
         let vars = parse_consent("[consent]\nenable = true");
-        assert_eq!(vars.consent.content_cache_ttl, 3600);
+        assert_eq!(vars.consent.content_cache_ttl, Duration::from_hours(1));
         assert!(vars.consent.sources.is_empty());
-        assert!(!vars.consent.requires_resource());
+        let ephemeral = redirect_test_client("https://cimd.example.com/client", "");
+        let static_client = redirect_test_client("app", "");
+        assert!(!vars.consent.missing_required_resource(&ephemeral, None));
 
         let vars = parse_consent(
             r"
@@ -6145,7 +6136,7 @@ source = 'https://consent.example.com/data'
 name = 'Data'
 ",
         );
-        assert_eq!(vars.consent.content_cache_ttl, 600);
+        assert_eq!(vars.consent.content_cache_ttl, Duration::from_mins(10));
         assert_eq!(
             vars.consent.sources.values().cloned().collect::<Vec<_>>(),
             vec![
@@ -6172,7 +6163,13 @@ name = 'Data'
                 .source_for("https://other.example.com")
                 .is_none()
         );
-        assert!(vars.consent.requires_resource());
+        assert!(vars.consent.missing_required_resource(&ephemeral, None));
+        assert!(
+            !vars
+                .consent
+                .missing_required_resource(&ephemeral, Some("urn:example:data"))
+        );
+        assert!(!vars.consent.missing_required_resource(&static_client, None));
 
         // without `consent.enable` no `resource` is required
         let vars = parse_consent(
@@ -6183,7 +6180,7 @@ source = 'local'
 name = 'Example API'
 ",
         );
-        assert!(!vars.consent.requires_resource());
+        assert!(!vars.consent.missing_required_resource(&ephemeral, None));
     }
 
     #[test]
@@ -6251,18 +6248,27 @@ name = 'B'
     }
 
     #[test]
-    fn consent_danger_allow_private_addresses() {
-        let vars = parse_consent("[consent]\nenable = true");
-        assert!(!vars.consent.danger_allow_private_addresses);
-        let vars = parse_consent("[consent]\ndanger_allow_private_addresses = true");
-        assert!(vars.consent.danger_allow_private_addresses);
-        assert!(!vars.ephemeral_clients.danger_allow_private_addresses);
+    fn consent_content_cache_ttl_duration() {
+        for (value, secs) in [("90", 90), ("'90s'", 90), ("'15m'", 900), ("'2h'", 7200)] {
+            let vars = parse_consent(&format!("[consent]\ncontent_cache_ttl = {value}"));
+            assert_eq!(
+                vars.consent.content_cache_ttl,
+                Duration::from_secs(secs),
+                "{value}"
+            );
+        }
     }
 
     #[test]
-    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1")]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1s")]
     fn consent_content_cache_ttl_zero_panics() {
         parse_consent("[consent]\ncontent_cache_ttl = 0");
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1s")]
+    fn consent_content_cache_ttl_zero_duration_panics() {
+        parse_consent("[consent]\ncontent_cache_ttl = '0m'");
     }
 
     #[test]
@@ -6348,13 +6354,17 @@ url = 'https://consent.example.com'
     }
 
     #[test]
-    fn consent_revoked_event_level() {
+    fn consent_event_levels() {
         let mut vars = Vars::default();
+        assert_eq!(vars.events.level_consent_granted, EventLevel::Notice);
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Notice);
 
-        let mut table: toml::Table =
-            toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
+        let mut table: toml::Table = toml::from_str(
+            "[events]\nlevel_consent_granted = 'info'\nlevel_consent_revoked = 'critical'",
+        )
+        .unwrap();
         vars.parse_events(&mut table, &mut RauthySecrets::default());
+        assert_eq!(vars.events.level_consent_granted, EventLevel::Info);
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
     }
 

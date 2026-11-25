@@ -1,11 +1,14 @@
 use crate::api_cookie::ApiCookie;
 use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
+use crate::entity::clients::Client;
+use crate::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use crate::entity::logos::{Logo, LogoRes, LogoType};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::html::templates::{FrontendAction, HtmlTemplate, TplPasswordReset};
+use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
 use chrono::Utc;
@@ -56,6 +59,25 @@ impl HtmlTemplate {
                     None
                 };
                 Ok((Self::ClientFaviconUpdated(updated), None))
+            }
+            "tpl_consent_content" => {
+                let Some(client_id) = client_id else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "no client_id",
+                    ));
+                };
+                let client = Client::find_maybe_ephemeral(client_id).await?;
+                let Some(docs) = ConsentDocs::find(&client, None, Language::default()).await?
+                else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "consent disabled",
+                    ));
+                };
+                let content = ConsentContent::build(&docs, &client.sanitize_login_scopes(None));
+                let content = LoginConsentContent::new(content, &client, None);
+                Ok((Self::ConsentContent(content), None))
             }
             "tpl_csrf_token" => {
                 if let Some(s) = session {

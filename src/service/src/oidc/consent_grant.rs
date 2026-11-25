@@ -1,11 +1,97 @@
-//! The consent grant check of the authorization_code exchange and FedCM, the mapping of its
-//! `ConsentRequired` to `invalid_grant`, and the narrowing of a refresh token's scope to the
-//! consent grant.
+//! The consent to ask for on the login page, the consent grant check of the authorization_code
+//! exchange and FedCM, the mapping of its `ConsentRequired` to `invalid_grant`, and the narrowing
+//! of a refresh token's scope to the consent grant.
 
+use rauthy_api_types::oidc::LoginConsent;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use rauthy_data::entity::user_consents::UserConsent;
+use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+
+/// When the login page asks for consent: always, or only when the user's grant does not cover
+/// the request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConsentAsk {
+    IfNotCovered,
+    /// `prompt=consent`
+    Always,
+}
+
+/// The login request a consent is for: the `client`, the RFC 8707 `resource` and the sanitized
+/// `scopes`, with the content shown in `lang`.
+pub struct ConsentRequest<'req> {
+    pub client: &'req Client,
+    pub resource: Option<&'req str>,
+    pub scopes: &'req [String],
+    pub lang: Language,
+}
+
+/// The consent the login page asks for, `None` without `consent.enable` or when it asks for none.
+/// `user_id` is the user a factor has already proven, whose grant is shown and may cover the
+/// request: `None` for a login that has proven none yet, which is always asked with no granted
+/// scopes.
+pub async fn consent_to_ask(
+    req: &ConsentRequest<'_>,
+    user_id: Option<&str>,
+    ask: ConsentAsk,
+) -> Result<Option<LoginConsentContent>, ErrorResponse> {
+    let Some(docs) = ConsentDocs::find(req.client, req.resource, req.lang).await? else {
+        return Ok(None);
+    };
+    let grant = match user_id {
+        None => None,
+        Some(user_id) => UserConsent::find(user_id, &req.client.id, req.resource).await?,
+    };
+    if ask == ConsentAsk::IfNotCovered
+        && let Some(grant) = &grant
+        && grant.covers(&docs, req.scopes)
+    {
+        return Ok(None);
+    }
+    let content = ConsentContent::build(&docs, req.scopes);
+    Ok(Some(LoginConsentContent::new(
+        content,
+        req.client,
+        grant.as_ref(),
+    )))
+}
+
+/// The consent documents of a login whose `consent` is valid for them: given for the content of
+/// the requested `scopes`, with all `default_scopes` of the client and only requested scopes.
+/// `None` without `consent.enable`.
+///
+/// # Errors
+///
+/// `ConsentRequired` with the content to ask for, with the scopes of `shown_grant` granted, when
+/// `consent` is missing or not valid. `ServiceUnavailable` as [`ConsentDocs::find`].
+pub async fn consented_docs(
+    req: &ConsentRequest<'_>,
+    consent: Option<&LoginConsent>,
+    shown_grant: Option<&UserConsent>,
+) -> Result<Option<ConsentDocs>, ErrorResponse> {
+    let Some(docs) = ConsentDocs::find(req.client, req.resource, req.lang).await? else {
+        return Ok(None);
+    };
+    let content = ConsentContent::build(&docs, req.scopes);
+    let is_valid = consent.is_some_and(|consent| {
+        let accepted = &consent.accepted_scopes;
+        consent.content_hash == content.content_hash
+            && req
+                .client
+                .default_scope_names()
+                .all(|d| accepted.iter().any(|a| a == d))
+            && accepted.iter().all(|a| req.scopes.contains(a))
+    });
+    if !is_valid {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::ConsentRequired,
+            LoginConsentContent::new(content, req.client, shown_grant).to_json_escaped(),
+        ));
+    }
+    Ok(Some(docs))
+}
 
 /// With `consent.enable`, fails with `ConsentRequired` when the user has no consent grant for the
 /// client and `resource`. The caller maps it to its own denial, see [`consent_as_invalid_grant`].
@@ -47,7 +133,7 @@ pub(crate) fn effective_scope(rt_scope: &str, grant: &UserConsent, client: &Clie
     for s in rt_scope.split_whitespace() {
         let covered = grant
             .scopes()
-            .chain(client.default_scopes.split(',').map(str::trim))
+            .chain(client.default_scope_names())
             .any(|g| g == s);
         if covered && !res.split(' ').any(|r| r == s) {
             if !res.is_empty() {
