@@ -18,6 +18,7 @@ pub mod language;
 pub mod migration;
 pub mod rauthy_config;
 pub mod secrets;
+pub mod shutdown;
 pub mod temp_migrations;
 pub mod vault_config;
 

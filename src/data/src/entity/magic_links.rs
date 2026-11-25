@@ -137,9 +137,9 @@ impl MagicLink {
             usage: usage.to_string(),
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         if is_hiqlite() {
             DB::hql()
@@ -212,11 +212,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
     /// Note: This is currently only used in integration tests.
     #[cfg(debug_assertions)]
     pub async fn find_pwd_reset_for_user(user_id: &str) -> Result<MagicLink, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM magic_links
 WHERE user_id = $1 AND usage LIKE 'password_reset%'
 ORDER BY exp DESC
-LIMIT 1"#;
+LIMIT 1";
         let res = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(user_id)).await?
         } else {

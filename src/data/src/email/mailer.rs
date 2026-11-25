@@ -1,9 +1,9 @@
-use crate::database::DB;
 use crate::email::mailer_callback::EMailCallback;
 use crate::email::mailer_microsoft_graph::sender_microsoft_graph;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::events::event::Event;
 use crate::rauthy_config::{EmailTlsMode, RauthyConfig};
+use crate::shutdown;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Mechanism;
 use lettre::transport::smtp::{authentication, client};
@@ -209,9 +209,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<(EMail, EMai
 
 /// Connects to SMTP.
 ///
-/// # Panics
-///
-/// If the connection is not possible after retries were exceeded.
+/// Shuts Rauthy down if the connection is not possible after retries were exceeded.
 async fn create_mailer(smtp_url: &str) -> AsyncSmtpTransport<Tokio1Executor> {
     let vars = &RauthyConfig::get().vars.email;
 
@@ -226,13 +224,10 @@ async fn create_mailer(smtp_url: &str) -> AsyncSmtpTransport<Tokio1Executor> {
         error!(?err);
 
         if retries >= vars.connect_retries {
-            // do a graceful shutdown of the DB before `panic`king
             if RauthyConfig::get().is_ha_cluster {
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }
-            DB::hql().shutdown().await.unwrap();
-
-            panic!("SMTP connection retries exceeded");
+            shutdown::fatal("SMTP connection retries exceeded").await;
         }
         retries += 1;
         tokio::time::sleep(Duration::from_secs(5)).await;

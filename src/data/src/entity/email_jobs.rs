@@ -192,10 +192,10 @@ impl EmailJob {
         .to_string();
         let content_type = EmailContentType::from(payload.content_type).to_string();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO email_jobs (id, scheduled, status, updated, filter, content_type, subject, body)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING *"#;
+RETURNING *";
 
         let slf = if is_hiqlite() {
             DB::hql()
@@ -262,9 +262,9 @@ RETURNING *"#;
     /// In HA deployments, only the current leader should look for orphaned jobs and pick them
     /// up to avoid duplicate emails because of possible race conditions.
     pub async fn find_orphaned_or_schedule() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM email_jobs
-WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
+WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)";
 
         let now = Utc::now().timestamp();
         let threshold = now
@@ -290,10 +290,10 @@ WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
     /// - updated
     /// - last_user_ts
     pub async fn save(&mut self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 UPDATE email_jobs
 SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4
-WHERE id = $5"#;
+WHERE id = $5";
 
         self.updated = Utc::now().timestamp();
         let status = self.status.value();

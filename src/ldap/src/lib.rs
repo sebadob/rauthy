@@ -24,7 +24,7 @@ use rauthy_service::login_delay::handle_login_delay;
 use rauthy_service::password_login::password_login;
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
 use tokio::sync::Semaphore;
@@ -39,9 +39,9 @@ mod dn;
 mod filter;
 
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
-const IDLE_TIMEOUT: Duration = Duration::from_secs(300);
+const IDLE_TIMEOUT: Duration = Duration::from_mins(5);
 // bound sessions are not rechecked, so this caps how long a rotated client secret stays usable
-const MAX_CONN_LIFETIME: Duration = Duration::from_secs(3600);
+const MAX_CONN_LIFETIME: Duration = Duration::from_hours(1);
 // each targeted user costs several sequential DB queries, so a search must stay far below a full load
 const MAX_TARGETS: usize = 50;
 
@@ -214,7 +214,7 @@ async fn bind(
         );
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
     let mut user_failed_logins = None;
     // all users of an app bind from the app's IP, so the per-IP checks can be disabled for them
     let ip_checks = !(is_user_bind

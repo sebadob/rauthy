@@ -15,13 +15,13 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let hash = match bootstrap.password_argon2id.clone() {
         Some(hash) => {
             info!(
-                r#"
+                r"
 
     First-Time setup - an already hashed bootstrap password has been given for '{email}'
 
     Please change it immediately: {issuer}account
     You will never see this message again!
-        "#
+        "
             );
             hash
         }
@@ -29,20 +29,20 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
             let plain = match bootstrap.password_plain.clone() {
                 Some(plain) => {
                     info!(
-                        r#"
+                        r"
 
     First-Time setup - a bootstrap password has been given for '{email}'
 
     Please change it immediately: {issuer}account
     You will never see this message again!
-        "#
+        "
                     );
                     plain
                 }
                 None => {
                     let plain = get_rand(24);
                     info!(
-                        r#"
+                        r"
 
     First-Time setup - new random password for '{email}':
 
@@ -50,7 +50,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 
     Please change it immediately: {issuer}account
     You will never see this message again!
-        "#
+        "
                     );
                     plain
                 }
@@ -65,10 +65,10 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
         }
     };
 
-    let sql = r#"
+    let sql = r"
 UPDATE users
 SET id = $1, email = $2, password = $3
-WHERE email = 'admin@localhost'"#;
+WHERE email = 'admin@localhost'";
 
     // We want the same user ID in tests all the time, but generate a new one for a fresh prod
     // init to reduce the possible attack surface even further. As long as a user provides a

@@ -25,7 +25,7 @@ pub async fn run_sponsor_reminder() {
     debug!("Project sponsoring Notifications enabled.");
 
     // Do a short sleep before starting, just in case we are inside the time window.
-    time::sleep(Duration::from_secs(300)).await;
+    time::sleep(Duration::from_mins(5)).await;
 
     loop {
         let now = Utc::now();
@@ -70,7 +70,7 @@ pub async fn run_sponsor_reminder() {
             debug!("Project sponsoring reminder: not the leader yet - checking again shortly");
         }
 
-        time::sleep(Duration::from_secs(600)).await;
+        time::sleep(Duration::from_mins(10)).await;
     }
 }
 
@@ -136,13 +136,11 @@ async fn execute(now: DateTime<Utc>) -> Result<(), ErrorResponse> {
             "Project sponsoring reminder sent to {} recipient(s)",
             recipients.len()
         );
+    } else if channels_configured {
+        info!("Project sponsoring reminder sent via the configured notification channel(s)");
     } else {
-        if channels_configured {
-            info!("Project sponsoring reminder sent via the configured notification channel(s)");
-        } else {
-            warn!("No recipients found for the Project sponsoring reminder - skipping");
-            return Ok(());
-        }
+        warn!("No recipients found for the Project sponsoring reminder - skipping");
+        return Ok(());
     }
 
     // mark it as sent, so we only do this once a year

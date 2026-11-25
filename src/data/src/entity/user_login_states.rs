@@ -53,24 +53,24 @@ impl UserLoginState {
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(session_id.as_ref().map(|_| 2).unwrap_or(1));
             txn.push((
-                r#"
+                r"
 INSERT INTO user_login_states(timestamp, user_id, client_id)
 SELECT $1, $2, $3
 WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2 AND client_id = $3 AND session_id IS NULL
-)"#,
+)",
                 params!(now - 1, user_id, client_id),
             ));
             if session_id.is_some() {
                 txn.push((
-                    r#"
+                    r"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 SELECT $1, $2, $3, $4
 WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2 AND client_id = $3 AND session_id = $4
-)"#,
+)",
                     params!(now, user_id, client_id, session_id),
                 ));
             }
@@ -82,25 +82,25 @@ WHERE NOT EXISTS (
 
             DB::pg_txn_append(
                 &txn,
-                r#"
+                r"
 INSERT INTO user_login_states(timestamp, user_id, client_id)
 SELECT $1, $2, $3
 WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2::VARCHAR AND client_id = $3::VARCHAR AND session_id IS NULL
-)"#,
+)",
                 &[&(now - 1), &user_id, &client_id],
             )
             .await?;
             DB::pg_txn_append(
                 &txn,
-                r#"
+                r"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 SELECT $1, $2, $3, $4
 WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2::VARCHAR AND client_id = $3::VARCHAR AND session_id = $4::VARCHAR
-)"#,
+)",
                 &[&(now), &user_id, &client_id, &session_id],
             )
             .await?;

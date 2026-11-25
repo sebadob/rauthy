@@ -10,7 +10,7 @@ use tracing::{debug, error};
 
 /// Cleans up all Events that exceed the configured EVENT_CLEANUP_THRESHOLD
 pub async fn events_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600));
+    let mut interval = tokio::time::interval(Duration::from_hours(1));
 
     loop {
         interval.tick().await;

@@ -19,6 +19,7 @@ use rauthy_data::events::health_watch::watch_health;
 use rauthy_data::events::listener::EventListener;
 use rauthy_data::events::notifier::EventNotifier;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_data::shutdown;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_handlers::{
@@ -104,9 +105,11 @@ pub async fn run(
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
 
-    DB::init(node_config)
-        .await
-        .expect("Error starting the database / cache layer");
+    // After `DB::init()`, any fatal error must go through `shutdown::fatal()` or be returned to
+    // `main()`, which shuts down the database / cache layer cleanly before the process exits.
+    if let Err(err) = DB::init(node_config).await {
+        shutdown::fatal(format!("Error starting the database / cache layer: {err}")).await;
+    }
 
     debug!("Starting E-Mail handler");
     tokio::spawn(mailer::sender(rx_email));
@@ -125,10 +128,15 @@ pub async fn run(
     }
 
     debug!("Applying database migrations");
-    let previous_db_version = DB::migrate().await.expect("Database migration error");
+    let previous_db_version = match DB::migrate().await {
+        Ok(version) => version,
+        Err(err) => shutdown::fatal(format!("Database migration error: {err}")).await,
+    };
 
     debug!("Starting Events handler");
-    EventNotifier::init_notifiers(tx_email).await.unwrap();
+    if let Err(err) = EventNotifier::init_notifiers(tx_email).await {
+        shutdown::fatal(format!("Cannot initialize the event notifiers: {err}")).await;
+    }
     tokio::spawn(EventListener::listen(
         tx_events_router,
         rx_events_router,
@@ -146,7 +154,9 @@ pub async fn run(
         time::sleep(Duration::from_secs(1)).await;
     }
 
-    UserPicture::test_config().await.unwrap();
+    if let Err(err) = UserPicture::test_config().await {
+        shutdown::fatal(format!("Invalid user picture configuration: {err}")).await;
+    }
 
     // We need to clear some caches
     DB::hql().clear_cache(Cache::Html).await?;
@@ -185,13 +195,10 @@ pub async fn run(
         }
     }
 
-    if RauthyConfig::get().vars.atproto.enable {
-        entity::atproto::Client::init_provider()
-            .await
-            .map_err(|error| {
-                error!(%error, "failed to initialize atproto provider");
-            })
-            .unwrap();
+    if RauthyConfig::get().vars.atproto.enable
+        && let Err(err) = entity::atproto::Client::init_provider().await
+    {
+        shutdown::fatal(format!("Failed to initialize the atproto provider: {err}")).await;
     }
 
     rauthy_schedulers::spawn();
@@ -244,23 +251,23 @@ async fn server_with_metrics() -> std::io::Result<()> {
     thread::spawn(move || {
         let vars = &RauthyConfig::get().vars.server;
         if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {err}");
-            error!(msg);
-            panic!("{}", msg);
+            shutdown::trigger(format!("Error parsing METRICS_ADDR: {err}"));
+            return;
         }
         let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
         info!("Metrics available on: http://{addr_full}/metrics");
         // TODO create single threaded runtime specifically -> probably use tokio
-        System::new()
-            .block_on(
-                HttpServer::new(move || App::new().wrap(metrics.clone()))
-                    .workers(1)
-                    .bind(addr_full)
-                    .unwrap()
-                    .run(),
-            )
-            .unwrap();
+        let res = System::new().block_on(async move {
+            HttpServer::new(move || App::new().wrap(metrics.clone()))
+                .workers(1)
+                .bind(addr_full)?
+                .run()
+                .await
+        });
+        if let Err(err) = res {
+            shutdown::trigger(format!("Metrics server error: {err}"));
+        }
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")

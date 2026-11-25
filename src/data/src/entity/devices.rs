@@ -35,11 +35,11 @@ impl DeviceEntity {
     }
 
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO devices
 (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name,
 client_created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
         if is_hiqlite() {
             DB::hql()
@@ -105,9 +105,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
 
-        let sql = r#"
+        let sql = r"
 DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql().execute(sql, params!(exp)).await?

@@ -162,13 +162,13 @@ impl PgDelete {
     }
 }
 
-static SQL_SAVE: &str = r#"
+static SQL_SAVE: &str = r"
 UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
 auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#;
+WHERE id = $18";
 
 /// Drops the sessions and refresh tokens of the disabled user `id`.
 async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
@@ -266,13 +266,13 @@ impl Debug for User {
 // CRUD
 // Keyset cursors over a composite key: `created_at` alone (seconds) is not unique, so a
 // plain comparison on it skips users at batch boundaries (same reasoning as `find_paginated`).
-const SQL_FIND_BATCH: &str = r#"
+const SQL_FIND_BATCH: &str = r"
 SELECT * FROM users
 WHERE (created_at, email) > ($1, $2)
 ORDER BY created_at ASC, email ASC
-LIMIT $3"#;
+LIMIT $3";
 
-const SQL_FIND_FOR_SCIM_SYNC: &str = r#"
+const SQL_FIND_FOR_SCIM_SYNC: &str = r"
 SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
     created_at, language, picture_id, birthdate, phone, street, zip, city, country,
     preferred_username, tz
@@ -280,7 +280,7 @@ FROM users u
 LEFT JOIN users_values uv ON u.id = uv.id
 WHERE (u.created_at, u.id) > ($1, $2)
 ORDER BY u.created_at ASC, u.id ASC
-LIMIT $3"#;
+LIMIT $3";
 
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
@@ -506,14 +506,14 @@ impl User {
             let res = DB::hql()
                 .txn([
                     (
-                        r#"
+                        r"
 UPDATE issued_tokens SET revoked = true
 WHERE user_id = $1
    OR jti IN (
        SELECT access_token_jti FROM refresh_tokens WHERE user_id = $1
        UNION
        SELECT access_token_jti FROM refresh_tokens_devices WHERE user_id = $1
-   )"#,
+   )",
                         params!(&self.id),
                     ),
                     ("DELETE FROM users WHERE id = $1", params!(&self.id)),
@@ -720,10 +720,10 @@ WHERE user_id = $1
     }
 
     pub async fn find_all_simple() -> Result<Vec<UserResponseSimple>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at ASC"#;
+ORDER BY created_at ASC";
 
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
@@ -848,13 +848,13 @@ ORDER BY created_at ASC"#;
             // not unique, so without the `id` tie-breaker, rows with an equal `created_at`
             // would be duplicated or skipped across pages.
             if backwards {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE (created_at, id) < ($1, $2)
 ORDER BY created_at DESC, id DESC
 LIMIT $3
-OFFSET $4"#;
+OFFSET $4";
 
                 let mut res: Vec<UserResponseSimple> = if is_hiqlite() {
                     DB::hql()
@@ -867,13 +867,13 @@ OFFSET $4"#;
                 res.reverse();
                 res
             } else {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE (created_at, id) > ($1, $2)
 ORDER BY created_at ASC, id ASC
 LIMIT $3
-OFFSET $4"#;
+OFFSET $4";
 
                 if is_hiqlite() {
                     DB::hql()
@@ -887,12 +887,12 @@ OFFSET $4"#;
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let sql = r#"
+            let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC, id DESC
 LIMIT $1
-OFFSET $2"#;
+OFFSET $2";
 
             let mut res = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
@@ -902,12 +902,12 @@ OFFSET $2"#;
             res.reverse();
             res
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC, id ASC
 LIMIT $1
-OFFSET $2"#;
+OFFSET $2";
 
             if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
@@ -925,12 +925,12 @@ OFFSET $2"#;
 
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO users
 (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
 password_expires, created_at, last_login, language, user_expires, auth_provider_id,
 federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)";
 
         if is_hiqlite() {
             DB::hql()
@@ -1313,10 +1313,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
         self.last_failed_login = None;
         self.failed_login_attempts = None;
 
-        let sql = r#"
+        let sql = r"
 UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL
 WHERE id = $2
-RETURNING email"#;
+RETURNING email";
 
         let stored_email: Option<String> = if is_hiqlite() {
             DB::hql()
@@ -1350,11 +1350,11 @@ RETURNING email"#;
         self.failed_login_attempts = None;
 
         // SQLite numbers `$n` in the order of first appearance, so they appear in order
-        let sql = r#"
+        let sql = r"
 UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL,
 password = CASE WHEN password = $2 THEN $3 ELSE password END
 WHERE id = $4
-RETURNING email"#;
+RETURNING email";
 
         let stored_email: Option<String> = if is_hiqlite() {
             DB::hql()
@@ -1389,11 +1389,11 @@ RETURNING email"#;
     pub async fn save_login_failure(&mut self) -> Result<(), ErrorResponse> {
         self.last_failed_login = Some(Utc::now().timestamp());
 
-        let sql = r#"
+        let sql = r"
 UPDATE users SET last_failed_login = $1,
 failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
 WHERE id = $2
-RETURNING email, failed_login_attempts"#;
+RETURNING email, failed_login_attempts";
 
         let stored: Option<(String, i64)> = if is_hiqlite() {
             DB::hql()
@@ -1431,11 +1431,11 @@ RETURNING email, failed_login_attempts"#;
     pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
         // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
         // the stored email is still that one
-        let sql = r#"
+        let sql = r"
 UPDATE users SET password = $1, password_expires = $2,
 email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
 WHERE id = $4
-RETURNING email, email_verified, enabled"#;
+RETURNING email, email_verified, enabled";
 
         /// The columns the reset returns from the stored row.
         struct StoredReset {
@@ -1523,12 +1523,12 @@ RETURNING email, email_verified, enabled"#;
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
                 let sql = format!(
-                    r#"
+                    r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE id {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#
+LIMIT $2"
                 );
 
                 if is_hiqlite() {
@@ -1539,12 +1539,12 @@ LIMIT $2"#
             }
             SearchParamsIdx::Email => {
                 let sql = format!(
-                    r#"
+                    r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE email {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#
+LIMIT $2"
                 );
 
                 if is_hiqlite() {
@@ -1555,12 +1555,12 @@ LIMIT $2"#
             }
             SearchParamsIdx::Name => {
                 let sql = format!(
-                    r#"
+                    r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE given_name {like} $1 OR family_name {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#
+LIMIT $2"
                 );
 
                 if is_hiqlite() {
@@ -1572,13 +1572,13 @@ LIMIT $2"#
             SearchParamsIdx::Username => {
                 // `preferred_username` lives in the `users_values` table
                 let sql = format!(
-                    r#"
+                    r"
 SELECT u.id, u.email, u.given_name, u.family_name, u.created_at, u.last_login, u.picture_id
 FROM users u
 INNER JOIN users_values uv ON u.id = uv.id
 WHERE uv.preferred_username {like} $1
 ORDER BY u.created_at ASC
-LIMIT $2"#
+LIMIT $2"
                 );
 
                 if is_hiqlite() {
@@ -1933,7 +1933,7 @@ LIMIT $2"#
 
                 let ml = MagicLink::create(
                     user.id.clone(),
-                    Duration::from_secs(3600),
+                    Duration::from_hours(1),
                     MagicLinkUsage::EmailChange(email.clone()),
                 )
                 .await?;
@@ -3154,7 +3154,7 @@ mod tests {
     fn test_batch_cursors_reach_every_user() {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            r#"
+            r"
 CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, email_verified INT,
     given_name TEXT, family_name TEXT, roles TEXT, groups TEXT, enabled INT,
     created_at INT NOT NULL, language TEXT, picture_id TEXT);
@@ -3163,7 +3163,7 @@ CREATE TABLE users_values (id TEXT PRIMARY KEY, birthdate TEXT, phone TEXT, stre
 INSERT INTO users (id, email, created_at) VALUES
     ('a', 'anna@x', 100), ('b', 'zoe@x', 200), ('c', 'bob@x', 300),
     ('d', 'carl@x', 400), ('e', 'zack@x', 500);
-"#,
+",
         )
         .unwrap();
 

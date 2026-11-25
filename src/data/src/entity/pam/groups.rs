@@ -65,12 +65,12 @@ impl From<tokio_postgres::Row> for PamGroup {
 
 impl PamGroup {
     pub async fn insert(name: String, typ: PamGroupType) -> Result<Self, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO pam_groups (name, typ)
 VALUES ($1, $2)
 ON CONFLICT (name) DO NOTHING
 RETURNING *
-"#;
+";
 
         let slf: Self = if is_hiqlite() {
             DB::hql()
@@ -156,11 +156,11 @@ RETURNING *
 
 impl PamGroup {
     pub async fn build_members_response(self) -> Result<PamGroupMembersResponse, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT name FROM pam_rel_groups_users pu
 JOIN pam_users u ON pu.uid = u.id
 WHERE pu.gid = $1
-"#;
+";
 
         let members = if is_hiqlite() {
             DB::hql()

@@ -57,7 +57,7 @@ impl Notification {
             .timeout(Duration::from_secs(10))
             .user_agent(format!("Rauthy v{RAUTHY_VERSION} Notifier"))
             .min_tls_version(tls::Version::TLS_1_2)
-            .pool_idle_timeout(Duration::from_secs(600))
+            .pool_idle_timeout(Duration::from_mins(10))
             .danger_accept_invalid_certs(disable_tls_validation);
 
         if let Some(path) = root_ca_path {

@@ -15,11 +15,11 @@ pub struct PasswordExpMail {
 
 impl PasswordExpMail {
     pub async fn upsert_now(user_id: String) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO pwd_exp_mails (user_id, mail_sent_ts)
 VALUES ($1, $2)
 ON CONFLICT (user_id) DO UPDATE SET mail_sent_ts = $2
-"#;
+";
 
         let now = Utc::now().timestamp();
         if is_hiqlite() {
