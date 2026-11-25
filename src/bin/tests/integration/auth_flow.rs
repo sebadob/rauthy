@@ -55,7 +55,7 @@ fn assert_not_consent_exempt(refresh_token: &str) {
 // This is a very long running test - run it manually as a single test
 // maybe moving it into its own module would work, so it does not block the others
 #[tokio::test]
-#[ignore]
+#[ignore = "long-running JWK rotation test that invalidates tokens of other tests"]
 async fn test_certs() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     eprintln!("backend_url: {}", backend_url);
@@ -911,7 +911,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
 /// measurement, not a pass/fail test, and it is heavy on a CI runner, so it stays `#[ignore]` and
 /// runs manually with `cargo test -p rauthy --test integration -- --ignored test_concurrent_logins`.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore]
+#[ignore = "manual load measurement ending in a deliberate failure"]
 async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
 

@@ -289,7 +289,7 @@ mod tests {
         // `oxttl` writes `rdf:type` with the Turtle keyword `a`.
         "<http://localhost:8081/auth/SomeId123/profile> a <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\ta <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
     )]
-    #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
+    #[ignore = "setting PUB_URL here interferes with other tests in CI"]
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
         let resp = WebIdResponse {
             webid: WebId::try_new(
