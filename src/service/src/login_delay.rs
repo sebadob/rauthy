@@ -9,8 +9,8 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::cmp::{max, min};
 use std::net::IpAddr;
-use std::ops::{Add, Sub};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::ops::Add;
+use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
 /**
@@ -25,7 +25,7 @@ never blacklisted. The delay then only grows with `user_failed_logins`.
  */
 pub async fn handle_login_delay<T>(
     peer_ip: IpAddr,
-    start: Duration,
+    start: Instant,
     res: Result<T, ErrorResponse>,
     has_password_been_hashed: bool,
     user_failed_logins: Option<i64>,
@@ -37,8 +37,7 @@ pub async fn handle_login_delay<T>(
         .await?
         .unwrap_or(2000);
 
-    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let delta = end - start;
+    let delta = start.elapsed();
 
     match res {
         Ok(resp) => {
@@ -75,15 +74,8 @@ pub async fn handle_login_delay<T>(
                 .await
                 .unwrap();
 
-            let sleep_time_median = {
-                let time_taken = end.sub(start).as_millis() as u64;
-                let mut sleep_time_median = 0;
-                let su64 = success_time as u64;
-                if time_taken < su64 {
-                    sleep_time_median = su64 - time_taken;
-                }
-                sleep_time_median
-            };
+            let time_taken = delta.as_millis() as u64;
+            let sleep_time_median = (success_time as u64).saturating_sub(time_taken);
 
             let sleep_time =
                 match sleep_time(u64::from(failed_logins), sleep_time_median, ip_checks) {
