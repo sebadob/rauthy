@@ -63,6 +63,26 @@ pub async fn post_authorize(
     debug_assert!(!*user_needs_mfa);
     debug_assert!(user_failed_logins.is_none());
 
+    // These depend on the client only and leak nothing about an account, so they run before a
+    // password may be hashed: a request no client of ours would ever accept must not buy the work
+    // of an Argon2id hash. Their failure is a request error and not a login attempt, so it gets
+    // no login delay either.
+    let client_checks = client
+        .validate_enabled()
+        .and_then(|()| client.validate_redirect_uri(&req_data.redirect_uri))
+        .and_then(|()| client.validate_flow(GrantType::AuthorizationCode))
+        .and_then(|()| client.get_validated_origin_header(req));
+    let header_origin = match client_checks {
+        Ok(origin) => origin,
+        Err(err) => {
+            *add_login_delay = false;
+            if let Some(mut pwd) = req_data.password {
+                pwd.zeroize();
+            }
+            return Err(err);
+        }
+    };
+
     let (user_res, is_rk_authenticated) = if let Some(code) = req_data.resident_key_token {
         let user_id = ResidentKeyToken::get_validated_user_id(&code, &session, &browser_id).await?;
         (User::find(user_id).await, true)
@@ -189,12 +209,6 @@ pub async fn post_authorize(
     // no data at all to someone who does not know the correct password.
     user.check_enabled()?;
     user.check_expired()?;
-
-    // client validations
-    client.validate_enabled()?;
-    client.validate_redirect_uri(&req_data.redirect_uri)?;
-    client.validate_flow(GrantType::AuthorizationCode)?;
-    let header_origin = client.get_validated_origin_header(req)?;
 
     // If we had a Resident Key authentication already, there is no need for another MFA request.
     let mfa_methods = if is_rk_authenticated {
