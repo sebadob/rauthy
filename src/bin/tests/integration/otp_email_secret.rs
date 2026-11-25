@@ -482,7 +482,7 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
         .iter()
         .filter_map(|c| c.to_str().ok()?.split_once(';').map(|(c, _)| c.to_string()))
         .find(|c| c.contains("RauthyMfa="));
-    expect_status_json!(res, 200, OtpChallenge);
+    expect_status_json!(res, 200, [OtpChallenge; 1]);
     let mfa_cookie = mfa_cookie.expect("the MFA cookie of the OTP step");
     assert!(consents(&user_id).await?.is_empty());
 
@@ -498,7 +498,7 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
     let mut accepted = consent.accepted_scopes.clone();
     accepted.sort_unstable();
     let res = login_mfa_cookie(&session, Some(consent)).await?;
-    let challenge = expect_status_json!(res, 200, OtpChallenge);
+    let [challenge] = expect_status_json!(res, 200, [OtpChallenge; 1]);
     assert!(consents(&user_id).await?.is_empty());
 
     // --- the finished ceremony writes the grant

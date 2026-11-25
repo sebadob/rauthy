@@ -21,7 +21,9 @@
 //!
 //! Without the API key or with `otp.enable` off, every test skips itself and the plain
 //! `just test-hiqlite` run stays green.
-use crate::common::{cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow};
+use crate::common::{
+    cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow, send_login,
+};
 use crate::{expect_status, expect_status_json};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::LoginRequest;
@@ -91,7 +93,8 @@ async fn init_session() -> Result<HeaderMap, Box<dyn Error>> {
     cookie_csrf_headers_from_res_direct(res).await
 }
 
-/// Password login of a user on an existing session, as the raw `POST /oidc/authorize` response.
+/// Password login of a user on an existing session, as the `POST /oidc/authorize` response. The
+/// suite runs with `consent.enable`, so the login is sent again with the consent it asks for.
 async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Response {
     let backend = get_backend_url();
     let challenge = base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()));
@@ -112,16 +115,11 @@ async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Res
         consent: None,
     };
 
-    Client::new()
-        .post(format!(
-            "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
-            &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
-        ))
-        .headers(session.clone())
-        .json(&req)
-        .send()
-        .await
-        .unwrap()
+    let url_auth = format!(
+        "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
+        &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+    );
+    send_login(&Client::new(), &url_auth, session, req).await
 }
 
 /// Creates the test user with a password, re-using and re-setting a left-over of a prior run,
