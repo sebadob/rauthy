@@ -12,6 +12,7 @@
     import NavSub from '#lib/nav/NavSub.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import { useParam } from '#state/param.svelte.ts';
+    import type { UnsavedField } from '#utils/unsaved.ts';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import UserAddNew from '#lib/admin/users/UserAddNew.svelte';
@@ -22,8 +23,6 @@
     import UserPicture from '#lib/UserPicture.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
-    import Button from '#lib/button/Button.svelte';
-    import IconEnvelope from '#icons/IconEnvelope.svelte';
     import SendMail from '#lib/SendMail.svelte';
     import EmailJobs from '#lib/EmailJobs.svelte';
 
@@ -46,7 +45,7 @@
     let usersPaginated: UserResponseSimple[] = $state([]);
     let uid = useParam('uid');
     let userId: undefined | string = $state();
-    let unsaved = $state(false);
+    let fields: UnsavedField[] = $state([]);
     // set by the guard inside UserDetails; a `uid` change is applied to the reactive state
     // before `goto` resolves, so switching users must be asked for here, not in beforeNavigate
     let guard: (run: () => void) => void = $state(run => run());
@@ -378,7 +377,7 @@
                 {providers}
                 {roles}
                 {groups}
-                bind:unsaved
+                bind:fields
                 bind:guard
                 {onSave}
             />

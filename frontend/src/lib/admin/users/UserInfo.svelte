@@ -38,6 +38,7 @@
     import Template from '#lib/Template.svelte';
     import { TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
     import type { OtpResponse } from '#api/types/otp.ts';
+    import { hasUnsavedChanges, type UnsavedField } from '#utils/unsaved.ts';
 
     let {
         user = $bindable(),
@@ -46,7 +47,7 @@
         groups,
         providers,
         isGroupAdmin = false,
-        unsaved = $bindable(false),
+        fields = $bindable([]),
         onSave,
     }: {
         user: UserResponse;
@@ -57,7 +58,8 @@
         // `true` when the logged-in principal is only a delegated group admin:
         // roles become read-only and groups outside the admin's prefix cannot be toggled.
         isGroupAdmin?: boolean;
-        unsaved?: boolean;
+        // the parent owns the `<UnsavedGuard>`, so it gets the watched values
+        fields?: UnsavedField[];
         onSave: () => void;
     } = $props();
 
@@ -131,56 +133,48 @@
             : '',
     );
 
-    let isUnsaved = $derived.by(() => {
+    // Roles and groups are sets: a re-ordered selection is not an edit, so both sides are sorted.
+    let watched = $derived.by(() => {
         if (!user || !userOrig) {
-            return false;
+            return [];
         }
-
-        let roles = rolesItems.filter(i => i.selected).map(i => i.name);
-        for (let role of roles) {
-            if (!userOrig.roles.includes(role)) {
-                return true;
-            }
-        }
-        for (let roleUser of userOrig.roles) {
-            if (!roles.includes(roleUser)) {
-                return true;
-            }
-        }
-
-        let groups = groupsItems.filter(i => i.selected).map(i => i.name);
-        for (let group of groups) {
-            if (!userOrig.groups || !userOrig.groups.includes(group)) {
-                return true;
-            }
-        }
-        for (let groupUser of userOrig.groups || []) {
-            if (!groups.includes(groupUser)) {
-                return true;
-            }
-        }
-
-        return (
-            email !== userOrig?.email ||
-            givenName !== userOrig?.given_name ||
-            familyName !== userOrig?.family_name ||
-            language !== userOrig?.language ||
-            enabled !== userOrig?.enabled ||
-            emailVerified !== userOrig?.email_verified ||
-            expires !== (!!userOrig?.user_expires || false) ||
-            birthdate !== userOrig?.user_values?.birthdate ||
-            tz !== userOrig?.user_values?.tz ||
-            phone !== userOrig?.user_values?.phone ||
-            street !== userOrig?.user_values?.street ||
-            zip !== (userOrig?.user_values?.zip || '') ||
-            city !== userOrig?.user_values?.city ||
-            country !== userOrig?.user_values?.country
-        );
+        return [
+            { value: email, original: userOrig.email },
+            { value: givenName, original: userOrig.given_name },
+            { value: familyName, original: userOrig.family_name },
+            { value: language, original: userOrig.language },
+            { value: enabled, original: userOrig.enabled },
+            { value: emailVerified, original: userOrig.email_verified },
+            { value: expires, original: !!userOrig.user_expires },
+            { value: birthdate, original: userOrig.user_values?.birthdate },
+            { value: tz, original: userOrig.user_values?.tz },
+            { value: phone, original: userOrig.user_values?.phone },
+            { value: street, original: userOrig.user_values?.street },
+            { value: zip, original: userOrig.user_values?.zip || '' },
+            { value: city, original: userOrig.user_values?.city },
+            { value: country, original: userOrig.user_values?.country },
+            {
+                value: rolesItems
+                    .filter(i => i.selected)
+                    .map(i => i.name)
+                    .sort(),
+                original: [...userOrig.roles].sort(),
+            },
+            {
+                value: groupsItems
+                    .filter(i => i.selected)
+                    .map(i => i.name)
+                    .sort(),
+                original: [...(userOrig.groups || [])].sort(),
+            },
+        ];
     });
+
+    let isUnsaved = $derived(hasUnsavedChanges(watched));
 
     // the parent owns navigation guards, so it needs to know about the form state
     $effect(() => {
-        unsaved = isUnsaved;
+        fields = watched;
     });
 
     let isOtpEnabled = $state(false);

@@ -22,6 +22,7 @@
     import { useSession } from '#state/session.svelte.ts';
     import { useParam } from '#state/param.svelte.ts';
     import UnsavedGuard from '#lib/admin/UnsavedGuard.svelte';
+    import type { UnsavedField } from '#utils/unsaved.ts';
     import { page } from '$app/state';
 
     let {
@@ -30,7 +31,7 @@
         providers,
         roles,
         groups,
-        unsaved = $bindable(false),
+        fields = $bindable([]),
         guard = $bindable((run: () => void) => run()),
         onSave,
     }: {
@@ -39,7 +40,8 @@
         providers: AuthProviderTemplate[];
         roles: RoleResponse[];
         groups: GroupResponse[];
-        unsaved?: boolean;
+        // the watched values of the mounted form, handed to `<UnsavedGuard>`
+        fields?: UnsavedField[];
         // set by UnsavedGuard; the list wraps its own `uid` changes with it
         guard?: (run: () => void) => void;
         onSave: () => void;
@@ -99,8 +101,8 @@
     }
 
     async function discardChanges() {
+        // re-fetching replaces `user`, which rebuilds the watched values from the persisted state
         await fetchUser();
-        unsaved = false;
     }
 
     let err = $state('');
@@ -187,7 +189,7 @@
     {#if selected === TAB_INFO}
         <UserInfo
             bind:user
-            bind:unsaved
+            bind:fields
             config={userValuesConfig}
             {providers}
             {roles}
@@ -210,7 +212,7 @@
     {/if}
 {/if}
 
-<UnsavedGuard dirty={unsaved} bind:guard {isSameTarget} onDiscard={discardChanges} />
+<UnsavedGuard {fields} bind:guard {isSameTarget} onDiscard={discardChanges} />
 
 <style>
     .notice {

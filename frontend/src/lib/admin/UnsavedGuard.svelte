@@ -4,14 +4,16 @@
     import Modal from '#lib/Modal.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { hasUnsavedChanges, type UnsavedField } from '#utils/unsaved.ts';
 
     let {
-        dirty,
+        fields,
         guard = $bindable(run => run()),
         isSameTarget = () => false,
         onDiscard,
     }: {
-        dirty: boolean;
+        // every form value the guard watches, each next to its persisted value
+        fields: UnsavedField[];
         // wraps a state change that is not a navigation, i.e. a tab switch
         guard?: (run: () => void) => void;
         // true when the target keeps the current form mounted, e.g. the very same record
@@ -23,6 +25,7 @@
     const t = useI18n();
     const ta = useI18nAdmin();
 
+    let dirty = $derived(hasUnsavedChanges(fields));
     let show = $state(false);
     let closeModal: undefined | (() => void) = $state();
     // the navigation we re-issue ourselves must not be blocked by our own hook again
