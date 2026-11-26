@@ -646,6 +646,12 @@ passwords. The default password policy is untouched.
   `x-session-expired` header, and the login page restarts its flow on its own when it gets that
   header, without claiming anything about the credentials.
   [#1929](https://github.com/sebadob/rauthy/issues/1929)
+- With `consent.enable`, a login that only needed its Passkey because of a valid MFA cookie asked
+  for consent on every single login, because the cookie proved no first factor and the user's
+  consent grant was never used. A valid MFA cookie for the email the form signs in now proves that
+  user, both on the login page and on the login itself, so its grant covers the request and the
+  consent block is skipped. The cookie of another user on a shared device still proves nothing, and
+  that login needs its password.
 
 ## v0.37.2
 

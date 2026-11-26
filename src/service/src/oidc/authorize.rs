@@ -140,7 +140,7 @@ pub async fn post_authorize(
     };
 
     let account_type = user.account_type();
-    let first_factor = if is_rk_authenticated || req_data.password.is_some() {
+    let first_factor = if is_rk_authenticated || has_mfa_cookie || req_data.password.is_some() {
         FirstFactor::Proven
     } else {
         FirstFactor::Pending
@@ -330,10 +330,10 @@ pub(crate) struct AuthorizeData {
 /// Whether a factor has proven the user before [`finish_authorize`]. Until one has, the user's
 /// consent grant is neither shown nor used.
 pub(crate) enum FirstFactor {
-    /// The password, a resident key, an upstream provider or a valid session of the user.
+    /// The password, a resident key, a valid MFA cookie for the user's email, an upstream provider
+    /// or a valid session of the user.
     Proven,
-    /// Only the WebAuthn or OTP ceremony proves the user: a passkey-only account, or a valid MFA
-    /// cookie without the password.
+    /// Only the WebAuthn or OTP ceremony proves the user: a passkey-only account.
     Pending,
 }
 
