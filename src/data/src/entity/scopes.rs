@@ -139,7 +139,7 @@ VALUES ($1, $2, $3, $4, $5)";
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -311,7 +311,7 @@ WHERE id = $5",
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
