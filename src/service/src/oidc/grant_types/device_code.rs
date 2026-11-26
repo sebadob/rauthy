@@ -111,10 +111,9 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
                 error,
                 error_description: Some(error_description),
             });
-        } else {
-            error = OAuth2ErrorTypeResponse::SlowDown;
-            error_description = Cow::from("must respect the poll interval");
         }
+        error = OAuth2ErrorTypeResponse::SlowDown;
+        error_description = Cow::from("must respect the poll interval");
     }
 
     // check validation

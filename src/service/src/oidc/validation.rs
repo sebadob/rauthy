@@ -51,16 +51,15 @@ pub async fn validate_auth_code_req_params(
                 ErrorResponseType::BadRequest,
                 "'code_challenge' is missing",
             ));
-        } else {
-            // 'plain' is the default method to be assumed by the OAuth specification when it is not
-            // further specified.
-            let method = if let Some(m) = code_challenge_method {
-                m.to_owned()
-            } else {
-                String::from("plain")
-            };
-            client.validate_challenge_method(&method)?;
         }
+        // 'plain' is the default method to be assumed by the OAuth specification when it is not
+        // further specified.
+        let method = if let Some(m) = code_challenge_method {
+            m.to_owned()
+        } else {
+            String::from("plain")
+        };
+        client.validate_challenge_method(&method)?;
     }
 
     Ok((client, header))

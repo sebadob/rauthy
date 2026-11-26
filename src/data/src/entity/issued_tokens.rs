@@ -57,9 +57,8 @@ impl IssuedToken {
             };
             if slf.insert().await.is_ok() {
                 return Ok(slf);
-            } else {
-                debug!("Conflicting `jti` generated");
             }
+            debug!("Conflicting `jti` generated");
         }
     }
 

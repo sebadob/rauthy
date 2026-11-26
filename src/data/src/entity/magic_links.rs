@@ -286,14 +286,13 @@ impl MagicLink {
                 if !binding_matches {
                     if cookie_binding {
                         return Err(err);
-                    } else {
-                        let ip = real_ip_from_req(req)?;
-                        warn!(
-                            ?ip,
-                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding \
-                            cookie",
-                        );
                     }
+                    let ip = real_ip_from_req(req)?;
+                    warn!(
+                        ?ip,
+                        "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding \
+                            cookie",
+                    );
                 }
             } else if cookie_binding {
                 return Err(err);

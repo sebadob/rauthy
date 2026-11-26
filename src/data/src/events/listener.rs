@@ -73,10 +73,9 @@ impl EventListener {
 
             if fails > 10 {
                 break;
-            } else {
-                fails += 1;
-                time::sleep(Duration::from_secs(1)).await;
             }
+            fails += 1;
+            time::sleep(Duration::from_secs(1)).await;
         }
 
         // send notification

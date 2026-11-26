@@ -99,12 +99,11 @@ impl ClientDyn {
                 ErrorResponseType::TooManyRequests(retry_at),
                 format!("You hit a rate limit. You may try again at: {retry_at}"),
             ));
-        } else {
-            let now = Utc::now().timestamp();
-            client
-                .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
-                .await?;
         }
+        let now = Utc::now().timestamp();
+        client
+            .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
+            .await?;
 
         Ok(())
     }
