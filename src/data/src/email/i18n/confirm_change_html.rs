@@ -44,8 +44,8 @@ impl I18nEmailConfirmChangeHtml<'_> {
     fn build_de() -> Self {
         Self {
             title: "E-Mail Wechsel bestätigt",
-            text_changed: "Ihre E-Mail Adresse wurde erfolgreich geändert von",
-            text_login: "Sie können sich jetzt mit der neuen Adresse einloggen.",
+            text_changed: "Die E-Mail Adresse wurde erfolgreich geändert von",
+            text_login: "Ein Login mit der neuen Adresse ist jetzt möglich.",
             to: "zu",
         }
     }

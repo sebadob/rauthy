@@ -4,15 +4,20 @@
     import IconDocText from '#icons/IconDocText.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
+    import type { UnsavedField } from '#utils/unsaved.ts';
     import AttrConfig from '#lib/admin/attrs/AttrConfig.svelte';
 
     let {
         attr,
         attrs,
+        fields = $bindable([]),
+        reset = $bindable(() => {}),
         onSave,
     }: {
         attr: UserAttrConfigValueResponse;
         attrs: UserAttrConfigValueResponse[];
+        fields?: UnsavedField[];
+        reset?: () => void;
         onSave: () => void;
     } = $props();
 
@@ -33,4 +38,4 @@
     <IconDocText width="28px" />
 </EntityHeader>
 
-<AttrConfig {attr} {attrs} {onSave} />
+<AttrConfig {attr} {attrs} bind:fields bind:reset {onSave} />

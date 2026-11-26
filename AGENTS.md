@@ -502,6 +502,22 @@ senders, the config.
   make sure to use the correct data structures for the task, and borrow values wherever
   possible.
 
+### Translations
+
+- **German has no salutation. Ever.** New German translations must not address the reader at
+  all — no `Sie`/`Ihr`/`Ihnen` and no `du`/`dein`. Rauthy is deployed in private setups where
+  `Du` would be right and in enterprise setups where `Sie` would be right, so any salutation
+  reads wrong in one of them. Write impersonal instead: infinitives and passive constructions.
+  `Wählen Sie Ihre Bestätigungsmethode` becomes `Bestätigungsmethode wählen`, `Ihre E-Mail
+  Adresse` becomes `die E-Mail Adresse`, `Bitte prüfen Sie Ihren Posteingang` becomes `Bitte
+  den E-Mail Posteingang prüfen`. This applies to the UI locale files in
+  [frontend/src/i18n](./frontend/src/i18n/) and to the email strings in
+  [src/data/src/email/i18n](./src/data/src/email/i18n/) plus the defaults in
+  [src/data/src/rauthy_config.rs](./src/data/src/rauthy_config.rs). A `Sie` that means *they*
+  or *it* (`Diese Gruppe ist speziell. Sie ist unveränderlich`) is not a salutation and stays.
+- **Translate, do not copy.** A German locale value that is still the English string is a bug,
+  not a fallback.
+
 ### Final checklist
 
 Before returning Rust code, confirm:

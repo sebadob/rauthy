@@ -184,6 +184,7 @@ export let I18nAdminFr: I18nAdmin = {
         copiedToClip: 'La valeur a été copiée dans le presse-papiers',
         details: 'Détails',
         edit: 'Modifier',
+        discard: 'Abandonner',
         enabled: 'Activé',
         filter: 'Filtrer',
         from: 'De',
@@ -197,6 +198,9 @@ export let I18nAdminFr: I18nAdmin = {
         noEntries: 'Aucune entrée',
         preview: 'Aperçu',
         reset: 'Réinitialiser',
+        unsavedChanges: 'Modifications non enregistrées',
+        unsavedChangesDesc:
+            'Vous avez des modifications non enregistrées. Continuer et les abandonner ?',
         searchOptions: 'Options de recherche',
         until: `Jusqu'à`,
     },

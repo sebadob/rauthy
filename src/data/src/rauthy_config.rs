@@ -741,7 +741,7 @@ impl Default for Vars {
                         header: "Neues Passwort für".into(),
                         text: None,
                         click_link:
-                        Some("Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
+                        Some("Zum Setzen eines neuen Passwortes den unten stehenden Link nutzen."
                                 .into()),
                         validity: Some("Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
                                 .into()),
@@ -942,7 +942,7 @@ impl Default for Vars {
                         subject: "Passwort Reset angefordert".into(),
                         header: "Passwort Reset angefordert für".into(),
                         text: None,
-                        click_link: Some("Klicken Sie auf den unten stehenden Link für den Passwort Reset."
+                        click_link: Some("Für den Passwort Reset den unten stehenden Link nutzen."
                                 .into()),
                         validity: Some("Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
                                 .into()),
@@ -1146,7 +1146,7 @@ während diese Adresse bereits registriert war. Falls dies ein Fehler war, kann 
 E-Mail ignoriert werden. Sollte jedoch das Passwort verloren gegangen sein und ein
 neues wird benötigt, so kann der unten stehende Link dafür genutzt werden.
 Falls diese Nachricht durch jemand Anderen ausgelöst wurde - keine Sorge, der Account
-is sicher und es gab keinerlei Datenlecks.".into()),
+ist sicher und es gab keinerlei Datenlecks.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1376,8 +1376,8 @@ Your account has not been compromised and no data was leaked.".into()),
                     },
                     de: VarsTemplate {
                         subject: "One Time Password".into(),
-                        header: "One Time Password for".into(),
-                        text: Some("Your OTP is the following:".into()),
+                        header: "One Time Password für".into(),
+                        text: Some("Das Einmalpasswort ist das Folgende:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,

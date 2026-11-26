@@ -9,12 +9,15 @@
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
     import { fetchGet } from '#api/fetch.ts';
     import { useParam } from '#state/param.svelte.ts';
+    import type { UnsavedField } from '#utils/unsaved.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
     } from '#api/types/user_attrs.ts';
     import AttrAddNew from '#lib/admin/attrs/AttrAddNew.svelte';
     import AttrDetails from '#lib/admin/attrs/AttrDetails.svelte';
+    import UnsavedGuard from '#lib/admin/UnsavedGuard.svelte';
+    import { page } from '$app/state';
 
     let ta = useI18nAdmin();
 
@@ -25,6 +28,10 @@
     let attrsFiltered: UserAttrConfigValueResponse[] = $state([]);
     let attr: undefined | UserAttrConfigValueResponse = $state();
     let an = useParam('an');
+    // set by the guard inside AttrDetails' form; switching an attribute unmounts it
+    let guard: (run: () => void) => void = $state(run => run());
+    let fields: UnsavedField[] = $state([]);
+    let reset: () => void = $state(() => {});
 
     const searchOptions = [ta.common.name];
     let searchOption = $state(searchOptions[0]);
@@ -70,16 +77,26 @@
         fetchAttrs();
     }
 
+    // search, ordering and re-selecting this very attribute keep the form mounted.
+    // compare against the current URL: a tile click already updates the `an` param
+    // before `goto` resolves, so the `attr` at that point is the target attribute
+    function isSameTarget(to: URL): boolean {
+        return (
+            to.pathname === page.url.pathname &&
+            to.searchParams.get('an') === page.url.searchParams.get('an')
+        );
+    }
+
     async function onAddNew(name: string) {
         closeModal?.();
         await fetchAttrs();
-        an.set(name);
+        guard(() => an.set(name));
     }
 </script>
 
 <NavSub
     detail={!!attr}
-    onBack={() => an.set(undefined)}
+    onBack={() => guard(() => an.set(undefined))}
     error={err}
     buttonTilesAriaControls="groups"
 >
@@ -99,7 +116,10 @@
     {#snippet buttonTiles()}
         <div class="attrsList">
             {#each attrsFiltered as attr (attr.name)}
-                <NavButtonTile onclick={() => an.set(attr.name)} selected={an.get() === attr.name}>
+                <NavButtonTile
+                    onclick={() => guard(() => an.set(attr.name))}
+                    selected={an.get() === attr.name}
+                >
                     {attr.name}
                 </NavButtonTile>
             {/each}
@@ -116,10 +136,12 @@
 
     <div id="groups">
         {#if attr}
-            <AttrDetails {attr} {attrs} {onSave} />
+            <AttrDetails {attr} {attrs} bind:fields bind:reset {onSave} />
         {/if}
     </div>
 </ContentAdmin>
+
+<UnsavedGuard {fields} bind:guard {isSameTarget} onDiscard={reset} />
 
 <style>
     .attrsList {
