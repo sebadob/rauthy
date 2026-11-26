@@ -5822,15 +5822,11 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
 
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
-            .as_deref()
-            .map(|v| match v.parse::<bool>() {
-                Ok(b) => b,
-                Err(_) => {
-                    panic!("{}", err_env(env_var, "bool"));
-                }
-            })
     {
-        return Some(v);
+        match v.parse::<bool>() {
+            Ok(b) => return Some(b),
+            Err(err) => panic!("{}: {}", err_env(env_var, "bool"), err),
+        }
     }
 
     let Value::Boolean(b) = value? else {
@@ -5897,15 +5893,11 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
-            .as_deref()
-            .map(|v| match v.parse::<i64>() {
-                Ok(b) => b,
-                Err(_) => {
-                    panic!("{}", err_env(env_var, "Integer"));
-                }
-            })
     {
-        return Some(v);
+        match v.parse::<i64>() {
+            Ok(i) => return Some(i),
+            Err(err) => panic!("{}: {}", err_env(env_var, "Integer"), err),
+        }
     }
 
     let Value::Integer(i) = value? else {
