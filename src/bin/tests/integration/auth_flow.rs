@@ -8,7 +8,6 @@ use crate::{expect_status, expect_status_json};
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
 use ed25519_compact::Noise;
-use josekit::jwk;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::generic::KeepAliveResponse;
@@ -28,7 +27,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::JwtTokenType;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::AUTHORIZATION;
-use ring::digest;
+use ring::{digest, signature};
 use std::error::Error;
 use std::fmt::Write;
 use std::net::TcpStream;
@@ -663,40 +662,40 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let id_token = ts.id_token.unwrap();
     println!("id_token: {}", id_token);
     // decode header to get the kid
-    let header = josekit::jwt::decode_header(id_token.clone())?;
+    let header = decode_jwt_header(&id_token)?;
     let kid = header
-        .claim("kid")
-        .map(|v| v.to_string().replace('\"', ""))
-        .unwrap();
+        .get("kid")
+        .and_then(|v| v.as_str())
+        .expect("'kid' is not set in id token header");
 
     // an ID token uses the generic `JWT`, while an access token must use `at+jwt` (RFC 9068)
     let typ = header
-        .claim("typ")
-        .map(|v| v.to_string().replace('\"', ""))
+        .get("typ")
+        .and_then(|v| v.as_str())
         .expect("'typ' is not set in id token header");
     assert_eq!(typ, "JWT");
 
-    let access_header = josekit::jwt::decode_header(ts.access_token.clone())?;
+    let access_header = decode_jwt_header(&ts.access_token)?;
     let access_typ = access_header
-        .claim("typ")
-        .map(|v| v.to_string().replace('\"', ""))
+        .get("typ")
+        .and_then(|v| v.as_str())
         .expect("'typ' is not set in access token header");
     assert_eq!(access_typ, "at+jwt");
 
     // retrieve jwk for kid
     let kid_url = format!("{}/oidc/certs/{}", backend_url, kid);
     let res = reqwest::get(&kid_url).await?;
-    let jwk = expect_status_json!(res, 200, jwk::Jwk);
+    let jwk = expect_status_json!(res, 200, JWKSPublicKey);
     println!("{:?}", jwk);
 
     // check signature and get the payload
     let alg = header
-        .claim("alg")
-        .map(|v| v.to_string().replace('\"', ""))
+        .get("alg")
+        .and_then(|v| v.as_str())
         .expect("'alg' is not set in id token header");
     let claims = SignedIdToken {
         token: &id_token,
-        alg: &alg,
+        alg,
         jwk: &jwk,
     }
     .verify()?;
@@ -1479,13 +1478,23 @@ fn wait_for_mock() {
     panic!("the ephemeral client mock did not start");
 }
 
+fn decode_jwt_header(token: &str) -> Result<serde_json::Value, Box<dyn Error>> {
+    let header_b64 = token
+        .split('.')
+        .next()
+        .ok_or("JWT is missing its header segment")?;
+    let bytes = base64_url_no_pad_decode(header_b64)
+        .map_err(|e| format!("JWT header is not base64url: {e}"))?;
+    Ok(serde_json::from_slice(&bytes)?)
+}
+
 /// The id token of a login together with the key the backend published for its `kid`.
 #[derive(Debug)]
 struct SignedIdToken<'a> {
     token: &'a str,
     /// The `alg` the token's own header names.
     alg: &'a str,
-    jwk: &'a jwk::Jwk,
+    jwk: &'a JWKSPublicKey,
 }
 
 impl SignedIdToken<'_> {
@@ -1498,31 +1507,49 @@ impl SignedIdToken<'_> {
     /// Panics when the token is not a three-part JWS, or when the JWK has a `kty` no backend
     /// publishes.
     fn verify(&self) -> Result<serde_json::Value, Box<dyn Error>> {
-        use josekit::jws::JwsVerifier;
-
         let parts: Vec<&str> = self.token.split('.').collect();
         let [header, payload, sig] = parts.as_slice() else {
             panic!("an id token is a three part JWS: {self:?}");
         };
+        let signing_input = &self.token[..header.len() + 1 + payload.len()];
         let signature = base64_url_no_pad_decode(sig)
             .map_err(|e| format!("the id token signature is not base64url: {e}"))?;
 
-        let verifier: Box<dyn JwsVerifier> = match (self.jwk.key_type(), self.alg) {
-            ("RSA", "RS256") => Box::new(josekit::jws::RS256.verifier_from_jwk(self.jwk)?),
-            ("RSA", "RS384") => Box::new(josekit::jws::RS384.verifier_from_jwk(self.jwk)?),
-            ("RSA", "RS512") => Box::new(josekit::jws::RS512.verifier_from_jwk(self.jwk)?),
-            ("OKP", "EdDSA" | "Ed25519") => {
-                Box::new(josekit::jws::EdDSA.verifier_from_jwk(self.jwk)?)
+        match (&self.jwk.kty, self.alg) {
+            (JwkKeyPairType::RSA, "RS256" | "RS384" | "RS512") => {
+                let alg = match self.alg {
+                    "RS256" => &signature::RSA_PKCS1_2048_8192_SHA256,
+                    "RS384" => &signature::RSA_PKCS1_2048_8192_SHA384,
+                    "RS512" => &signature::RSA_PKCS1_2048_8192_SHA512,
+                    _ => unreachable!(),
+                };
+                let n = base64_url_no_pad_decode(
+                    self.jwk.n.as_deref().ok_or("RSA jwk is missing `n`")?,
+                )
+                .map_err(|e| format!("RSA jwk `n` is not base64url: {e}"))?;
+                let e = base64_url_no_pad_decode(
+                    self.jwk.e.as_deref().ok_or("RSA jwk is missing `e`")?,
+                )
+                .map_err(|e| format!("RSA jwk `e` is not base64url: {e}"))?;
+                signature::RsaPublicKeyComponents { n, e }
+                    .verify(alg, signing_input.as_bytes(), &signature)
+                    .map_err(|_| format!("invalid {} signature", self.alg))?;
             }
-            (kty, alg) => return Err(format!("published jwk {kty} cannot sign {alg}").into()),
-        };
-        verifier.verify(format!("{header}.{payload}").as_bytes(), &signature)?;
+            (JwkKeyPairType::OKP, "EdDSA" | "Ed25519") => {
+                let x = base64_url_no_pad_decode(
+                    self.jwk.x.as_deref().ok_or("OKP jwk is missing `x`")?,
+                )
+                .map_err(|e| format!("OKP jwk `x` is not base64url: {e}"))?;
+                signature::UnparsedPublicKey::new(&signature::ED25519, &x)
+                    .verify(signing_input.as_bytes(), &signature)
+                    .map_err(|_| format!("invalid {} signature", self.alg))?;
+            }
+            (kty, alg) => return Err(format!("published jwk {kty:?} cannot sign {alg}").into()),
+        }
 
         let claims = base64_url_no_pad_decode(payload)
             .map_err(|e| format!("the id token payload is not base64url: {e}"))?;
-        let claims = String::from_utf8(claims)
-            .map_err(|e| format!("the id token payload is not utf8: {e}"))?;
-        Ok(serde_json::from_str(&claims)?)
+        Ok(serde_json::from_slice(&claims)?)
     }
 }
 
