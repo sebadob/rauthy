@@ -3,10 +3,10 @@
 [NetBird](https://netbird.io) is a WireGuard-based overlay network. A self-hosted NetBird uses its own embedded IdP,
 which can log users in with any external OIDC provider. You can add Rauthy there as a **Generic OIDC** provider.
 
-```admonish note
-You need Rauthy v0.37.1 or newer. The Generic OIDC connector in NetBird reads the `name` claim from the `id_token` only,
-and older versions of Rauthy do not include it there.
-```
+> [!NOTE]
+> You need Rauthy v0.37.1 or newer. The Generic OIDC connector in NetBird reads the `name` claim
+> from the `id_token` only,
+> and older versions of Rauthy do not include it there.
 
 ## Rauthy Client
 

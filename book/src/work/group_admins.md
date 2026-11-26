@@ -25,11 +25,10 @@ groups:
 You assign these roles like any other role. Create a role named e.g. `rauthy_admin:engineering`,
 then assign it to the users who should administer that group.
 
-```admonish note
-This is non-breaking: unless you already had a custom role that happens to start with
-`rauthy_admin:`, nothing changes. On startup, Rauthy logs a warning listing any pre-existing roles
-that match this scheme so you can double-check they are intended.
-```
+> [!NOTE]
+> This is non-breaking: unless you already had a custom role that happens to start with
+> `rauthy_admin:`, nothing changes. On startup, Rauthy logs a warning listing any pre-existing roles
+> that match this scheme so you can double-check they are intended.
 
 ## What a group admin can do
 

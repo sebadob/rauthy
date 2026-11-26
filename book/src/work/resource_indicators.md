@@ -31,10 +31,9 @@ grant the granted resource is carried inside the refresh token and reused, so a 
 token keeps its audience binding. A `resource` sent with the refresh must match the granted one; a
 refresh can never widen or switch the resource set.
 
-```admonish note
-The `password` grant and logins brokered through an upstream identity provider do not process the
-`resource` parameter yet.
-```
+> [!NOTE]
+> The `password` grant and logins brokered through an upstream identity provider do not process the
+> `resource` parameter yet.
 
 ## Per-client configuration
 
@@ -59,10 +58,9 @@ The `aud` claim is a single string when there is exactly one audience, and a JSO
 are two or more. Both forms are valid per RFC 7519. Consumers that already read `aud` as a string
 keep working for the single-audience case.
 
-```admonish note
-Solid-OIDC ephemeral clients (`enable_solid_aud`) previously received an `aud` value that was a
-string containing array-like text. With this feature it is emitted as a proper JSON array.
-```
+> [!NOTE]
+> Solid-OIDC ephemeral clients (`enable_solid_aud`) previously received an `aud` value that was a
+> string containing array-like text. With this feature it is emitted as a proper JSON array.
 
 ## Ephemeral clients
 
@@ -78,11 +76,10 @@ danger_allow_unvalidated_resource = true
 This defaults to `false` (deny) so that a client without a declared allow-list cannot silently
 obtain a token for an arbitrary audience.
 
-```admonish danger
-Only enable `danger_allow_unvalidated_resource` if you know exactly what you are doing and have a
-good reason. It can lead to an easy privilege escalation, because an ephemeral client could then
-mint tokens for an arbitrary audience.
-```
+> [!CAUTION]
+> Only enable `danger_allow_unvalidated_resource` if you know exactly what you are doing and have a
+> good reason. It can lead to an easy privilege escalation, because an ephemeral client could then
+> mint tokens for an arbitrary audience.
 
 ### Consent sources
 

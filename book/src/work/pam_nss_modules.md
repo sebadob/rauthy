@@ -54,28 +54,35 @@ The PAM project is in a very early phase and there are no distro-packaged versio
 is an install script
 though: [rauthy-pam-nss install](https://github.com/sebadob/rauthy-pam-nss?tab=readme-ov-file#install-tldr)
 
-```admonish danger
-Before you install anything, make sure that you have at least a backup session / terminal somewhere 
-in the background that you don't use for installation / testing. If you mess up your PAM setup, you 
-can easily lock yourself out of your machine and it could be very hard, or sometimes impossible, to 
-recover it. Keep the backup session open and don't do anything with it, until you verified after the 
-installation that everything is working as expected. If this should not be the case, you should 
-revert your PAM config. The install script will copy the old files and appends `.bak-non-rauthy` to 
-them.
+> [!CAUTION]
+> Before you install anything, make sure that you have at least a backup session / terminal
+> somewhere 
+> in the background that you don't use for installation / testing. If you mess up your PAM setup,
+> you 
+> can easily lock yourself out of your machine and it could be very hard, or sometimes impossible,
+> to 
+> recover it. Keep the backup session open and don't do anything with it, until you verified after
+> the 
+> installation that everything is working as expected. If this should not be the case, you should 
+> revert your PAM config. The install script will copy the old files and appends `.bak-non-rauthy`
+> to 
+> them.
+>
+> If you are not experienced with NSS / PAM yet, you should not try it on any important or
+> production 
+> machine for the first time. The best thing would be to spin up an empty VM for testing, or at
+> least 
+> create a new snapshot before you start. The default PAM configs are safe, but if you do anything 
+> custom, it is very easy to make your whole system insecure if done incorrectly.
 
-If you are not experienced with NSS / PAM yet, you should not try it on any important or production 
-machine for the first time. The best thing would be to spin up an empty VM for testing, or at least 
-create a new snapshot before you start. The default PAM configs are safe, but if you do anything 
-custom, it is very easy to make your whole system insecure if done incorrectly.
-```
-
-```admonish hint
-The install script detects `authselect`-managed environments automatically and creates a 
-`custom/rauthy` profile in this case, which you need to activate manually. However, it does NOT 
-work with other management systems yet and if it does not find `authselect`, it will create backup 
-copies of `/etc/nsswitch.conf` and the ones in `/etc/pam.d/` before copying its own files in place. 
-If you manage PAM via other systems, feel welcome to provide a PR to include it in the script.
-```
+> [!TIP]
+> The install script detects `authselect`-managed environments automatically and creates a 
+> `custom/rauthy` profile in this case, which you need to activate manually. However, it does NOT 
+> work with other management systems yet and if it does not find `authselect`, it will create backup
+> 
+> copies of `/etc/nsswitch.conf` and the ones in `/etc/pam.d/` before copying its own files in
+> place. 
+> If you manage PAM via other systems, feel welcome to provide a PR to include it in the script.
 
 ## Where to find everything
 
@@ -99,25 +106,26 @@ information:
   `/usr/sbin/rauthy-authorized-keys`. Usage is super simple, as it only expects the username as the
   first and only argument.
 
-```admonish caution
-It is VERY important that you never mess up the access rights for all of these files and dirs. Most 
-importantly for the UDS so it can never be spoofed. Everything should run as `root` for the highest 
-level of protection. In case of the session open and close scripts, their access rights will be 
-checked by the PAM module before each execution and if they don't match `0700` or are not owned by 
-`root`, they will not be executed.
-```
+> [!WARNING]
+> It is VERY important that you never mess up the access rights for all of these files and dirs.
+> Most 
+> importantly for the UDS so it can never be spoofed. Everything should run as `root` for the
+> highest 
+> level of protection. In case of the session open and close scripts, their access rights will be 
+> checked by the PAM module before each execution and if they don't match `0700` or are not owned by
+> 
+> `root`, they will not be executed.
 
-```admonish caution
-If you change any of the paths like e.g. the `data_dir` and you have SELinux running, you must make 
-sure that the correct types are added via the file context.
-```
+> [!WARNING]
+> If you change any of the paths like e.g. the `data_dir` and you have SELinux running, you must
+> make 
+> sure that the correct types are added via the file context.
 
-```admonish note
-All of these locations and executables have dedicated SELinux types and a policy to provide 
-additional protection. This will of course only work on systems where SELinux is available. An 
-AppArmor equivalent does NOT exist yet, but the generic Linux access rules provide proper 
-protection, at least as long a not another `root` application is malicious.
-```
+> [!NOTE]
+> All of these locations and executables have dedicated SELinux types and a policy to provide 
+> additional protection. This will of course only work on systems where SELinux is available. An 
+> AppArmor equivalent does NOT exist yet, but the generic Linux access rules provide proper 
+> protection, at least as long a not another `root` application is malicious.
 
 ## SELinux
 

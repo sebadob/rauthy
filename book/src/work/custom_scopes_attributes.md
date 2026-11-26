@@ -7,10 +7,9 @@ applications need, like for instance an internal employee ID.
 Rauthy can handle this as well. There are custom scopes you can create. These do not get mixed up with the default
 scopes, so they can't interfere, which makes the whole setup pretty easy.
 
-```admonish info
-Users are not allowed to self-manage their custom scope values.  
-This must be done by an admin.
-```
+> [!NOTE]
+> Users are not allowed to self-manage their custom scope values.  
+> This must be done by an admin.
 
 Values are mapped as claims into tokens only if allowed an requested for an individual client. This means even if you
 set a value for a user, it will not just end up in the token automatically. Let's walk through how you can achieve that.
@@ -35,9 +34,9 @@ choice, expand the entry and choose the `Attributed` tab.
 
 ![set user attribute](img/set_user_attr.png)
 
-```admonish info
-The custom values for users are always interpreted, saved and returned `String`s without any further validation.
-```
+> [!NOTE]
+> The custom values for users are always interpreted, saved and returned `String`s without any
+> further validation.
 
 ## Create a Custom Scope
 
@@ -148,13 +147,16 @@ root` on the client, they are written at the token root (flattened) instead, jus
 `claims_at_root` option. As with that option, you own collision-correctness: if a claim name collides with a
 reserved JWT claim, token issuance fails rather than silently shadowing it.
 
-```admonish info
-The value must be a JSON object and is capped at 1024 serialized characters, since tokens are frequently kept
-small (and sometimes stored in cookies). The cap applies to the client's custom JSON only, not the full token.
-```
+> [!NOTE]
+> The value must be a JSON object and is capped at 1024 serialized characters, since tokens are
+> frequently kept
+> small (and sometimes stored in cookies). The cap applies to the client's custom JSON only, not the
+> full token.
 
-```admonish caution
-Custom claims can only be set by an admin (or via the management API). Dynamic clients (registered through the
-dynamic client registration endpoint) and ephemeral clients cannot set their own claims, which would otherwise be
-a privilege-escalation vector: a client must not be able to assert facts about itself that it was never granted.
-```
+> [!WARNING]
+> Custom claims can only be set by an admin (or via the management API). Dynamic clients (registered
+> through the
+> dynamic client registration endpoint) and ephemeral clients cannot set their own claims, which
+> would otherwise be
+> a privilege-escalation vector: a client must not be able to assert facts about itself that it was
+> never granted.

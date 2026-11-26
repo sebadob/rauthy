@@ -16,13 +16,13 @@ If your instance is exposed directly, in most situations the IP extractions work
 may change though
 when running behind a reverse proxy or a CDN.
 
-```admonish hint
-To check which IP Rauthy will extract for your requests, you don't to search through logs. You can 
-use the whoami endpoint. This is unauthenticated and will just return your current IP from the 
-request headers. If the returned IP is correct, your setup is fine.
-
-The endpoint is reachable via: <code>/auth/v1/whoami</code>
-```
+> [!TIP]
+> To check which IP Rauthy will extract for your requests, you don't to search through logs. You can
+> 
+> use the whoami endpoint. This is unauthenticated and will just return your current IP from the 
+> request headers. If the returned IP is correct, your setup is fine.
+>
+> The endpoint is reachable via: <code>/auth/v1/whoami</code>
 
 ## Running behind a reverse proxy
 
@@ -70,12 +70,13 @@ the `/32` subnet to it. If you are running in a more dynamic environment like Do
 where your proxy could get an IP dynamically from an internal pool, you need to add all the possible
 IPs as trustworthy.
 
-```admonish caution
-When Rauthy is running in proxy mode, it will block every incoming request that does not match the 
-<code>trusted_proxies</code> IP pool. This means if you have internal tooling set up like health 
-checks, monitoring or metrics, which do not connect via the proxy, you need to add these source IPs 
-to the <code>trusted_proxies</code> list.
-```
+> [!WARNING]
+> When Rauthy is running in proxy mode, it will block every incoming request that does not match the
+> 
+> <code>trusted_proxies</code> IP pool. This means if you have internal tooling set up like health 
+> checks, monitoring or metrics, which do not connect via the proxy, you need to add these source
+> IPs 
+> to the <code>trusted_proxies</code> list.
 
 ### Running behind a CDN
 
@@ -123,13 +124,13 @@ machine, copy the information, and use it on their own. This means even if you w
 session cookie and CSRF token to someone, they would not be able to use it, as long as the requests
 are not coming from the exact same source IP.
 
-```admonish note
-Rauthy has lots of mechanisms in place to prevent things like cookie stealing, session takeover, and 
-so on , but it can't do anything about it, when the client's OS itself is infected. All these 
-mechanisms add up to the defense in depth, but at the end of the day, when the clients machine 
-itself is infected, there is not much any application can do about it. There just is no silver 
-bullet.
-```
+> [!NOTE]
+> Rauthy has lots of mechanisms in place to prevent things like cookie stealing, session takeover,
+> and 
+> so on , but it can't do anything about it, when the client's OS itself is infected. All these 
+> mechanisms add up to the defense in depth, but at the end of the day, when the clients machine 
+> itself is infected, there is not much any application can do about it. There just is no silver 
+> bullet.
 
 ```toml
 # If set to 'true', this will validate the remote peer IP address with
@@ -287,7 +288,6 @@ them right now.
 sec_header_block = true
 ```
 
-```admonish danger
-Only change any of the above mentioned session security settings if you really know what you are 
-doing and if you have a good reason to do so.
-```
+> [!CAUTION]
+> Only change any of the above mentioned session security settings if you really know what you are 
+> doing and if you have a good reason to do so.

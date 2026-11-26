@@ -16,12 +16,11 @@ order matches their location in the reference config below.
 - `[tls]` if you don't terminate TLS on your reverse proxy
 - !!! `webauthn.rp_id` + `webauthn.rp_origin` + `webauthn.rp_name`
 
-```admonish caution
-When you go into production, make sure that you provide the included secrets / sensitive
-information in this file in an appropriate way. With docker, you can leave them inside this file
-(with proper access rights!), but when deploying with Kubernetes, either extract these values into
-Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
-```
+> [!WARNING]
+> When you go into production, make sure that you provide the included secrets / sensitive
+> information in this file in an appropriate way. With docker, you can leave them inside this file
+> (with proper access rights!), but when deploying with Kubernetes, either extract these values into
+> Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
 
 ````toml
 [access]

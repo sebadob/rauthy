@@ -92,10 +92,10 @@ The process is really simple:
 5. After a successful restore, Rauthy will start its normal operation
 6. Make sure to remove the `HQL_BACKUP_RESTORE` env value.
 
-```admonish danger 
-After a successful restore, you **MUST** remove the env var again! If you don't do it, Rauthy will 
-re-apply the same backup with each following restart over and over again.
-```
+> [!CAUTION]
+> After a successful restore, you **MUST** remove the env var again! If you don't do it, Rauthy will
+> 
+> re-apply the same backup with each following restart over and over again.
 
 You only need to set this single value:
 

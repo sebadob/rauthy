@@ -11,9 +11,8 @@ The most important of these newly generated secrets is the default admin user's 
 When this is securely generated with the very first start, it will be logged into the console. This
 will only happen once and never again.
 
-```admonish hint
-You can also [bootstrap](../config/bootstrap.md) the admin password, if you like.
-```
+> [!TIP]
+> You can also [bootstrap](../config/bootstrap.md) the admin password, if you like.
 
 ### Logs with docker
 
@@ -27,14 +26,13 @@ docker logs -f rauthy
 kubectl -n rauthy logs -f rauthy-0
 ```
 
-```admonish note
-If you do a Kubernetes HA deployment directly, only the Pod `rauthy-0` will log the initial password.
-```
+> [!NOTE]
+> If you do a Kubernetes HA deployment directly, only the Pod `rauthy-0` will log the initial
+> password.
 
-```admonish caution
-If you missed this log entry, you will not be able to log in.  
-If this is the case, you can delete the database / volume and just restart rauthy.
-```
+> [!WARNING]
+> If you missed this log entry, you will not be able to log in.  
+> If this is the case, you can delete the database / volume and just restart rauthy.
 
 The log message contains a link to the accounts page, where you then should log in to immediately
 set a new password. Follow the link, use as the default admin `admin@localhost` and as password the
@@ -53,16 +51,15 @@ When logged in to the admin UI, you can add a new user. When the `SMTP` settings
 configured in the config, which we can test right now, you will receive an E-Mail with the very
 first password reset.
 
-```admonish note
-If you do not receive an E-Mail after the first user registration, chances are you may have a 
-problem with the SMTP setup.
-  
-To debug this, you can set `LOG_LEVEL=debug` in the config and then watch the logs after a restart.
-```
+> [!NOTE]
+> If you do not receive an E-Mail after the first user registration, chances are you may have a 
+> problem with the SMTP setup.
+>
+> To debug this, you can set `LOG_LEVEL=debug` in the config and then watch the logs after a
+> restart.
 
-```admonish hint
-You can also [bootstrap](../config/bootstrap.md) everything.
-```
+> [!TIP]
+> You can also [bootstrap](../config/bootstrap.md) everything.
 
 ### `rauthy_admin` user role
 

@@ -13,13 +13,13 @@ it for the Session ID `sid` only. This means only clients where the user logged 
 are associated with this `sid` will receive a Logout Token. All others will not. This is NOT a
 global user logout, only for this very session.
 
-```admonish caution
-The User Initiated Logout does NOT affect already signed and issue stateless(!) tokens. A stateless 
-token, once singned, cannot be revoked by design, even though you might read things like this in 
-many places on the internet.
-
-It is impossible to revoke a stateless JWT token.
-```
+> [!WARNING]
+> The User Initiated Logout does NOT affect already signed and issue stateless(!) tokens. A
+> stateless 
+> token, once singned, cannot be revoked by design, even though you might read things like this in 
+> many places on the internet.
+>
+> It is impossible to revoke a stateless JWT token.
 
 ## Admin-Forced User Logout
 
@@ -33,12 +33,11 @@ specific session only. If you log out a user via the Logout Tab for a selected u
 global User Logout everywhere. This will delete all existing sessions on all devices, delete all
 refresh tokens and trigger a Backchannel Logout for the whole user for all configured clients.
 
-```admonish note
-The global, forced user logout does NOT affect logged in devices via the device flow, which are 
-usually either IoT devices or maybe a CLI tool on a headless server. If you also want to remove 
-access for all of these, do this additionally via the Admin UI -> Users -> select user -> Devices 
-Tab.
-```
+> [!NOTE]
+> The global, forced user logout does NOT affect logged in devices via the device flow, which are 
+> usually either IoT devices or maybe a CLI tool on a headless server. If you also want to remove 
+> access for all of these, do this additionally via the Admin UI -> Users -> select user -> Devices 
+> Tab.
 
 ## RP Initiated Logout
 

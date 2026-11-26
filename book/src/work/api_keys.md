@@ -34,10 +34,10 @@ Authorization: API-Key my_key$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx5
 The correct format will be generated automatically, when you create a new secret for an API Key via
 the Admin UI, so you only need to copy & paste it.
 
-```admonish info
-The only actions API Keys are not allowed to do is interacting with other API Keys and external SSO Providers for
-logins to limit the likelihood of privilege escalation in case of leaked credentials. 
-```
+> [!NOTE]
+> The only actions API Keys are not allowed to do is interacting with other API Keys and external
+> SSO Providers for
+> logins to limit the likelihood of privilege escalation in case of leaked credentials. 
 
 ## Creating a new API Key
 

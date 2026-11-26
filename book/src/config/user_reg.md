@@ -25,21 +25,21 @@ After successful registration, the user will receive an E-Mail with an activatio
 this link will direct the user on a page, where a new password or passkey can be set. At the same
 time, the account will be activated and the E-Mail will be validated as well of course.
 
-```admonish caution
-You must have configured your E-Mail sending beforehand. Otherwise the registration process will not work.
-You need to configure the following values to be able to send out E-Mails:
+> [!WARNING]
+> You must have configured your E-Mail sending beforehand. Otherwise the registration process will
+> not work.
+> You need to configure the following values to be able to send out E-Mails:
+>
+> - SMTP_URL
+> - SMTP_USERNAME
+> - SMTP_PASSWORD
 
-- SMTP_URL
-- SMTP_USERNAME
-- SMTP_PASSWORD
-```
-
-```admonish hint
-When you have another client application that redirects to the registration form, you can provide
-a `redirect_uri=https%3A%2F%2Fmy.client.app`. If the value you append is registered for any clients as
-contact URI (not allowed redirect URIs), the registration form will redirect back to your
-application after success.
-```
+> [!TIP]
+> When you have another client application that redirects to the registration form, you can provide
+> a `redirect_uri=https%3A%2F%2Fmy.client.app`. If the value you append is registered for any
+> clients as
+> contact URI (not allowed redirect URIs), the registration form will redirect back to your
+> application after success.
 
 ## Captcha / Proof of Work
 
@@ -51,9 +51,8 @@ This will of course not prevent real humans from registering fake accounts, but 
 had issues with any bots, so it does what it should while providing a way better UX than any
 traditional captcha challenge.
 
-```admonish hint
-If you are interested in how it works, take a look at [spow](https://github.com/sebadob/spow).
-```
+> [!TIP]
+> If you are interested in how it works, take a look at [spow](https://github.com/sebadob/spow).
 
 ## Restricted Registration
 
@@ -133,11 +132,11 @@ domain_blacklist = [
 ]
 ```
 
-```admonish note
-If you get targeted by something like fake accounts for testing your security and so on, don't panic.
-These attacks usually stop after 1-2 weeks most often. When attackers did not find a way in, they
-loose interest.
-```
+> [!NOTE]
+> If you get targeted by something like fake accounts for testing your security and so on, don't
+> panic.
+> These attacks usually stop after 1-2 weeks most often. When attackers did not find a way in, they
+> loose interest.
 
 ## Reserved Names
 
@@ -168,13 +167,12 @@ reserved_names = ['ceo', 'root']
 The default is the RFC 2142 team addresses (`postmaster`, `abuse`, `webmaster`, …) plus the usual
 system and daemon accounts. A custom list replaces the default, it does not extend it.
 
-```admonish warning
-This list only protects mailboxes when Rauthy is the source of truth for the accounts on that mail
-server, and no local account is ever created separately. Every mailbox which exists on the mail
-server must be in this list, because Rauthy cannot block what it does not know about, and an
-address which is missing here can be claimed by the first person who registers it. A mail server
-with a catch-all domain cannot be protected by this list at all.
-```
+> [!WARNING]
+> This list only protects mailboxes when Rauthy is the source of truth for the accounts on that mail
+> server, and no local account is ever created separately. Every mailbox which exists on the mail
+> server must be in this list, because Rauthy cannot block what it does not know about, and an
+> address which is missing here can be claimed by the first person who registers it. A mail server
+> with a catch-all domain cannot be protected by this list at all.
 
 ## Subaddressing
 
@@ -205,16 +203,19 @@ which canonicalizes `ceo+news` into the mailbox `ceo` would make the `reserved_n
 danger_reg_acc_init_immediate = false
 ```
 
-```admonish danger title="Rauthy must own the account table"
-The Magic Link is the mechanism that proves control over an E-Mail address. With this flag, Rauthy
-does not send it out at registration, so anyone who can reach the form takes over the mailbox of
-the address they type in, and Rauthy cannot detect it.
-
-This is only defensible when Rauthy is the source of truth for the accounts on that mail server and
-no mailbox is ever created locally on the mail server. A mailbox that exists there without a Rauthy
-account is taken by the first person who registers it, and a mail server with a catch-all domain
-cannot be protected by any list at all, so it cannot use this flag.
-```
+> [!CAUTION]
+> **Rauthy must own the account table**
+>
+> The Magic Link is the mechanism that proves control over an E-Mail address. With this flag, Rauthy
+> does not send it out at registration, so anyone who can reach the form takes over the mailbox of
+> the address they type in, and Rauthy cannot detect it.
+>
+> This is only defensible when Rauthy is the source of truth for the accounts on that mail server
+> and
+> no mailbox is ever created locally on the mail server. A mailbox that exists there without a
+> Rauthy
+> account is taken by the first person who registers it, and a mail server with a catch-all domain
+> cannot be protected by any list at all, so it cannot use this flag.
 
 Rauthy refuses to start with this flag set unless all of these are configured, and it prints the
 missing values:
@@ -339,11 +340,10 @@ initial setup of a new account:
 The `redirect_uri` of a magic link always wins over this value, and if neither is set, nothing
 changes compared to the current behavior.
 
-```admonish note
-The `redirect_uri` of a client is validated against the registered `client_uri`s, unless
-`allow_open_redirect` is `true`. This config value is set by an admin, and therefore trusted, so
-it is not validated.
-```
+> [!NOTE]
+> The `redirect_uri` of a client is validated against the registered `client_uri`s, unless
+> `allow_open_redirect` is `true`. This config value is set by an admin, and therefore trusted, so
+> it is not validated.
 
 ### Custom Frontend
 
@@ -381,13 +381,13 @@ struct NewUserRegistrationRequest {
 }
 ```
 
-```admonish caution
-Do not fetch and solve a PoW when the user has not submitted the form yet!
-
-The PoWs have a very short lifetime by default to prevent them from being used multiple times.
-Rauthy has additional re-use prevention, but a POST to get a PoW will modify the backend state. This
-is unnecessary if the user decides to not submit the form at all.
-
-You can configure PoWs with `pow.difficulty` and `pow.exp`.
-Keep in mind, that the `pow.exp` should be a high as necessary but always as low as possible.
-```
+> [!WARNING]
+> Do not fetch and solve a PoW when the user has not submitted the form yet!
+>
+> The PoWs have a very short lifetime by default to prevent them from being used multiple times.
+> Rauthy has additional re-use prevention, but a POST to get a PoW will modify the backend state.
+> This
+> is unnecessary if the user decides to not submit the form at all.
+>
+> You can configure PoWs with `pow.difficulty` and `pow.exp`.
+> Keep in mind, that the `pow.exp` should be a high as necessary but always as low as possible.

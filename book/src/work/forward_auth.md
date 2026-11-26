@@ -77,20 +77,26 @@ given_name = 'x-forwarded-user-given-name'
 mfa = 'x-forwarded-user-mfa'
 ```
 
-```admonish caution
-This feature makes it really easy for any application behind your reverse proxy to serve protected resources, but you
-really only use it, if you cannot use a proper OIDC client or something like that. 
-
-Rauthy tries to catch as many config errors as possible, but a lot of issues can happen outside of its scope. Forward 
-Auth has many pitfalls and you need to be very careful with your whole setup when using it. If you only have a tiny
-configuration error in your reverse proxy or your whole environment, it's easily possible that all your security is gone
-immediately. For instance, configuring the HTTP method forwarded to Rauthy wrongly could disable all CSRF checks, or if
-there is a loopwhole in your setup and it's possible for someone to access your client app avoiding your reverse proxy,
-it would be the same as if there was not forward auth at all.
- 
-A direct token validation inside your downstream application via **a native OIDC client should ALWAYS be preferred!** 
-Use Forward Auth only as a last resort!
-```
+> [!WARNING]
+> This feature makes it really easy for any application behind your reverse proxy to serve protected
+> resources, but you
+> really only use it, if you cannot use a proper OIDC client or something like that. 
+>
+> Rauthy tries to catch as many config errors as possible, but a lot of issues can happen outside of
+> its scope. Forward 
+> Auth has many pitfalls and you need to be very careful with your whole setup when using it. If you
+> only have a tiny
+> configuration error in your reverse proxy or your whole environment, it's easily possible that all
+> your security is gone
+> immediately. For instance, configuring the HTTP method forwarded to Rauthy wrongly could disable
+> all CSRF checks, or if
+> there is a loopwhole in your setup and it's possible for someone to access your client app
+> avoiding your reverse proxy,
+> it would be the same as if there was not forward auth at all.
+>
+> A direct token validation inside your downstream application via **a native OIDC client should
+> ALWAYS be preferred!** 
+> Use Forward Auth only as a last resort!
 
 ## Different Types
 
@@ -199,19 +205,21 @@ dynamically to "just use them", to avoid issues like for instance re-using the w
 location, because reverse proxy configs can become very complex pretty quickly. Forwarding these headers (mentioned
 below) is absolutely crucial for the security of this setup!
 
-```admonish hint
-If you end up in an infinite redirect loop later on, you most probably have an issue with your Cookies not being set
-correctly. This can happen for instance, when you are testing in an insecure environment, but having not told Rauthy
-to create insecure cookies, so they would get rejected by the browser on the `/callback` endpoint.
-```
+> [!TIP]
+> If you end up in an infinite redirect loop later on, you most probably have an issue with your
+> Cookies not being set
+> correctly. This can happen for instance, when you are testing in an insecure environment, but
+> having not told Rauthy
+> to create insecure cookies, so they would get rejected by the browser on the `/callback` endpoint.
 
-```admonish note
-Both example configs for reverse proxies down below re-use Rauthy's own `/auth/v1/whoami` route for demonstration, 
-instead of a separate client app. This endpoint helps you debugging your setup, if you have issues with headers maybe.
-You can enable `access.whoami_headers = true` to make it also return all found headers.
-
-The setup works in the exact same way though for a separate client application.
-```
+> [!NOTE]
+> Both example configs for reverse proxies down below re-use Rauthy's own `/auth/v1/whoami` route
+> for demonstration, 
+> instead of a separate client app. This endpoint helps you debugging your setup, if you have issues
+> with headers maybe.
+> You can enable `access.whoami_headers = true` to make it also return all found headers.
+>
+> The setup works in the exact same way though for a separate client application.
 
 ### Why is this secure?
 

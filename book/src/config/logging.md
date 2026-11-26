@@ -261,12 +261,11 @@ matrix_danger_disable_tls_validation = false
 matrix_error_no_panic = false
 ```
 
-```admonish hint
-I suggest that you create a separate room for these events. If you experience issues with Matrix
-encryption, you should maybe disable the encryption for the Events room. I came across some weird
-errors from Matrix in the past when I was using a session token which has been created on another
-machine.
-```
+> [!TIP]
+> I suggest that you create a separate room for these events. If you experience issues with Matrix
+> encryption, you should maybe disable the encryption for the Events room. I came across some weird
+> errors from Matrix in the past when I was using a session token which has been created on another
+> machine.
 
 #### Slack
 
@@ -378,12 +377,11 @@ enum EventType {
 }
 ```
 
-```admonish note
-Keep in mind, that depending on proxies you might have in between, they might kill your connection
-to the events stream after some timeout without messages. Your app should work around this and
-either re-connect on connection loss, or you could fix it with a different proxy config or keep
-alive messages.
-```
+> [!NOTE]
+> Keep in mind, that depending on proxies you might have in between, they might kill your connection
+> to the events stream after some timeout without messages. Your app should work around this and
+> either re-connect on connection loss, or you could fix it with a different proxy config or keep
+> alive messages.
 
 ### Testing
 

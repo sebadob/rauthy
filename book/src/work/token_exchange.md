@@ -36,14 +36,11 @@ exchange is only allowed for confidential clients.
 | `scope` | optional | Narrows the scopes. It can never widen the `subject_token`'s scopes. See below for an ID-JAG. |
 | `requested_token_type` | optional | `urn:ietf:params:oauth:token-type:access_token`, which is also the default, or `urn:ietf:params:oauth:token-type:id-jag`. |
 
-```admonish note
-Apart from the ID-JAG, Rauthy only accepts **access tokens** as `subject_token` / `actor_token`,
-and the exchanged token is always an access token. The exchanged token never comes with a refresh
-token: a refresh must come from the client that owns the original token, with a fresh exchange on
-top. The `may_act` claim is
-not supported yet.
-```
-
+> [!NOTE]
+> Apart from the ID-JAG, Rauthy only accepts **access tokens** as `subject_token` / `actor_token`,
+> and the exchanged token is always an access token. The exchanged token never comes with a refresh
+> token: a refresh must come from the client that owns the original token, with a fresh exchange on
+> top. The `may_act` claim is not supported yet.
 ## Per-client configuration
 
 The exchange is **deny by default** and needs two things configured on the exchanging client, in the
