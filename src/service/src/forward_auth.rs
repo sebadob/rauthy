@@ -421,16 +421,17 @@ fn get_header_alt<'a>(
 ) -> Result<&'a str, ErrorResponse> {
     match get_header(key_first, req) {
         Ok(v) => Ok(v),
-        Err(_) => match get_header(key_second, req) {
-            Ok(v) => Ok(v),
-            Err(_) => {
+        Err(_) => {
+            if let Ok(v) = get_header(key_second, req) {
+                Ok(v)
+            } else {
                 debug!("Missing at least one of headers {key_first} / {key_second}");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     format!("Missing at least one of headers {key_first} / {key_second}"),
                 ))
             }
-        },
+        }
     }
 }
 

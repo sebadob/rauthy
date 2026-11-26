@@ -675,35 +675,30 @@ impl AuthProvider {
             .collect::<BTreeSet<String>>();
 
         for mapping in mappings {
-            match mapping.target.strip_prefix(RAUTHY_ADMIN_GROUP_PREFIX) {
-                // A group admin is a role name, never a row in the `roles` table, so its group is
-                // what must exist. Rauthy never creates a group on a login path.
-                Some(group) => {
-                    if group.is_empty()
-                        || !groups
-                            .iter()
-                            .any(|name| group_admin_matches_group(name, group))
-                    {
-                        return Err(ErrorResponse::new(
-                            ErrorResponseType::BadRequest,
-                            format!(
-                                "Claim mapping target has no group behind it: {}",
-                                mapping.target
-                            ),
-                        ));
-                    }
+            if let Some(group) = mapping.target.strip_prefix(RAUTHY_ADMIN_GROUP_PREFIX) {
+                if group.is_empty()
+                    || !groups
+                        .iter()
+                        .any(|name| group_admin_matches_group(name, group))
+                {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        format!(
+                            "Claim mapping target has no group behind it: {}",
+                            mapping.target
+                        ),
+                    ));
                 }
-                None => {
-                    let known = match mapping.typ {
-                        ClaimMappingTyp::Role => &roles,
-                        ClaimMappingTyp::Group => &groups,
-                    };
-                    if !known.contains(&mapping.target) {
-                        return Err(ErrorResponse::new(
-                            ErrorResponseType::BadRequest,
-                            format!("Claim mapping target does not exist: {}", mapping.target),
-                        ));
-                    }
+            } else {
+                let known = match mapping.typ {
+                    ClaimMappingTyp::Role => &roles,
+                    ClaimMappingTyp::Group => &groups,
+                };
+                if !known.contains(&mapping.target) {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        format!("Claim mapping target does not exist: {}", mapping.target),
+                    ));
                 }
             }
         }
@@ -1558,77 +1553,71 @@ impl AuthProviderIdClaims<'_> {
             }
         };
 
-        let (user_opt, new_federated_user) = match User::find_by_federation(
-            &provider.id,
-            &claims_user_id,
-        )
-        .await
+        let (user_opt, new_federated_user) = if let Ok(user) =
+            User::find_by_federation(&provider.id, &claims_user_id).await
         {
-            Ok(user) => {
-                debug!("found already existing user by federation lookup: {user:?}");
-                (Some(user), NewFederatedUserCreated::No)
-            }
-            Err(_) => {
-                debug!("did not find already existing user by federation lookup");
-                if let Ok(mut user) = User::find_by_email(email.clone()).await {
-                    if let Some(link) = link_cookie {
-                        if link.provider_id != provider.id {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie",
-                            ));
-                        }
-
-                        if link.user_id != user.id {
-                            // In this case, the link cookie exists from another user session.
-                            // It is possible to build this situation manually with access to
-                            // multiple accounts.
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie",
-                            ));
-                        }
-
-                        // finally, this is our condition we allow linking for existing accs
-                        if link.user_email != user.email {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "Invalid E-Mail",
-                            ));
-                        }
-
-                        // If we got here, everything was fine, and we can create the link.
-                        // No need to `.save()` here, will be done later anyway with other updates.
-                        user.auth_provider_id = Some(provider.id.clone());
-                        user.federation_uid = Some(claims_user_id.clone());
-
-                        (Some(user), NewFederatedUserCreated::No)
-                    } else if provider.auto_link
-                        && user.federation_uid.is_none()
-                        && user.auth_provider_id.is_none()
-                    {
-                        user.auth_provider_id = Some(provider.id.clone());
-                        user.federation_uid = Some(claims_user_id.clone());
-
-                        (Some(user), NewFederatedUserCreated::No)
-                    } else {
+            debug!("found already existing user by federation lookup: {user:?}");
+            (Some(user), NewFederatedUserCreated::No)
+        } else {
+            debug!("did not find already existing user by federation lookup");
+            if let Ok(mut user) = User::find_by_email(email.clone()).await {
+                if let Some(link) = link_cookie {
+                    if link.provider_id != provider.id {
                         return Err(ErrorResponse::new(
-                            ErrorResponseType::Forbidden,
-                            format!(
-                                "User with email '{}' already exists but is not linked to this provider.",
-                                user.email
-                            ),
+                            ErrorResponseType::BadRequest,
+                            "bad provider_id in link cookie",
                         ));
                     }
-                } else if !provider.auto_onboarding {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::NotFound,
-                        "User not found",
-                    ));
+
+                    if link.user_id != user.id {
+                        // In this case, the link cookie exists from another user session.
+                        // It is possible to build this situation manually with access to
+                        // multiple accounts.
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "bad user_id in link cookie",
+                        ));
+                    }
+
+                    // finally, this is our condition we allow linking for existing accs
+                    if link.user_email != user.email {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "Invalid E-Mail",
+                        ));
+                    }
+
+                    // If we got here, everything was fine, and we can create the link.
+                    // No need to `.save()` here, will be done later anyway with other updates.
+                    user.auth_provider_id = Some(provider.id.clone());
+                    user.federation_uid = Some(claims_user_id.clone());
+
+                    (Some(user), NewFederatedUserCreated::No)
+                } else if provider.auto_link
+                    && user.federation_uid.is_none()
+                    && user.auth_provider_id.is_none()
+                {
+                    user.auth_provider_id = Some(provider.id.clone());
+                    user.federation_uid = Some(claims_user_id.clone());
+
+                    (Some(user), NewFederatedUserCreated::No)
                 } else {
-                    // a new user will be created further down
-                    (None, NewFederatedUserCreated::Yes)
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        format!(
+                            "User with email '{}' already exists but is not linked to this provider.",
+                            user.email
+                        ),
+                    ));
                 }
+            } else if !provider.auto_onboarding {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "User not found",
+                ));
+            } else {
+                // a new user will be created further down
+                (None, NewFederatedUserCreated::Yes)
             }
         };
         debug!("user_opt:\n{:?}", user_opt);

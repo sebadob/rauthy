@@ -1271,9 +1271,10 @@ impl Client {
     pub fn get_flows(&self) -> Vec<GrantType> {
         self.flows_enabled
             .split(',')
-            .filter_map(|f| match GrantType::from_str(f.trim()) {
-                Ok(flow) => Some(flow),
-                Err(_) => {
+            .filter_map(|f| {
+                if let Ok(flow) = GrantType::from_str(f.trim()) {
+                    Some(flow)
+                } else {
                     warn!(
                         client_id = self.id,
                         flow = f,

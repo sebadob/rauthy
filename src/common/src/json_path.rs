@@ -282,13 +282,12 @@ pub fn has_match(
 /// which is why the match compares this destructured form and not `{value}`.
 #[inline]
 fn node_str<'a>(node: &'a Value, buf: &'a mut String) -> &'a str {
-    match node {
-        Value::String(s) => s.as_str(),
-        _ => {
-            buf.clear();
-            write!(buf, "{node}").expect("Writing to a String never fails");
-            buf.as_str()
-        }
+    if let Value::String(s) = node {
+        s.as_str()
+    } else {
+        buf.clear();
+        write!(buf, "{node}").expect("Writing to a String never fails");
+        buf.as_str()
     }
 }
 

@@ -156,36 +156,33 @@ impl EventListener {
                             continue;
                         }
 
-                        match time::timeout(
+                        if let Ok(tx_res) = time::timeout(
                             Duration::from_secs(5),
                             client.tx.send(sse_payload.clone()),
                         )
                         .await
                         {
-                            Ok(tx_res) => {
-                                if let Err(err) = tx_res {
-                                    error!(
-                                        ?client_id,
-                                        ?client.ip,
-                                        ?client.user_id,
-                                        ?client.api_key_name,
-                                        ?err,
-                                        "sending event to client from event listener - removing \
-                                        client",
-                                    );
-                                    ids_to_remove.push(client_id.clone());
-                                }
-                            }
-                            Err(_) => {
+                            if let Err(err) = tx_res {
                                 error!(
                                     ?client_id,
                                     ?client.ip,
                                     ?client.user_id,
                                     ?client.api_key_name,
-                                    "Timeout reached sending event to client - removing client",
+                                    ?err,
+                                    "sending event to client from event listener - removing \
+                                    client",
                                 );
                                 ids_to_remove.push(client_id.clone());
                             }
+                        } else {
+                            error!(
+                                ?client_id,
+                                ?client.ip,
+                                ?client.user_id,
+                                ?client.api_key_name,
+                                "Timeout reached sending event to client - removing client",
+                            );
+                            ids_to_remove.push(client_id.clone());
                         }
                     }
 
@@ -235,34 +232,32 @@ impl EventListener {
                         let skip = evt_len.saturating_sub(latest);
 
                         for event in events_filtered.iter().skip(skip) {
-                            match time::timeout(Duration::from_secs(5), tx.send((*event).clone()))
-                                .await
+                            if let Ok(tx_res) =
+                                time::timeout(Duration::from_secs(5), tx.send((*event).clone()))
+                                    .await
                             {
-                                Ok(tx_res) => {
-                                    if let Err(err) = tx_res {
-                                        error!(
-                                            ?ip,
-                                            ?user_id,
-                                            ?api_key_name,
-                                            ?err,
-                                            "sending latest event to client after ClientReg - \
-                                            removing client",
-                                        );
-                                        is_err = true;
-                                        break;
-                                    }
-                                }
-                                Err(_) => {
+                                if let Err(err) = tx_res {
                                     error!(
                                         ?ip,
                                         ?user_id,
                                         ?api_key_name,
-                                        "Timeout reached sending latest events to client - \
+                                        ?err,
+                                        "sending latest event to client after ClientReg - \
                                         removing client",
                                     );
                                     is_err = true;
                                     break;
                                 }
+                            } else {
+                                error!(
+                                    ?ip,
+                                    ?user_id,
+                                    ?api_key_name,
+                                    "Timeout reached sending latest events to client - \
+                                    removing client",
+                                );
+                                is_err = true;
+                                break;
                             }
                         }
                     }

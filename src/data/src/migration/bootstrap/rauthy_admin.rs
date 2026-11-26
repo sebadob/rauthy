@@ -12,37 +12,33 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let issuer = &RauthyConfig::get().issuer;
     let bootstrap = &RauthyConfig::get().vars.bootstrap;
     let email = &bootstrap.admin_email;
-    let hash = match bootstrap.password_argon2id.clone() {
-        Some(hash) => {
-            info!(
-                r"
+    let hash = if let Some(hash) = bootstrap.password_argon2id.clone() {
+        info!(
+            r"
 
     First-Time setup - an already hashed bootstrap password has been given for '{email}'
 
     Please change it immediately: {issuer}account
     You will never see this message again!
         "
-            );
-            hash
-        }
-        None => {
-            let plain = match bootstrap.password_plain.clone() {
-                Some(plain) => {
-                    info!(
-                        r"
+        );
+        hash
+    } else {
+        let plain = if let Some(plain) = bootstrap.password_plain.clone() {
+            info!(
+                r"
 
     First-Time setup - a bootstrap password has been given for '{email}'
 
     Please change it immediately: {issuer}account
     You will never see this message again!
         "
-                    );
-                    plain
-                }
-                None => {
-                    let plain = get_rand(24);
-                    info!(
-                        r"
+            );
+            plain
+        } else {
+            let plain = get_rand(24);
+            info!(
+                r"
 
     First-Time setup - new random password for '{email}':
 
@@ -51,18 +47,16 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     Please change it immediately: {issuer}account
     You will never see this message again!
         "
-                    );
-                    plain
-                }
-            };
+            );
+            plain
+        };
 
-            let params = RauthyConfig::get().argon2_params.clone();
-            let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-            argon2
-                .hash_password(plain.as_bytes())
-                .expect("Error hashing the Password")
-                .to_string()
-        }
+        let params = RauthyConfig::get().argon2_params.clone();
+        let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+        argon2
+            .hash_password(plain.as_bytes())
+            .expect("Error hashing the Password")
+            .to_string()
     };
 
     let sql = r"

@@ -32,34 +32,33 @@ pub async fn get_static_assets(
             (Cow::Borrowed(path.as_str()), "none")
         };
 
-    match Assets::get(p.as_ref()) {
-        Some(content) => HttpResponse::Ok()
+    if let Some(content) = Assets::get(p.as_ref()) {
+        HttpResponse::Ok()
             .insert_header(("cache-control", "max-age=15552000; public"))
             .insert_header(("content-encoding", encoding))
             .insert_header((VARY, "content-encoding"))
             .content_type(mime.first_or_octet_stream().as_ref())
-            .body(content.data.into_owned()),
-        None => {
-            if path.starts_with("admin/") && path.ends_with('/') {
-                let new_path = format!("/auth/v1/{}", &path[..path.len() - 1]);
-                let Ok(loc) = header::HeaderValue::from_str(&new_path) else {
-                    // This can only happen if an attacker sends an invalid character, like a
-                    // control char, inside the path. This does not happen by accident, so we
-                    // blacklist for a short period of time.
-                    if let Ok(ip) = real_ip_from_req(&req) {
-                        let _ = IpBlacklist::put(ip.to_string(), Duration::from_mins(10)).await;
-                    }
-                    return HttpResponse::BadRequest().finish();
-                };
-                return HttpResponse::MovedPermanently()
-                    .insert_header((header::LOCATION, loc))
-                    .finish();
-            }
-
-            // Since this may resolve to a sub url path of any length, we cannot now, which
-            // error template we need to serve -> just return not found
-            HttpResponse::NotFound().finish()
+            .body(content.data.into_owned())
+    } else {
+        if path.starts_with("admin/") && path.ends_with('/') {
+            let new_path = format!("/auth/v1/{}", &path[..path.len() - 1]);
+            let Ok(loc) = header::HeaderValue::from_str(&new_path) else {
+                // This can only happen if an attacker sends an invalid character, like a
+                // control char, inside the path. This does not happen by accident, so we
+                // blacklist for a short period of time.
+                if let Ok(ip) = real_ip_from_req(&req) {
+                    let _ = IpBlacklist::put(ip.to_string(), Duration::from_mins(10)).await;
+                }
+                return HttpResponse::BadRequest().finish();
+            };
+            return HttpResponse::MovedPermanently()
+                .insert_header((header::LOCATION, loc))
+                .finish();
         }
+
+        // Since this may resolve to a sub url path of any length, we cannot now, which
+        // error template we need to serve -> just return not found
+        HttpResponse::NotFound().finish()
     }
 }
 
