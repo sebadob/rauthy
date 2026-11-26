@@ -609,6 +609,21 @@ pub async fn post_host_whoami(
 pub async fn post_login(
     Json(payload): Json<PamLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    #[inline]
+    async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
+        user.save_login_failure().await?;
+
+        // Note: We don't want to increase the FailedLoginCounter for the IP here, because
+        // this could be abused for DoS and block remote hosts with enough failed login attempts.
+
+        warn!(?err, "Failed PAM login for user {}", user.email);
+
+        let sec = max(user.failed_login_attempts.unwrap_or(1), 5) as u64;
+        tokio::time::sleep(Duration::from_secs(sec)).await;
+
+        Err(err)
+    }
+
     payload.validate()?;
     if payload.password.is_none()
         && payload.webauthn_code.is_none()
@@ -635,21 +650,6 @@ pub async fn post_login(
     let mut user = User::find_by_email(pam_user.email.clone()).await?;
     user.check_expired()?;
     user.check_enabled()?;
-
-    #[inline]
-    async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
-        user.save_login_failure().await?;
-
-        // Note: We don't want to increase the FailedLoginCounter for the IP here, because
-        // this could be abused for DoS and block remote hosts with enough failed login attempts.
-
-        warn!(?err, "Failed PAM login for user {}", user.email);
-
-        let sec = max(user.failed_login_attempts.unwrap_or(1), 5) as u64;
-        tokio::time::sleep(Duration::from_secs(sec)).await;
-
-        Err(err)
-    }
 
     if let Some(password) = payload.password {
         // Note: Theoretically, we could have a TOCTOU here if an admin decides to switch this

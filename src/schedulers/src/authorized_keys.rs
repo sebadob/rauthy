@@ -7,6 +7,18 @@ use std::str::FromStr;
 use tracing::{debug, error};
 
 pub async fn cleanup_authorized_keys() {
+    async fn exec() -> Result<(), ErrorResponse> {
+        AuthorizedKey::cleanup_blacklist().await?;
+
+        let expired = AuthorizedKey::find_expired(30).await?;
+        for key in expired {
+            // delete one by one to blacklist them properly
+            key.delete().await?;
+        }
+
+        Ok(())
+    }
+
     if !RauthyConfig::get()
         .vars
         .pam
@@ -35,17 +47,5 @@ pub async fn cleanup_authorized_keys() {
         if let Err(err) = exec().await {
             error!("Error during cleanup_authorized_keys: {:?}", err);
         }
-    }
-
-    async fn exec() -> Result<(), ErrorResponse> {
-        AuthorizedKey::cleanup_blacklist().await?;
-
-        let expired = AuthorizedKey::find_expired(30).await?;
-        for key in expired {
-            // delete one by one to blacklist them properly
-            key.delete().await?;
-        }
-
-        Ok(())
     }
 }

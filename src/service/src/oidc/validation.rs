@@ -75,6 +75,11 @@ pub async fn validate_and_refresh_token(
     resource: Option<&str>,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
+    enum Source {
+        Token(RefreshToken),
+        Device(RefreshTokenDevice),
+    }
+
     let clock_skew_secs = RauthyConfig::get().vars.lifetimes.refresh_token_grace_time;
     let mut buf = Vec::with_capacity(256);
     JwtToken::validate_claims_into(
@@ -179,11 +184,6 @@ pub async fn validate_and_refresh_token(
     } else {
         ConsentCheck::Required
     };
-
-    enum Source {
-        Token(RefreshToken),
-        Device(RefreshTokenDevice),
-    }
 
     // Both kinds of refresh tokens are kept until their replacement exists, to fence the rotation.
     // A failed row check is permanent for the token -> it is deleted.

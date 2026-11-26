@@ -1430,6 +1430,13 @@ RETURNING email, failed_login_attempts";
     /// concurrent update changed it. Like [`Self::save`], it drops the sessions and refresh
     /// tokens of a user the stored row has disabled.
     pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
+        /// The columns the reset returns from the stored row.
+        struct StoredReset {
+            email: String,
+            email_verified: bool,
+            enabled: bool,
+        }
+
         // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
         // the stored email is still that one
         let sql = r"
@@ -1437,13 +1444,6 @@ UPDATE users SET password = $1, password_expires = $2,
 email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
 WHERE id = $4
 RETURNING email, email_verified, enabled";
-
-        /// The columns the reset returns from the stored row.
-        struct StoredReset {
-            email: String,
-            email_verified: bool,
-            enabled: bool,
-        }
 
         let stored: Option<StoredReset> = if is_hiqlite() {
             DB::hql()
