@@ -214,6 +214,9 @@ pub async fn auth_finish(
                     .set_authenticated(&user, MfaAssurance::Ceremony)
                     .await?;
                 user.save_login_success().await?;
+                if let Some(pending) = &data.pending_consent {
+                    pending.upsert_for_unchanged_client(&user, req).await?;
+                }
             }
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;

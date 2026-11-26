@@ -83,7 +83,7 @@ export let I18nAdminPt: I18nAdmin = {
         config: 'Configuração do Client',
         consent: {
             builtIn: 'Integrado',
-            desc: `De onde vem o conteúdo do ecrã de consentimento, quando 'consent.enable' está definido. Integrado mostra os Scopes pedidos. Um URL tem de servir o conteúdo do consentimento como JSON. Uma entrada em '[[consent.sources]]' para o recurso pedido tem precedência. Ainda não está ativo: o valor só é guardado até o ecrã de consentimento existir.`,
+            desc: `De onde vem o conteúdo do ecrã de consentimento, quando 'consent.enable' está definido. Integrado mostra os Scopes pedidos. Um URL tem de servir o conteúdo do consentimento como JSON. Uma entrada em '[[consent.sources]]' para o recurso pedido tem precedência.`,
             source: 'Origem do consentimento',
         },
         delete1: 'Tem a certeza de que pretende eliminar este Client?',
@@ -591,6 +591,17 @@ export let I18nAdminPt: I18nAdmin = {
             rauthyAdmin: 'a função rauthy_admin não pode ser removida',
         },
         attributes: 'Atributos',
+        consents: {
+            title: 'Consentimentos',
+            desc: 'Consentimentos que este utilizador deu a aplicações. As horas são mostradas no seu fuso horário local; passe o cursor sobre uma hora para a ver em UTC.',
+            none: 'Este utilizador não deu consentimento a nenhuma aplicação.',
+            revokeDesc:
+                'A revogação remove o consentimento e a aplicação deixa de poder renovar o seu acesso para este utilizador. A aplicação terá de pedir novamente o consentimento do utilizador.',
+            revokeAllDesc:
+                'Revoga todos os consentimentos deste utilizador. Cada aplicação terá de pedir novamente o consentimento do utilizador.',
+            sessionsWarning:
+                'Todas as sessões do utilizador são também eliminadas e o utilizador é desligado em todo o lado.',
+        },
         deleteUser: 'Tem a certeza de que pretende eliminar este utilizador?',
         descAttr: `Defina atributos personalizados do utilizador. Todos os pares chave / valor serão tratados como
             String / valor JSON.`,

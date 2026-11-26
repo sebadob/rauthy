@@ -5,6 +5,7 @@
         PKCE_VERIFIER,
         REDIRECT_URI,
         TPL_AUTH_PROVIDERS,
+        TPL_CLIENT_NAME,
         TPL_REG_ACC_INIT_IMMEDIATE,
         TPL_RESTRICTED_EMAIL_DOMAIN,
         TPL_USER_VALUES_CONFIG,
@@ -40,6 +41,8 @@
     import { execProviderLogin } from '#utils/login.ts';
     import { emailDomainMatches, genKey, saveCsrfToken, generatePassword } from '#utils/helpers.ts';
     import type { SessionInfoResponse } from '#api/types/session.ts';
+    import LoginConsent from '#lib/LoginConsent.svelte';
+    import type { ConsentContentTemplate } from '#api/templates/ConsentContent.ts';
     import type { RegAccInitImmediate } from '#api/templates/RegAccInitImmediate.ts';
 
     let t = useI18n();
@@ -55,6 +58,8 @@
     let config: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
     let providers: AuthProviderTemplate[] = $state([]);
+    // the name of the `rauthy` client, which a provider sign-up asks the consent for
+    let clientName = $state('Rauthy');
     // `hide_login` providers are never rendered on this page
     let visibleProviders = $derived(providers.filter(p => !p.hide_login));
 
@@ -64,6 +69,12 @@
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
+
+    // the consent a provider sign-up was answered with `consent_required` for
+    let consent: undefined | ConsentContentTemplate = $state();
+    let consentAccepted: string[] = $state([]);
+    let consentConfirmed = $state(false);
+    let consentChoicesFor: undefined | ConsentContentTemplate = $state.raw();
 
     let tos: undefined | ToSLatestResponse = $state();
     let noTosExists = $state(false);
@@ -194,14 +205,37 @@
             provider_id: id,
             pkce_challenge: '',
             pow: '',
+            consent:
+                consent && consentConfirmed
+                    ? { content_hash: consent.content_hash, accepted_scopes: consentAccepted }
+                    : undefined,
         };
 
         // provider login will fail without a session in at least init state
         await createSession();
 
-        let errMsg = await execProviderLogin(payload);
-        err = errMsg || '';
+        let res = await execProviderLogin(payload);
         isLoading = false;
+        err = '';
+        if (!res) {
+            return;
+        }
+        if (res.status === 503) {
+            err = t.authorize.busy;
+        } else if (res.error?.error === 'consent_required') {
+            try {
+                consent = JSON.parse(res.error.message) as ConsentContentTemplate;
+            } catch {
+                err = res.error.message;
+                return;
+            }
+            if (payload.consent) {
+                // the confirmed consent was refused, because the content changed meanwhile
+                err = t.authorize.consent.changed;
+            }
+        } else {
+            err = res.error?.message || `HTTP ${res.status}`;
+        }
     }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -293,6 +327,7 @@
 <Template id={TPL_REG_ACC_INIT_IMMEDIATE} bind:value={accInit} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
+<Template id={TPL_CLIENT_NAME} clientId="rauthy" bind:value={clientName} />
 
 <PublicPage>
     <div class="public-card register-card">
@@ -482,11 +517,22 @@
             {#if visibleProviders.length > 0}
                 <div class="providers flex-col gap-05">
                     <div class="public-divider">{t.register.orRegisterWith}</div>
+                    {#if consent}
+                        <LoginConsent
+                            {consent}
+                            {clientName}
+                            bind:accepted={consentAccepted}
+                            bind:confirmed={consentConfirmed}
+                            bind:choicesFor={consentChoicesFor}
+                            disabled={isLoading}
+                        />
+                    {/if}
                     {#each visibleProviders as provider}
                         <ButtonAuthProvider
                             ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
                             {provider}
                             onclick={() => providerLogin(provider.id)}
+                            isDisabled={!!consent && !consentConfirmed}
                             {isLoading}
                         />
                     {/each}

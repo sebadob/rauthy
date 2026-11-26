@@ -1,13 +1,14 @@
 //! Regression tests for the MFA assurance of admin sessions: `Session::is_mfa` may only ever be set
 //! by a completed 2nd factor ceremony, never by the *request* of one.
 //!
-//! These tests need both feature flags that the default `config-test.toml` keeps disabled, plus the
-//! bootstrap API key every fixture request runs on: an API key is not a session, and with
-//! `admin_force_mfa` on, no session of the MFA-less bootstrap admin can create users at all.
+//! These tests need `admin_force_mfa`, which the default `config-test.toml` keeps disabled, plus
+//! the bootstrap API key every fixture request runs on: an API key is not a session, and with
+//! `admin_force_mfa` on, no session of the MFA-less bootstrap admin can create users at all. The
+//! key itself and `otp.enable` are in `config-test.toml`; the key's secret stays outside it,
+//! because the test process needs it to use the key.
 //!
 //! ```sh
-//! ADMIN_FORCE_MFA=true OTP_ENABLE=true \
-//! BOOTSTRAP_API_KEY=eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0= \
+//! ADMIN_FORCE_MFA=true \
 //! BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec \
 //! just test-hiqlite mfa_assurance
 //! ```
@@ -18,6 +19,7 @@
 //! `just test-hiqlite` run stays green.
 use crate::common::{
     PASSWORD, USERNAME, cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow,
+    send_login,
 };
 use crate::{expect_status, expect_status_json};
 use pretty_assertions::assert_eq;
@@ -109,18 +111,14 @@ async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Res
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
-    Client::new()
-        .post(format!(
-            "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
-            &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
-        ))
-        .headers(session.clone())
-        .json(&req)
-        .send()
-        .await
-        .unwrap()
+    let url_auth = format!(
+        "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
+        &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+    );
+    send_login(&Client::new(), &url_auth, session, req).await
 }
 
 /// Creates a user with the given roles and password and returns its id, re-using and re-setting a

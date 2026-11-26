@@ -12,6 +12,7 @@ use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::sessions::{MfaAssurance, Session};
+use crate::entity::user_consents::PendingConsent;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
@@ -564,6 +565,9 @@ pub struct OtpLoginReq {
     pub tos_await_data: Option<OtpToSAwaitData>,
     pub needs_user_update: bool,
     pub session_id: String,
+    /// The consent sent with the login request (`POST /authorize`, `/authorize/refresh` or a
+    /// provider login), written as the user's grant once the ceremony verified the user.
+    pub pending_consent: Option<PendingConsent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -750,6 +754,9 @@ pub async fn auth_finish(
                     .set_authenticated(&user, MfaAssurance::Ceremony)
                     .await?;
                 user.save_login_success().await?;
+                if let Some(pending) = &data.pending_consent {
+                    pending.upsert_for_unchanged_client(&user, req).await?;
+                }
             }
 
             info!(

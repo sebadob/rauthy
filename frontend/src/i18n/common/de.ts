@@ -162,10 +162,15 @@ export const I18nDe: I18n = {
             connectedAppsDesc:
                 'Anwendungen, denen Sie den Zugriff auf Ihren Account erlaubt haben.',
             granted: 'Erteilt',
+            logoutWarning:
+                'Dadurch werden Sie außerdem aus allen Sitzungen auf allen Geräten abgemeldet. Sie müssen sich erneut anmelden.',
             noConnectedApps: 'Bisher wurde keiner Anwendung Zugriff gewährt.',
             privacy: 'Datenschutz',
             resource: 'Ressource',
             revoke: 'Zugriff widerrufen',
+            revokeAll: 'Alle Zugriffe widerrufen',
+            revokeAllDesc:
+                'Widerruft Ihre Zustimmung für alle hier aufgeführten Anwendungen. Jede Anwendung muss erneut um Ihre Zustimmung bitten.',
             revokeDesc:
                 'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff nicht mehr erneuern. Access Tokens, die mit den gelöschten Refresh Tokens ausgestellt wurden, werden bei Userinfo und Introspection widerrufen. Anwendungen, die ihre Tokens selbst validieren, können sie bis zu ihrem Ablauf weiterhin akzeptieren. Die Anwendung muss erneut um Ihre Zustimmung bitten.',
             scopes: 'Scopes',
@@ -202,10 +207,33 @@ export const I18nDe: I18n = {
         zip: 'PLZ',
     },
     authorize: {
+        busy: 'Der Server ist gerade ausgelastet. Bitte versuchen Sie es gleich noch einmal.',
         clientForceMfa: `Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.\nUm Zugang zu 
             bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey\n
             hinzufügen.`,
         clientGroupPrefixForbidden: 'Fehlende Gruppenzugehörigkeit für diesen Login',
+        consent: {
+            agree: 'Ich stimme der [Übermittlung meiner Daten] zu',
+            changed: 'Der Inhalt der Zustimmung hat sich geändert, bitte prüfen Sie ihn erneut.',
+            continue: 'Weiter',
+            details: 'Details',
+            intro: '{{ CLIENT }} bittet um Zugriff auf:',
+            introResource: '{{ CLIENT }} bittet um Zugriff auf {{ RESOURCE }}:',
+            required: 'immer',
+            scopes: {
+                address: 'Ihre Postanschrift',
+                email: 'Ihre E-Mail-Adresse',
+                groups: 'Ihre Gruppenzugehörigkeiten',
+                openid: 'Ihre Benutzer-ID und Rollen für die Anmeldung',
+                phone: 'Ihre Telefonnummer',
+                profile:
+                    'Ihr Name, Benutzername (kann Ihre E-Mail-Adresse sein), Bild, Sprache, Geburtsdatum und Zeitzone',
+                webid: 'Ihre WebID',
+            },
+            terms: 'Bedingungen',
+            title: 'Zustimmung',
+            warning: 'Bitte lesen Sie sorgfältig',
+        },
         email: 'E-Mail',
         emailBadFormat: 'Inkorrektes E-Mail Format',
         emailRequired: 'E-Mail ist notwendig',

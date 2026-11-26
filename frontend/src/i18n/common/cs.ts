@@ -152,10 +152,15 @@ export const I18nCs: I18n = {
             connectedApps: 'Propojené aplikace',
             connectedAppsDesc: 'Aplikace, kterým jste povolili přístup ke svému účtu.',
             granted: 'Povoleno',
+            logoutWarning:
+                'Tím se zároveň odhlásíte ze všech relací na všech zařízeních. Budete se muset znovu přihlásit.',
             noConnectedApps: 'Zatím jste žádné aplikaci přístup nepovolili.',
             privacy: 'Soukromí',
             resource: 'Zdroj',
             revoke: 'Odebrat přístup',
+            revokeAll: 'Odebrat veškerý přístup',
+            revokeAllDesc:
+                'Odebere souhlas pro všechny zde uvedené aplikace. Každá aplikace vás bude muset požádat o souhlas znovu.',
             revokeDesc:
                 'Odebráním zrušíte souhlas a aplikace si už nebude moci přístup obnovit. Přístupové tokeny vydané se smazanými obnovovacími tokeny jsou zneplatněné v userinfo a introspekci. Aplikace, které si tokeny ověřují samy, je ale mohou přijímat až do jejich vypršení. Aplikace vás bude muset požádat o souhlas znovu.',
             scopes: 'Rozsahy',
@@ -189,9 +194,32 @@ export const I18nCs: I18n = {
         zip: 'PSČ',
     },
     authorize: {
+        busy: 'Server je právě vytížený. Zkuste to prosím za chvíli znovu.',
         clientForceMfa: `Toto přihlášení vyžaduje kvůli vyšší bezpečnosti MFA.\nPro přístup se
             přihlaste ke svému účtu a přidejte aspoň jeden přístupový klíč.`,
         clientGroupPrefixForbidden: 'Pro toto přihlášení nejste zařazeni do potřebné skupiny',
+        consent: {
+            agree: 'Souhlasím s [předáním svých údajů]',
+            changed: 'Obsah souhlasu se změnil, zkontrolujte jej prosím znovu.',
+            continue: 'Pokračovat',
+            details: 'Podrobnosti',
+            intro: '{{ CLIENT }} žádá o přístup k:',
+            introResource: '{{ CLIENT }} žádá o přístup k {{ RESOURCE }}:',
+            required: 'vždy',
+            scopes: {
+                address: 'Vaše poštovní adresa',
+                email: 'Vaše e-mailová adresa',
+                groups: 'Vaše členství ve skupinách',
+                openid: 'Vaše ID uživatele a role pro přihlášení',
+                phone: 'Vaše telefonní číslo',
+                profile:
+                    'Vaše jméno, uživatelské jméno (může to být vaše e-mailová adresa), obrázek, jazyk, datum narození a časové pásmo',
+                webid: 'Vaše WebID',
+            },
+            terms: 'Podmínky',
+            title: 'Souhlas',
+            warning: 'Čtěte prosím pozorně',
+        },
         email: 'E-mail',
         emailBadFormat: 'Neplatný tvar e-mailu',
         emailRequired: 'E-mail je povinný',

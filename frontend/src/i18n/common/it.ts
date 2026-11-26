@@ -147,10 +147,15 @@ export const I18nIt: I18n = {
             connectedApps: 'Applicazioni collegate',
             connectedAppsDesc: 'Applicazioni che hai autorizzato ad accedere al tuo account.',
             granted: 'Autorizzato il',
+            logoutWarning:
+                'Questo ti disconnette anche da tutte le sessioni su ogni dispositivo. Dovrai accedere di nuovo.',
             noConnectedApps: 'Nessuna applicazione autorizzata.',
             privacy: 'Privacy',
             resource: 'Risorsa',
             revoke: 'Revoca accesso',
+            revokeAll: 'Revoca tutti gli accessi',
+            revokeAllDesc:
+                'Revoca il tuo consenso per tutte le applicazioni elencate qui. Ogni applicazione dovrà chiedere di nuovo il tuo consenso.',
             revokeDesc:
                 "La revoca ritira il consenso e impedisce all'applicazione di rinnovare l'accesso. UserInfo e introspezione respingono i token di accesso associati ai token di aggiornamento eliminati. Le applicazioni che verificano i token autonomamente possono accettarli fino alla scadenza. L'applicazione dovrà chiederti di nuovo il consenso.",
             scopes: 'Ambiti',
@@ -181,9 +186,32 @@ export const I18nIt: I18n = {
         zip: 'CAP',
     },
     authorize: {
+        busy: 'Il server è occupato in questo momento. Riprova tra un attimo.',
         clientForceMfa:
             "L'accesso a questa applicazione richiede la MFA. Accedi al tuo account e aggiungi almeno una passkey.",
         clientGroupPrefixForbidden: "L'utente non appartiene a un gruppo autorizzato ad accedere",
+        consent: {
+            agree: 'Acconsento alla [trasmissione dei miei dati]',
+            changed: 'Il contenuto del consenso è cambiato, controllalo di nuovo.',
+            continue: 'Continua',
+            details: 'Dettagli',
+            intro: "{{ CLIENT }} richiede l'accesso a:",
+            introResource: "{{ CLIENT }} richiede l'accesso a {{ RESOURCE }}:",
+            required: 'sempre',
+            scopes: {
+                address: 'Il tuo indirizzo postale',
+                email: 'Il tuo indirizzo email',
+                groups: 'I tuoi gruppi',
+                openid: "Il tuo ID utente e i tuoi ruoli per l'accesso",
+                phone: 'Il tuo numero di telefono',
+                profile:
+                    'Il tuo nome, nome utente (può essere il tuo indirizzo e-mail), immagine, lingua, data di nascita e fuso orario',
+                webid: 'Il tuo WebID',
+            },
+            terms: 'Condizioni',
+            title: 'Consenso',
+            warning: 'Leggi con attenzione',
+        },
         email: 'Email',
         emailBadFormat: 'Indirizzo email non valido',
         emailRequired: 'Inserisci un indirizzo email',

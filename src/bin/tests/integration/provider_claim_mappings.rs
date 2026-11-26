@@ -1,11 +1,13 @@
 use crate::common::{
-    cookie_csrf_headers_from_res_direct, get_auth_headers, get_backend_url, get_solved_pow,
+    accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_auth_headers,
+    get_backend_url, get_solved_pow,
 };
 use crate::{expect_status, expect_status_json};
 use actix_web::{App, HttpResponse, HttpServer, web};
 use rauthy_api_types::auth_providers::{
     ClaimMapping, ClaimMappingTyp, ProviderCallbackRequest, ProviderLoginRequest,
 };
+use rauthy_api_types::oidc::LoginConsent;
 use rauthy_api_types::users::UpdateUserRequest;
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, new_store_id};
@@ -692,28 +694,33 @@ async fn federated_login(
     let res = http.post(format!("{url}/oidc/session")).send().await?;
     let mut headers = cookie_csrf_headers_from_res_direct(res).await?;
 
-    let res = http
-        .post(format!("{url}/providers/login"))
-        .headers(headers.clone())
-        .json(&ProviderLoginRequest {
-            email: None,
-            client_id: "rauthy".to_string(),
-            redirect_uri: format!("{url}/oidc/callback"),
-            scopes: None,
-            state: None,
-            nonce: None,
-            // The `rauthy` client requires PKCE, so the downstream challenge must be carried.
-            code_challenge: Some(base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()))),
-            code_challenge_method: Some("S256".to_string()),
-            resource: None,
-            pow: get_solved_pow().await,
-            provider_id: provider_id.to_string(),
-            pkce_challenge: base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes())),
-            handle: None,
-            fwda: None,
-        })
-        .send()
-        .await?;
+    let login = async |consent: Option<LoginConsent>| {
+        http.post(format!("{url}/providers/login"))
+            .headers(headers.clone())
+            .json(&ProviderLoginRequest {
+                email: None,
+                client_id: "rauthy".to_string(),
+                redirect_uri: format!("{url}/oidc/callback"),
+                scopes: None,
+                state: None,
+                nonce: None,
+                // The `rauthy` client requires PKCE, so the downstream challenge must be carried.
+                code_challenge: Some(base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()))),
+                code_challenge_method: Some("S256".to_string()),
+                resource: None,
+                pow: get_solved_pow().await,
+                provider_id: provider_id.to_string(),
+                pkce_challenge: base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes())),
+                handle: None,
+                fwda: None,
+                consent,
+            })
+            .send()
+            .await
+    };
+    // the consent to the `rauthy` client is given before the upstream redirect
+    let content = consent_required(login(None).await?).await;
+    let res = login(Some(accept_all(&content))).await?;
     let res = expect_status!(res, 202);
 
     let callback_cookie = res

@@ -23,6 +23,22 @@ pub async fn get_template() -> Result<HttpResponse, ErrorResponse> {
     Ok(HttpResponse::NotFound().finish())
 }
 
+// dev-only endpoint - a consent document in the format of a remote `[[consent.sources]]` entry,
+// so that a local dev server shows custom consent content without any external source.
+#[cfg(debug_assertions)]
+#[get("/dev/consent")]
+pub async fn get_dev_consent(
+    query: actix_web::web::Query<dev_handler::DevConsentQuery>,
+) -> Result<HttpResponse, ErrorResponse> {
+    dev_handler::get_consent(&query.lang)
+}
+
+#[cfg(not(debug_assertions))]
+#[get("/dev/consent")]
+pub async fn get_dev_consent() -> Result<HttpResponse, ErrorResponse> {
+    Ok(HttpResponse::NotFound().finish())
+}
+
 // This is a dev only endpoint. It is used in very specific scenarios only to work around a
 // limitation of the vite proxy. E.h. the `/oidc/logout` endpoint is used with `GET` to return
 // HTML, and with POST to actually do the logout. However, the vite proxy (at the time of writing)

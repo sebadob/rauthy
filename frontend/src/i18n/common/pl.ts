@@ -154,10 +154,15 @@ export const I18nPl: I18n = {
             connectedApps: 'Połączone aplikacje',
             connectedAppsDesc: 'Aplikacje, którym udzielono zgody na dostęp do Twojego konta.',
             granted: 'Udzielono',
+            logoutWarning:
+                'Spowoduje to również wylogowanie ze wszystkich sesji na wszystkich urządzeniach. Konieczne będzie ponowne zalogowanie.',
             noConnectedApps: 'Żadna aplikacja nie ma jeszcze dostępu.',
             privacy: 'Prywatność',
             resource: 'Zasób',
             revoke: 'Cofnij dostęp',
+            revokeAll: 'Cofnij cały dostęp',
+            revokeAllDesc:
+                'Cofa Twoją zgodę dla wszystkich wymienionych tu aplikacji. Każda aplikacja będzie musiała ponownie poprosić o Twoją zgodę.',
             revokeDesc:
                 'Cofnięcie usuwa zgodę, a aplikacja nie może już odnawiać swojego dostępu. Tokeny dostępu wydane na podstawie usuniętych tokenów odświeżania są unieważniane w punktach userinfo i introspection. Aplikacje, które same weryfikują swoje tokeny, mogą je nadal akceptować do czasu ich wygaśnięcia. Aplikacja musi ponownie poprosić o Twoją zgodę.',
             scopes: 'Zakresy',
@@ -191,9 +196,32 @@ export const I18nPl: I18n = {
         zip: 'Kod pocztowy',
     },
     authorize: {
+        busy: 'Serwer jest teraz zajęty. Spróbuj ponownie za chwilę.',
         clientForceMfa: `To logowanie wymusza MFA dla większego bezpieczeństwa.\nAby uzyskać dostęp,
             zaloguj się na swoje konto i dodaj co najmniej jeden dodatkowy klucz dostępu`,
         clientGroupPrefixForbidden: 'Brak przypisania do grupy dla tego logowania',
+        consent: {
+            agree: 'Wyrażam zgodę na [przekazanie moich danych]',
+            changed: 'Treść zgody uległa zmianie, sprawdź ją ponownie.',
+            continue: 'Dalej',
+            details: 'Szczegóły',
+            intro: '{{ CLIENT }} prosi o dostęp do:',
+            introResource: '{{ CLIENT }} prosi o dostęp do {{ RESOURCE }}:',
+            required: 'zawsze',
+            scopes: {
+                address: 'Twój adres pocztowy',
+                email: 'Twój adres e-mail',
+                groups: 'Twoje grupy',
+                openid: 'Twój identyfikator użytkownika i role do logowania',
+                phone: 'Twój numer telefonu',
+                profile:
+                    'Twoje imię, nazwa użytkownika (może to być Twój adres e-mail), zdjęcie, język, data urodzenia i strefa czasowa',
+                webid: 'Twój WebID',
+            },
+            terms: 'Warunki',
+            title: 'Zgoda',
+            warning: 'Przeczytaj uważnie',
+        },
         email: 'E-mail',
         emailBadFormat: 'Nieprawidłowy format adresu e-mail',
         emailRequired: 'E-mail jest wymagany',

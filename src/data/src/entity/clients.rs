@@ -1173,7 +1173,7 @@ impl Client {
 
     /// The consent source for a login to this client with the optional RFC 8707 `resource`.
     /// `None` only without `consent.enable`. Precedence: `[[consent.sources]]` entry for the
-    /// `resource`, the client's own `consent`, `Local`. Not called yet, the consent screen will.
+    /// `resource`, the client's own `consent`, `Local`.
     pub fn consent_source(&self, resource: Option<&str>) -> Option<ConsentSource> {
         self.consent_source_with(resource, &RauthyConfig::get().vars.consent)
     }
@@ -1241,6 +1241,14 @@ impl Client {
         } else {
             Ok(None)
         }
+    }
+
+    /// The `default_scopes`, trimmed, without empty ones.
+    pub fn default_scope_names(&self) -> impl Iterator<Item = &str> {
+        self.default_scopes
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
     }
 
     #[inline]
@@ -1355,12 +1363,9 @@ impl Client {
     /// Sanitizes the requested scopes on the authorization endpoint and matches them to the
     /// allowed scopes for this client.
     #[inline]
-    pub fn sanitize_login_scopes(
-        &self,
-        scopes: &Option<Vec<String>>,
-    ) -> Result<Vec<String>, ErrorResponse> {
+    pub fn sanitize_login_scopes(&self, scopes: Option<&[String]>) -> Vec<String> {
         let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
-        Ok(self.sanitize_login_scopes_with(scopes.as_deref(), matrix_enabled))
+        self.sanitize_login_scopes_with(scopes, matrix_enabled)
     }
 
     /// Config-free core of [`Self::sanitize_login_scopes`]: default scopes first, then the
@@ -1372,10 +1377,8 @@ impl Client {
     ) -> Vec<String> {
         // Always add the configured default scopes
         let mut res = self
-            .default_scopes
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(ToString::to_string)
+            .default_scope_names()
+            .map(String::from)
             .collect::<Vec<_>>();
 
         let Some(scopes) = scopes else {
@@ -2679,8 +2682,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
     fn consent_vars(enable: bool) -> VarsConsent {
         VarsConsent {
             enable,
-            content_cache_ttl: 3600,
-            danger_allow_private_addresses: false,
+            content_cache_ttl: std::time::Duration::from_hours(1),
             sources: [
                 VarsConsentSource::new(
                     "https://api.example.com".to_string(),
@@ -3310,6 +3312,29 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         };
         let res = client.sanitize_login_scopes_with(Some(&strs(&["email", "email"])), false);
         assert_eq!(res, strs(&["openid", "email"]));
+    }
+
+    #[test]
+    fn test_default_scope_names_skip_blank_entries() {
+        for (default_scopes, want) in [
+            ("", strs(&[])),
+            (" , ", strs(&[])),
+            (" openid , ,email", strs(&["openid", "email"])),
+            ("openid, ,email", strs(&["openid", "email"])),
+        ] {
+            let client = Client {
+                scopes: "openid,email".to_string(),
+                default_scopes: default_scopes.to_string(),
+                ..Default::default()
+            };
+            let names = client.default_scope_names().map(String::from);
+            assert_eq!(names.collect::<Vec<_>>(), want, "{default_scopes:?}");
+            assert_eq!(
+                client.sanitize_login_scopes_with(None, false),
+                want,
+                "{default_scopes:?}"
+            );
+        }
     }
 
     #[test]

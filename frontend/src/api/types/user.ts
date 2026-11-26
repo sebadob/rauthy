@@ -99,6 +99,12 @@ export interface UserConsentDeleteResponse {
     refresh_tokens_deleted: number;
 }
 
+export interface UserConsentsDeleteResponse {
+    consents_deleted: number;
+    /// From all clients of the deleted consents together
+    refresh_tokens_deleted: number;
+}
+
 export interface UserConsentResponse {
     client_id: string;
     client_name?: string;

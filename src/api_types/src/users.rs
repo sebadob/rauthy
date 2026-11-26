@@ -643,6 +643,14 @@ pub struct UserConsentDeleteResponse {
 
 #[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct UserConsentsDeleteResponse {
+    pub consents_deleted: usize,
+    /// From all clients of the deleted consents together
+    pub refresh_tokens_deleted: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserConsentResponse {
     pub client_id: String,
     /// `None` if the client does not exist (anymore), is ephemeral, or has no name

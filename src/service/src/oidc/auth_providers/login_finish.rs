@@ -1,5 +1,5 @@
 use crate::oidc;
-use crate::oidc::authorize::AuthorizeData;
+use crate::oidc::authorize::{AuthorizeData, FirstFactor};
 use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
@@ -98,6 +98,7 @@ pub async fn login_finish<'a>(
     let header_origin = client.get_validated_origin_header(req)?;
 
     let auth_step = oidc::authorize::finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -109,6 +110,8 @@ pub async fn login_finish<'a>(
             code_challenge: slf.req_code_challenge,
             code_challenge_method: slf.req_code_challenge_method,
             resource: slf.req_resource,
+            consent: slf.req_consent,
+            first_factor: FirstFactor::Proven,
             header_origin,
             mfa_methods,
             is_forward_auth: slf.is_forward_auth,
@@ -116,7 +119,18 @@ pub async fn login_finish<'a>(
         None,
         Some(provider_mfa_login),
     )
-    .await?;
+    .await
+    .map_err(|err| {
+        // the spent callback cannot be retried
+        if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) {
+            ErrorResponse::new(
+                ErrorResponseType::Connection,
+                "The consent content is unavailable, please start the login again",
+            )
+        } else {
+            err
+        }
+    })?;
 
     // callback data deletion cookie
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);

@@ -10,7 +10,7 @@
     import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
     import type { ActiveOtp, LoginResponse } from '#api/types/authorize.ts';
     import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
-    import { IS_DEV } from '#utils/constants.ts';
+    import { IS_DEV, PROVIDER_LOGIN_PAGE } from '#utils/constants.ts';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
     import TosAccept from '#lib/TosAccept.svelte';
     import type { MfaPurpose } from '#api/types/mfa.ts';
@@ -30,6 +30,8 @@
     let tosAcceptCode = $state('');
     let tosForceAccept = $state(false);
     let needsValuesUpdate = $state(false);
+    // the login page to ask the consent again is unknown, the account is the way on
+    let consentLost = $state(false);
 
     onMount(async () => {
         let pErr = useParam('error').get();
@@ -122,6 +124,17 @@
             setTimeout(() => {
                 window.location.replace('/auth/v1/');
             }, 5000);
+        } else if (res.error?.error === 'consent_required') {
+            // The consent is missing or changed meanwhile. The login page asks for it again with the
+            // original request.
+            let loginPage = sessionStorage.getItem(PROVIDER_LOGIN_PAGE);
+            sessionStorage.removeItem(PROVIDER_LOGIN_PAGE);
+            if (loginPage?.startsWith(`${window.location.origin}/`)) {
+                window.location.replace(loginPage);
+            } else {
+                error = t.authorize.consent.changed;
+                consentLost = true;
+            }
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             error = t.authorize.clientForceMfa;
@@ -206,6 +219,13 @@
             onToSAccept={handleAuthRes}
             {onToSCancel}
         />
+    {:else if consentLost}
+        <div class="public-card ui-section-stack">
+            <p class="err">{error}</p>
+            <Button onclick={() => window.location.replace('/auth/v1/account')}>
+                {t.authorize.navigateToAccount}
+            </Button>
+        </div>
     {:else if error}
         <div class="public-card err">
             {error}

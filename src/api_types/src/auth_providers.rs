@@ -1,4 +1,5 @@
 use crate::cust_validation::validate_vec_scopes;
+use crate::oidc::LoginConsent;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLAIM_VALUE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE,
     RE_JSON_PATH, RE_RESOURCE, RE_ROLE_GROUP_TARGET, RE_SCOPE_SPACE, RE_URI,
@@ -221,6 +222,11 @@ pub struct ProviderLoginRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
+    /// The consent given on the login page, see [`LoginRequest::consent`]. Checked before the
+    /// upstream redirect, where a refusal returns `ConsentRequired`, and again after the
+    /// callback.
+    #[validate(nested)]
+    pub consent: Option<LoginConsent>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -290,6 +296,29 @@ pub struct ProviderLookupResponse {
 mod tests {
     use super::*;
     use validator::Validate;
+
+    /// The consent of a provider login is validated with the login.
+    #[test]
+    fn provider_login_request_validates_the_consent() {
+        let hash = "a".repeat(64);
+        for (hash, scope, is_valid) in [
+            (hash.as_str(), "openid", true),
+            ("not-a-hash", "openid", false),
+            (hash.as_str(), "open id", false),
+        ] {
+            let json = format!(
+                r#"{{"client_id": "my-client", "redirect_uri": "https://app.example.com/cb",
+                "pow": "pow", "provider_id": "provider", "pkce_challenge": "{}",
+                "consent": {{"content_hash": "{hash}", "accepted_scopes": ["{scope}"]}}}}"#,
+                "a".repeat(43)
+            );
+            let req: ProviderLoginRequest = serde_json::from_str(&json).unwrap();
+            let has_err = req
+                .validate()
+                .is_err_and(|err| err.errors().contains_key("consent"));
+            assert_eq!(has_err, !is_valid, "{json}");
+        }
+    }
 
     // Regression tests for RFC 8707 `resource` being dropped on upstream-provider
     // logins (#1702). The provider login request must carry a `resource` just like

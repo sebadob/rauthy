@@ -8,20 +8,22 @@
 //! the feature is on. The webauthn start fails either way, because the login request for webauthn
 //! was never created.
 //!
-//! These tests need `otp.enable` on plus the bootstrap API key, which is also how the `otp_secret`
-//! and `mfa_assurance` suites are run. `OPTIONAL_SELECT_MFA` must be given to both the backend and
-//! the test, since it is not observable from the outside for a user without a passkey:
+//! These tests need `otp.enable` and the bootstrap API key, both of which `config-test.toml` sets;
+//! the key's secret stays outside the config, because the test process needs it to use the key.
+//! `OPTIONAL_SELECT_MFA` must be given to both the backend and the test, since it is not
+//! observable from the outside for a user without a passkey:
 //!
 //! ```sh
-//! OTP_ENABLE=true OPTIONAL_SELECT_MFA=true \
-//! BOOTSTRAP_API_KEY=eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0= \
+//! OPTIONAL_SELECT_MFA=true \
 //! BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec \
 //! just test-hiqlite mfa_select
 //! ```
 //!
-//! Without the API key or with `otp.enable` off, every test skips itself and the plain
+//! Without the API key secret or with `otp.enable` off, every test skips itself and the plain
 //! `just test-hiqlite` run stays green.
-use crate::common::{cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow};
+use crate::common::{
+    cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow, send_login,
+};
 use crate::{expect_status, expect_status_json};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::LoginRequest;
@@ -91,7 +93,8 @@ async fn init_session() -> Result<HeaderMap, Box<dyn Error>> {
     cookie_csrf_headers_from_res_direct(res).await
 }
 
-/// Password login of a user on an existing session, as the raw `POST /oidc/authorize` response.
+/// Password login of a user on an existing session, as the `POST /oidc/authorize` response. The
+/// suite runs with `consent.enable`, so the login is sent again with the consent it asks for.
 async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Response {
     let backend = get_backend_url();
     let challenge = base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()));
@@ -109,18 +112,14 @@ async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Res
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
-    Client::new()
-        .post(format!(
-            "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
-            &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
-        ))
-        .headers(session.clone())
-        .json(&req)
-        .send()
-        .await
-        .unwrap()
+    let url_auth = format!(
+        "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
+        &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+    );
+    send_login(&Client::new(), &url_auth, session, req).await
 }
 
 /// Creates the test user with a password, re-using and re-setting a left-over of a prior run,

@@ -84,7 +84,7 @@ export const I18nAdminIt: I18nAdmin = {
         config: 'Configurazione del client',
         consent: {
             builtIn: 'Integrata',
-            desc: 'Origine dei contenuti della schermata di consenso quando consent.enable è attivo. La schermata integrata mostra gli ambiti richiesti. Un URL deve restituire il consenso in JSON. Una voce [[consent.sources]] per la risorsa richiesta ha la precedenza. La configurazione diventa operativa quando sarà disponibile la relativa schermata.',
+            desc: 'Origine dei contenuti della schermata di consenso quando consent.enable è attivo. La schermata integrata mostra gli ambiti richiesti. Un URL deve restituire il consenso in JSON. Una voce [[consent.sources]] per la risorsa richiesta ha la precedenza.',
             source: 'Origine del consenso',
         },
         delete1: 'Vuoi eliminare questo client?',
@@ -523,6 +523,17 @@ export const I18nAdminIt: I18nAdmin = {
             rauthyAdmin: 'Il ruolo rauthy_admin non può essere rimosso',
         },
         attributes: 'Attributi',
+        consents: {
+            title: 'Consensi',
+            desc: 'Consensi che questo utente ha dato alle applicazioni. Gli orari sono mostrati nel tuo fuso orario locale; passa il mouse su un orario per vederlo in UTC.',
+            none: 'Questo utente non ha dato il consenso a nessuna applicazione.',
+            revokeDesc:
+                'La revoca rimuove il consenso e l’applicazione non può più rinnovare il suo accesso per questo utente. L’applicazione dovrà chiedere di nuovo il consenso all’utente.',
+            revokeAllDesc:
+                'Revoca tutti i consensi di questo utente. Ogni applicazione dovrà chiedere di nuovo il consenso all’utente.',
+            sessionsWarning:
+                'Vengono eliminate anche tutte le sessioni dell’utente, che viene disconnesso ovunque.',
+        },
         deleteUser: 'Vuoi eliminare questo utente?',
         descAttr:
             'Assegna attributi personalizzati all’utente. Ogni valore è trattato come stringa o valore JSON.',

@@ -3,7 +3,7 @@ use rauthy_api_types::clients::{
 };
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{
-    GrantType, JwkKeyPairAlg, LoginRequest, SessionInfoResponse, TokenRequest,
+    GrantType, JwkKeyPairAlg, LoginConsent, LoginRequest, SessionInfoResponse, TokenRequest,
 };
 use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
@@ -11,17 +11,25 @@ use rauthy_api_types::users::{
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode, new_store_id};
+use rauthy_data::entity::consent_sources::LoginConsentContent;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
-use reqwest::{Response, header};
+use reqwest::{Response, StatusCode, header};
 use serde_json::json;
 use spow::pow::Pow;
 use std::error::Error;
+use tokio::sync::OnceCell;
+
+/// Set once the admin has given its consent to the `rauthy` client in this test binary.
+static ADMIN_CONSENT: OnceCell<()> = OnceCell::const_new();
 
 pub const CLIENT_ID: &str = "init_client";
 pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
 pub const USERNAME: &str = "init_admin@localhost";
 pub const PASSWORD: &str = "123SuperSafe";
+/// A `content_hash` of no consent content.
+pub const STALE_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 /// The password for every user a test creates: the test backend's password policy requires at
 /// least 14 characters, which the seeded [`PASSWORD`] of `init_admin` does not satisfy.
@@ -398,8 +406,19 @@ pub async fn get_token_set_init_client() -> TokenSet {
     res.json::<TokenSet>().await.unwrap()
 }
 
+/// A session of the admin on the `rauthy` client.
+///
+/// Almost every test starts with it. On a fresh backend the admin has not consented yet, and
+/// without the one login [`ADMIN_CONSENT`] waits for, all of them would be answered with
+/// `ConsentRequired` at once and log in a second time: twice the password hashes while the
+/// deliberate failed logins of other tests count towards the blacklist of the source address.
 pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let redirect_uri = format!("{}/oidc/callback", get_backend_url());
+    ADMIN_CONSENT
+        .get_or_init(async || {
+            session_headers_for_client("rauthy", None, &redirect_uri).await;
+        })
+        .await;
     session_headers_for_client("rauthy", None, &redirect_uri).await
 }
 
@@ -416,6 +435,30 @@ pub async fn session_headers_for_client(
         redirect_uri: redirect_uri.to_string(),
     })
     .await
+}
+
+/// A full login of `email` on [`CLIENT_ID`], whose backchannel logout stores the logout token
+/// for the tests, returning the session headers and the issued tokens.
+pub async fn login_session_init_client(email: &str, password: &str) -> (HeaderMap, TokenSet) {
+    login_session(&LoginTarget {
+        email: email.to_string(),
+        password: password.to_string(),
+        client_id: CLIENT_ID.to_string(),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        redirect_uri: "http://localhost:3000/oidc/callback".to_string(),
+    })
+    .await
+}
+
+/// The status of `GET /oidc/sessioninfo` with the session `headers`, `401` once it is deleted.
+pub async fn session_status(headers: &HeaderMap) -> StatusCode {
+    reqwest::Client::new()
+        .get(format!("{}/oidc/sessioninfo", get_backend_url()))
+        .headers(headers.clone())
+        .send()
+        .await
+        .unwrap()
+        .status()
 }
 
 /// Who logs in, and on which client: the credentials of the user, and the client with the
@@ -467,15 +510,10 @@ pub async fn login_session(target: &LoginTarget) -> (HeaderMap, TokenSet) {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
-    let res = client
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await
-        .unwrap();
+    let res = send_login(&client, &url_auth, &headers, req_login).await;
     let res = expect_status!(res, 202);
 
     let (code, _state) = code_state_from_headers(&res).unwrap();
@@ -525,7 +563,13 @@ impl PreparedLogin {
     pub async fn send(self) -> HeaderMap {
         let email = self.req.email.clone().unwrap_or_default();
         let headers = self.headers.clone();
-        let res = self.response().await;
+        let res = send_login(
+            &reqwest::Client::new(),
+            &self.url_auth,
+            &self.headers,
+            self.req,
+        )
+        .await;
         let status = res.status();
         if status != 202 {
             let body = res.text().await.unwrap_or_default();
@@ -534,7 +578,7 @@ impl PreparedLogin {
         headers
     }
 
-    /// Sends the login and returns its response, whatever its status.
+    /// Sends the login without consent and returns its response, whatever its status.
     pub async fn response(self) -> Response {
         reqwest::Client::new()
             .post(&self.url_auth)
@@ -543,6 +587,90 @@ impl PreparedLogin {
             .send()
             .await
             .unwrap()
+    }
+}
+
+/// Sends the login `req`. When it fails with `ConsentRequired`, it is sent once more with a new
+/// proof of work and the consent it asks for, accepting all requested scopes.
+///
+/// # Panics
+///
+/// On any other 400, whose body is read for the check. Logins expected to fail with a 400 are
+/// sent directly.
+pub async fn send_login(
+    client: &reqwest::Client,
+    url_auth: &str,
+    headers: &HeaderMap,
+    mut req: LoginRequest,
+) -> Response {
+    let send = async |req: &LoginRequest| {
+        client
+            .post(url_auth)
+            .headers(headers.clone())
+            .json(req)
+            .send()
+            .await
+            .unwrap()
+    };
+
+    let res = send(&req).await;
+    if res.status() != 400 {
+        return res;
+    }
+    req.consent = Some(accept_all(&consent_required(res).await));
+    req.pow = get_solved_pow().await;
+    send(&req).await
+}
+
+/// The [`LoginConsentContent`] of a `ConsentRequired` response.
+///
+/// # Panics
+///
+/// On any other response.
+pub async fn consent_required(res: Response) -> LoginConsentContent {
+    let res = expect_status!(res, 400);
+    let err = res.json::<ErrorResponse>().await.unwrap();
+    assert_eq!(
+        err.error,
+        ErrorResponseType::ConsentRequired,
+        "{}",
+        err.message
+    );
+    consent_content(&err.message)
+}
+
+/// The [`LoginConsentContent`] of a `ConsentRequired` message or a login page template.
+pub fn consent_content(json: &str) -> LoginConsentContent {
+    serde_json::from_str(json).expect("LoginConsentContent JSON")
+}
+
+/// The consent template of a login page, `None` if it asks for no consent.
+pub fn consent_template(html: &str) -> Option<LoginConsentContent> {
+    let (_, tpl) = html.split_once("<template id=\"tpl_consent_content\">")?;
+    let (json, _) = tpl
+        .split_once("</template>")
+        .expect("closed consent template");
+    Some(consent_content(json))
+}
+
+/// The consent to `content` with all requested scopes.
+pub fn accept_all(content: &LoginConsentContent) -> LoginConsent {
+    LoginConsent {
+        content_hash: content.content.content_hash.clone(),
+        accepted_scopes: content
+            .content
+            .scopes
+            .iter()
+            .map(|s| s.name.clone())
+            .collect(),
+    }
+}
+
+/// The consent with all requested scopes of `content`, but given for other content.
+pub fn stale_consent(content: &LoginConsentContent) -> LoginConsent {
+    LoginConsent {
+        content_hash: STALE_HASH.to_string(),
+        ..accept_all(content)
     }
 }
 
@@ -582,6 +710,7 @@ pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     PreparedLogin {

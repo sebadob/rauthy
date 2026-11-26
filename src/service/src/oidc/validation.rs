@@ -292,7 +292,7 @@ pub async fn validate_and_refresh_token(
         let rt_scope = rt.scope.take();
         let vars = &RauthyConfig::get().vars.consent;
         let rt_scope = if vars.enable && consent == ConsentCheck::Required {
-            if vars.requires_resource() && client.is_ephemeral() && claims.resource.is_none() {
+            if vars.missing_required_resource(&client, claims.resource) {
                 tracing::warn!("refresh token without a `resource` for a client that requires one");
                 return Err(ErrorResponse::new(
                     ErrorResponseType::InvalidGrant,

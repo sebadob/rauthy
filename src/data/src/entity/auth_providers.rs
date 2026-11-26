@@ -20,6 +20,7 @@ use rauthy_api_types::auth_providers::{
     ClaimMapping, ClaimMappingTyp, ProviderCallbackRequest, ProviderLinkedUserResponse,
     ProviderLookupRequest, ProviderLookupResponse, ProviderRequest, ProviderResponse,
 };
+use rauthy_api_types::oidc::LoginConsent;
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, CLAIM_MAPPINGS_MAX_RULES,
@@ -1042,10 +1043,8 @@ pub struct AuthProviderCallback {
     pub req_code_challenge: Option<String>,
     pub req_code_challenge_method: Option<String>,
     /// RFC 8707 resource indicator from the authorization request (#1702).
-    /// `default` so a callback cached by the previous version still decodes
-    /// during a rolling upgrade.
-    #[serde(default)]
     pub req_resource: Option<String>,
+    pub req_consent: Option<LoginConsent>,
 
     pub provider_id: String,
 

@@ -170,7 +170,6 @@ pub async fn run(
     {
         DB::hql().clear_cache(Cache::Atproto).await?;
         DB::hql().clear_cache(Cache::DeviceCode).await?;
-        DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
         DB::hql().clear_cache(Cache::ClientDynamic).await?;
         DB::hql().clear_cache(Cache::ClientSecret).await?;
         DB::hql().clear_cache(Cache::DPoPNonce).await?;
@@ -182,7 +181,6 @@ pub async fn run(
         DB::hql().clear_cache(Cache::PoW).await?;
         DB::hql().clear_cache(Cache::ToS).await?;
         DB::hql().clear_cache(Cache::User).await?;
-        DB::hql().clear_cache(Cache::Webauthn).await?;
         DB::hql().clear_cache(Cache::PAM).await?;
         DB::hql().clear_cache(Cache::ConsentContent).await?;
     }
@@ -558,6 +556,7 @@ fn api_services() -> actix_web::Scope {
                 .service(events::sse_events)
                 .service(events::post_event_test)
                 .service(dev_only::get_template)
+                .service(dev_only::get_dev_consent)
                 .service(dev_only::post_dev_only_endpoints)
                 .service(html::get_index)
                 .service(html::get_account_html)
@@ -707,6 +706,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::delete_user_device)
                 .service(users::get_user_consents)
                 .service(users::delete_user_consent)
+                .service(users::delete_user_consents_all)
                 .service(users::get_user_webid_data)
                 .service(users::put_user_webid_data)
                 .service(users::get_user_email_confirm)

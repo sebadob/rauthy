@@ -380,6 +380,12 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 200);
+    let res = client
+        .delete(format!("{backend}/users/{}/consents/all", member.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 200);
 
     // its own consents, before the group admin check that would refuse an admin target
     let res = client
@@ -397,6 +403,14 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 200);
+    // a revoke deletes all sessions of the user, here the one of the group admin itself
+    let res = client
+        .get(format!("{backend}/users/{}/consents", ga.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 401);
+    let ga_headers = session_headers_with(&setup.ga, PWD).await;
 
     // an API key of another access group is checked first and rejected, even with the group
     // admin session
@@ -457,6 +471,12 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     expect_status!(res, 403);
     let res = client
+        .delete(format!("{backend}/users/{}/consents/all", coadmin.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 403);
+    let res = client
         .get(format!("{backend}/users/{}/consents", outsider.id))
         .headers(ga_headers.clone())
         .send()
@@ -467,6 +487,12 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
             "{backend}/users/{}/consents?client_id=init_client",
             outsider.id
         ))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 403);
+    let res = client
+        .delete(format!("{backend}/users/{}/consents/all", outsider.id))
         .headers(ga_headers.clone())
         .send()
         .await?;

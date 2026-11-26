@@ -5,8 +5,8 @@ use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_common::constants::PASSWORD_MAX_LEN;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_LOWERCASE,
-    RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_ALNUM_64, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER,
+    RE_LOWERCASE, RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -298,9 +298,29 @@ pub struct LoginRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
+    /// The consent given on the login page. Required with `consent.enable`, unless the user's
+    /// consent grant already covers the requested scopes for the current consent content.
+    #[validate(nested)]
+    pub consent: Option<LoginConsent>,
+}
+
+/// The consent a user gives on the login page for the consent content shown there.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate, ToSchema)]
+pub struct LoginConsent {
+    /// The `content_hash` of the consent content that was shown.
+    ///
+    /// Validation: `^[a-zA-Z0-9]{64}$`
+    #[validate(regex(path = "*RE_ALNUM_64", code = "^[a-zA-Z0-9]{64}$"))]
+    pub content_hash: String,
+    /// Must contain all `default_scopes` of the client, and only requested scopes.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9-_/,:*.]{2,64}$>`
+    #[validate(custom(function = "validate_vec_scopes"))]
+    pub accepted_scopes: Vec<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct LoginRefreshRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -335,6 +355,9 @@ pub struct LoginRefreshRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
+    /// The consent given on the login page, see [`LoginRequest::consent`].
+    #[validate(nested)]
+    pub consent: Option<LoginConsent>,
 }
 
 #[derive(Default, Deserialize, Validate, ToSchema, IntoParams)]
@@ -759,6 +782,37 @@ pub struct TokenInfo<'a> {
 mod tests {
     use super::*;
     use validator::Validate;
+
+    /// The consent of a login is validated with the login, for both login requests.
+    #[test]
+    fn login_requests_validate_the_consent() {
+        let consent = |hash: &str, scope: &str| {
+            format!(r#"{{"content_hash": "{hash}", "accepted_scopes": ["{scope}"]}}"#)
+        };
+        let hash = "a".repeat(64);
+        for (consent, is_valid) in [
+            (consent(&hash, "openid"), true),
+            (consent("not-a-hash", "openid"), false),
+            (consent(&hash, "open id"), false),
+        ] {
+            let refresh = format!(
+                r#"{{"client_id": "my-client", "redirect_uri": "https://app.example.com/cb",
+                "consent": {consent}}}"#
+            );
+            let req: LoginRefreshRequest = serde_json::from_str(&refresh).unwrap();
+            assert_eq!(req.validate().is_ok(), is_valid, "{refresh}");
+
+            let login = format!(
+                r#"{{"email": "u@example.com", "pow": "pow", "client_id": "my-client",
+                "redirect_uri": "https://app.example.com/cb", "consent": {consent}}}"#
+            );
+            let req: LoginRequest = serde_json::from_str(&login).unwrap();
+            let has_err = req
+                .validate()
+                .is_err_and(|err| err.errors().contains_key("consent"));
+            assert_eq!(has_err, !is_valid, "{login}");
+        }
+    }
 
     // Regression test for RFC 8707 `resource` being dropped on the silent re-auth path.
     // The refresh authorize request must deserialize and validate a `resource` just like

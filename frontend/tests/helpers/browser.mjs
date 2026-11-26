@@ -48,7 +48,8 @@ export function injectTemplates(
     const injected = Object.entries(templates)
         .map(([id, value]) => `<template id="${id}">${value}</template>`)
         .join('');
-    return html.replace(/\{%- for tpl in templates -%\}[\s\S]*?\{%- endfor %\}/, injected);
+    // a function, so that a `$'` in a value is not read as a replacement pattern
+    return html.replace(/\{%- for tpl in templates -%\}[\s\S]*?\{%- endfor %\}/, () => injected);
 }
 
 // Serves the built UI for a context: the document and the static bundle are the helper's, anything

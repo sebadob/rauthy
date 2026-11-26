@@ -1,12 +1,12 @@
 use crate::config::Config;
-use axum::routing::{get, post};
 use axum::Router;
+use axum::routing::{get, post};
 use rauthy_client::oidc_config::{ClaimMapping, JwtClaim, JwtClaimTyp, RauthyConfig};
 use rauthy_client::provider::OidcProvider;
 use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
 use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::{info, subscriber, Level};
+use tracing::{Level, info, subscriber};
 use tracing_subscriber::FmtSubscriber;
 
 mod config;
@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
     subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     // we need to start the backend for the rauthy-client
-    rauthy_client::init_with(None, RauthyHttpsOnly::No, DangerAcceptInvalidCerts::Yes).await?;
+    rauthy_client::init_with(None, RauthyHttpsOnly::No, DangerAcceptInvalidCerts::Yes)?;
 
     let config = RauthyConfig {
         // Sets the .is_admin field for the principal based on the `ClaimMapping`.

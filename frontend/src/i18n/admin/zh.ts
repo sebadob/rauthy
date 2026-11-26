@@ -79,7 +79,7 @@ export let I18nAdminZh: I18nAdmin = {
         config: '客户端配置',
         consent: {
             builtIn: '内置',
-            desc: `设置 'consent.enable' 时同意页面内容的来源。内置显示请求的 scopes。URL 必须以 JSON 形式提供同意内容。针对所请求资源的 '[[consent.sources]]' 条目优先。尚未生效：在同意页面上线之前，该值仅被保存。`,
+            desc: `设置 'consent.enable' 时同意页面内容的来源。内置显示请求的 scopes。URL 必须以 JSON 形式提供同意内容。针对所请求资源的 '[[consent.sources]]' 条目优先。`,
             source: '同意来源',
         },
         delete1: '您确定要删除此客户端吗？',
@@ -557,6 +557,15 @@ export let I18nAdminZh: I18nAdmin = {
             rauthyAdmin: '无法移除rauthy_admin规则',
         },
         attributes: '属性',
+        consents: {
+            title: '同意',
+            desc: '此用户向应用授予的同意。时间以您的本地时区显示；将鼠标悬停在时间上可查看 UTC 时间。',
+            none: '此用户尚未向任何应用授予同意。',
+            revokeDesc:
+                '撤销将删除该同意，应用将无法再续期其对此用户的访问权限。应用需要重新请求用户的同意。',
+            revokeAllDesc: '撤销此用户的所有同意。每个应用都需要重新请求用户的同意。',
+            sessionsWarning: '该用户的所有会话也会被删除，用户将在所有地方退出登录。',
+        },
         deleteUser: '您确定要删除此用户吗？',
         descAttr: `设置自定义用户属性。所有键/值对将作为字符串/JSON值处理。`,
         forceLogout: `您确定要使此用户的所有现有会话无效并删除所有刷新令牌吗？`,

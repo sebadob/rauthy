@@ -882,62 +882,61 @@ backup_keep_for_local = '3d'
 #HQL_DANGER_RAFT_STATE_RESET=true
 
 [consent]
-# Not active yet: until the consent screen lands, consent content
-# (`[[consent.sources]]` and the client consent sources) is only
-# validated and stored, never fetched or shown, whatever `enable`
-# is.
-#
-# Set to `true` to enable user consent for clients. Without it,
+# Set to `true` to ask users for their consent to a client on the
+# login page. The consent content comes from `[[consent.sources]]`
+# below, the client's consent source in the Admin UI, or the
+# built-in one, which shows the requested scopes. Without it,
 # configured `[[consent.sources]]` log a warning at startup.
-# This feature is still in progress. Currently, it makes the
-# authorization code exchange, FedCM and a refresh require the
-# user's consent grant for the client (password, device code and
-# token exchange tokens issued by this version are exempt), a
-# client deletion also delete all legacy refresh tokens (issued
-# before refresh tokens were bound to a client) of all users, and a
-# user's consent revoke also delete that user's legacy refresh
-# tokens.
 #
-# Until the consent screen lands, no grant can be given. While it is
-# enabled:
-# - every `authorization_code` login, the Admin UI included, and
-#   every FedCM login fails: the user signs in, but the client's
-#   token request (code exchange / FedCM) is rejected with
-#   `invalid_grant` "no consent grant for this client", and rauthy
-#   logs a warning
-# - every non-exempt refresh token is deleted, and its access token
-#   revoked, on its next refresh. Turning the flag off again does not
-#   restore them.
+# While it is enabled:
+# - the login page asks for consent, the Admin UI included: a login
+#   without a valid session, which includes one forced by
+#   `prompt=login` or an exceeded `max_age`, always shows the
+#   consent block, while a valid session skips it only when the
+#   user's consent grant for the client and `resource` covers the
+#   requested scopes for the current consent content and there is
+#   no `prompt=consent`. With `prompt=none`, an uncovered request is
+#   answered with `consent_required`. The client's `default_scopes`
+#   are always accepted, other requested scopes can be declined.
+#   The grant is stored with the time, IP and user agent of the
+#   login.
+# - the authorization code exchange, FedCM and a refresh require the
+#   user's consent grant for the client (password, device code and
+#   token exchange tokens issued by this version are exempt). FedCM
+#   has no consent screen: it needs a grant from an earlier login
+#   on the login page.
+# - a client deletion also deletes all legacy refresh tokens (issued
+#   before refresh tokens were bound to a client) of all users, and a
+#   user's consent revoke also deletes that user's legacy refresh
+#   tokens.
+# - every non-exempt refresh token without a consent grant is
+#   deleted, and its access token revoked, on its next refresh.
+#   Turning the flag off again does not restore them.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
 #enable = false
 
-# Lifetime in seconds of cached consent content fetched from a
-# remote consent source (see `[[consent.sources]]` below and the
-# per-client consent source in the Admin UI). Must be at least 1.
-# A failed fetch is cached as well, for `min(content_cache_ttl, 60)`
-# seconds, so an unavailable source is not requested on every
-# lookup.
+# Lifetime of cached consent content fetched from a remote consent
+# source (see `[[consent.sources]]` below and the per-client
+# consent source in the Admin UI). Accepts Durations like '60s',
+# '10m', '1h', or an Integer as seconds. Only the TOML value takes
+# a bare Integer, the env var needs a unit, e.g. `3600s`.
+# Must be at least 1s.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60s)`,
+# so an unavailable source is not requested on every lookup.
 #
-# default: 3600
+# default: 1h
 # overwritten by: CONSENT_CONTENT_CACHE_TTL
-#content_cache_ttl = 3600
+#content_cache_ttl = '1h'
 
-# Remote consent sources that resolve to a loopback, private,
-# link-local or otherwise non-public address are rejected by
-# default, like ephemeral client documents. Consent sources are
-# configured by an admin, so this is independent of
-# `ephemeral_clients.danger_allow_private_addresses`. Set to `true`
-# when your consent service runs on an internal address.
-#
-# Consent source fetches follow redirects only to https, with the
-# same address checks, never use system proxies and time out after
-# 3 seconds.
-#
-# default: false
-# overwritten by: CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES
-#danger_allow_private_addresses = false
+# Remote consent sources are configured by an admin, so the source
+# itself may resolve to a loopback, private or otherwise non-public
+# address, unlike ephemeral client documents, and may redirect to
+# another one. A redirect from a source on a public address into
+# the internal network is refused. Consent source fetches follow
+# redirects only to https, never use system proxies and time out
+# after 3 seconds.
 
 #[[consent.sources]]
 # The consent source per RFC 8707 resource indicator, with
@@ -973,12 +972,16 @@ backup_keep_for_local = '3d'
 # The `lang=en` response is required and the default: the
 # response for the user's language is used, the `lang=en` one
 # if that is unavailable.
+# All fields are shown as plain text: HTML in a scope
+# `description` is not rendered, only its text is shown.
 # The version of the consent content is the hash of the content
 # as shown: the name, intro, terms_url and the requested scopes
 # with their title, description and warning (the warnings of
-# the `lang=en` response are shown in every language). Any edit
-# to a shown field asks for consent again, an edit to a scope
-# that was not requested does not. A user who switches the
+# the `lang=en` response are shown in every language). The hash
+# covers the field values as received, HTML markup included, so
+# an edit that only changes the markup asks for consent again.
+# Any edit to a shown field asks for consent again, an edit to a
+# scope that was not requested does not. A user who switches the
 # language may be asked again.
 # If the `lang=en` response is unavailable or invalid, the
 # built-in content is used instead.
@@ -986,8 +989,6 @@ backup_keep_for_local = '3d'
 # the built-in content while `lang=en` is unavailable or
 # invalid, and the `lang=en` content while the translation is
 # unavailable.
-# This is the planned contract: nothing compares the version
-# with the one a consent was given for yet.
 #source = 'local'
 # The name of the resource shown on the consent screen. It wins
 # over the `name` of a remote consent document, which is only
@@ -1963,6 +1964,12 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user gave
+# consent to a client on the login page.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_GRANTED
+level_consent_granted = 'notice'
 # The level for the generated Event after a user consent
 # for a client has been revoked, either by the user
 # themselves, by an admin or through an API key.

@@ -159,10 +159,15 @@ export const I18nEn: I18n = {
             connectedApps: 'Connected Apps',
             connectedAppsDesc: 'Applications you have given consent to access your account.',
             granted: 'Granted',
+            logoutWarning:
+                'This also signs you out of all your sessions on every device. You will have to log in again.',
             noConnectedApps: 'No application has been granted access yet.',
             privacy: 'Privacy',
             resource: 'Resource',
             revoke: 'Revoke Access',
+            revokeAll: 'Revoke All Access',
+            revokeAllDesc:
+                'Revokes your consent for all applications listed here. Each application has to ask for your consent again.',
             revokeDesc:
                 'Revoking removes the consent and the application can no longer renew its access. Access tokens issued with the deleted refresh tokens are revoked at userinfo and introspection. Applications that validate their tokens themselves can still accept them until they expire. The application has to ask for your consent again.',
             scopes: 'Scopes',
@@ -196,9 +201,32 @@ export const I18nEn: I18n = {
         zip: 'ZIP / Postal Code',
     },
     authorize: {
+        busy: 'The server is busy right now. Please try again in a moment.',
         clientForceMfa: `This login forces MFA to achieve higher security.\nTo get access, you need 
             to log in to your account and add at least one additional Passkey`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',
+        consent: {
+            agree: 'I consent to the [transmission of my data]',
+            changed: 'The consent content has changed, please check it again.',
+            continue: 'Continue',
+            details: 'Details',
+            intro: '{{ CLIENT }} requests access to:',
+            introResource: '{{ CLIENT }} requests access to {{ RESOURCE }}:',
+            required: 'always',
+            scopes: {
+                address: 'Your postal address',
+                email: 'Your E-Mail address',
+                groups: 'Your group memberships',
+                openid: 'Your user ID and roles to sign you in',
+                phone: 'Your phone number',
+                profile:
+                    'Your name, username (may be your E-Mail address), picture, language, birthdate and time zone',
+                webid: 'Your WebID',
+            },
+            terms: 'Terms',
+            title: 'Consent',
+            warning: 'Please read carefully',
+        },
         email: 'E-Mail',
         emailBadFormat: 'Bad E-Mail format',
         emailRequired: 'E-Mail is required',

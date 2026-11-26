@@ -1,16 +1,18 @@
 import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
 import { generatePKCE } from '#utils/pkce.ts';
 import { fetchSolvePow } from '#utils/pow.ts';
-import { fetchPost } from '#api/fetch.ts';
+import { fetchPost, type IResponse } from '#api/fetch.ts';
 import { saveProviderToken } from '#utils/helpers.ts';
-import { PKCE_VERIFIER_UPSTREAM } from '#utils/constants.ts';
+import { PKCE_VERIFIER_UPSTREAM, PROVIDER_LOGIN_PAGE } from '#utils/constants.ts';
 
 /**
  * The payload does not need to contain `pkce_challenge` and `pow`, as they will be
- * generated inside this function. Will return an error string, if anything fails,
+ * generated inside this function. Will return the response, if the login request fails,
  * and do a redirect otherwise.
  */
-export async function execProviderLogin(payload: ProviderLoginRequest) {
+export async function execProviderLogin(
+    payload: ProviderLoginRequest,
+): Promise<undefined | IResponse<string>> {
     let pkce = await generatePKCE();
     if (!pkce) {
         return;
@@ -29,6 +31,8 @@ export async function execProviderLogin(payload: ProviderLoginRequest) {
 
     if (res.text) {
         saveProviderToken(res.text);
+        // the callback returns here if the consent turns out to be missing
+        sessionStorage.setItem(PROVIDER_LOGIN_PAGE, window.location.href);
 
         let loc = res.headers.get('location');
         if (!loc) {
@@ -37,6 +41,6 @@ export async function execProviderLogin(payload: ProviderLoginRequest) {
         }
         window.location.href = loc;
     } else {
-        return res.error?.message || 'Error';
+        return res;
     }
 }
