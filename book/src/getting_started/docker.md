@@ -10,22 +10,19 @@ your localhost. The image contains a basic default config which is sufficient fo
 docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.37.2
 ```
 
-```admonish caution
-When you add the `LOCAL_TEST=true` var, it will ONLY work on `localhost`! Under the hood, Rauthy
-loads a very minimal (and unsafe) demo config. If you want to test anywhere else than `localhost`,
-you need to set up a proper config.
-```
+> [!WARNING]
+> When you add the `LOCAL_TEST=true` var, it will ONLY work on `localhost`! Under the hood, Rauthy
+> loads a very minimal (and unsafe) demo config. If you want to test anywhere else than `localhost`,
+> you need to set up a proper config.
 
-```admonish note
-Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
-certificates. To be able to do this during testing, you would need to add the generated CA
-certificate to your trust store.
-```
+> [!NOTE]
+> Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS
+> certificates. To be able to do this during testing, you would need to add the generated CA
+> certificate to your trust store.
 
-```admonish hint
-This command starts an HTTPS server with self-signed certificates.  
-Make sure to add the `https://` scheme if you open the URL manually.
-```
+> [!TIP]
+> This command starts an HTTPS server with self-signed certificates.  
+> Make sure to add the `https://` scheme if you open the URL manually.
 
 To proceed, go to **[First Start](first_start.md)**, or do the production setup below to have
 persistence.
@@ -66,10 +63,9 @@ volumes:
   data:
 ```
 
-```admonish hint
-You can create a `.env` file with `COMPOSE_PROJECT_NAME=myapp` for custom container/volume name 
-prefix.
-```
+> [!TIP]
+> You can create a `.env` file with `COMPOSE_PROJECT_NAME=myapp` for custom container/volume name 
+> prefix.
 
 Save this into `docker-compose.yaml` and start with:
 
@@ -104,10 +100,10 @@ vars. It parses both, the config first and any env var that is set will overwrit
 existing one from the config. You can add environment variables to the startup command with the `-e`
 option.
 
-```admonish note
-The following commands will work on Linux and Mac OS (even though not tested on Mac OS). Since I am 
-no Windows user myself, I cannot provide tested commands in this case.
-```
+> [!NOTE]
+> The following commands will work on Linux and Mac OS (even though not tested on Mac OS). Since I
+> am 
+> no Windows user myself, I cannot provide tested commands in this case.
 
 **1. We want to create a new directory for Rauthy's persistent data**
 
@@ -131,10 +127,9 @@ Next, we set an `alias` to be able to work with the CLI comfortably.
 alias rauthy='docker run -it --rm -v $(pwd)/rauthy/data:/app/data -p 8080:8080 ghcr.io/sebadob/rauthy'
 ```
 
-```admonish note
-The alias expects you to expose on port `8080` afterwards. If you plan on doing something else
-(for testing), adopt the `-p` option.
-```
+> [!NOTE]
+> The alias expects you to expose on port `8080` afterwards. If you plan on doing something else
+> (for testing), adopt the `-p` option.
 
 Make sure it's working:
 
@@ -164,10 +159,9 @@ everything works as expected:
 rauthy serve -c data/config-generated.toml
 ```
 
-```admonish note
-If you answered during the config generation that you want to run Rauthy with your own TLS 
-certificates, make sure to copy them in place. By default in `rauthy/tls/*`.
-```
+> [!NOTE]
+> If you answered during the config generation that you want to run Rauthy with your own TLS 
+> certificates, make sure to copy them in place. By default in `rauthy/tls/*`.
 
 When everything is working as expected, move the generated config in the final location:
 
@@ -213,9 +207,8 @@ docker run -d \
   need to make sure to set `server.scheme = "http"`, `server.proxy_mode = true` and the correct
   value for `server.trusted_proxies`.-
 
-```admonish note
-If you provided your own TLS Certificates, make sure to mount them as well with an additional \
-`-v $(pwd)/rauthy/tls:/app/tls`.
-```
+> [!NOTE]
+> If you provided your own TLS Certificates, make sure to mount them as well with an additional \
+> `-v $(pwd)/rauthy/tls:/app/tls`.
 
 **6. You can now proceed with the [First Start](first_start.md) steps.**

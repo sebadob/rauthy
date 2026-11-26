@@ -29,13 +29,13 @@ scheme = "unix_https"
 proxy_mode = true
 ```
 
-```admonish caution
-Note that `unix_https` does not make a socket with TLS. When `unix_https` is used, the socket will 
-still be plain HTTP!
-
-`unix_https` specifies the scheme to be prepended to `pub_url`, so whether to use`unix_http` and 
-`unix_https` depends on the scheme you are using on the reverse-proxy.
-```
+> [!WARNING]
+> Note that `unix_https` does not make a socket with TLS. When `unix_https` is used, the socket will
+> 
+> still be plain HTTP!
+>
+> `unix_https` specifies the scheme to be prepended to `pub_url`, so whether to use`unix_http` and 
+> `unix_https` depends on the scheme you are using on the reverse-proxy.
 
 UNIX domain sockets should be used with a reverse proxy. Without such a proxy, Rauthy could not know
 the IP address of visitors, and it will see all visitors as `192.0.0.8`, the IPv4 dummy address.
@@ -49,10 +49,11 @@ correctly.
 It is also recommended to use POSIX ACLs to limit access to Rauthy socket to your reverse proxy, so
 other UNIX users won't be able to connect to the socket directly and bypass the reverse proxy.
 
-```admonish hint
-If you want to listen on a socket that you mount inside a container, you most probably will have 
-issues when you mount a file directly. Like when you `touch rauthy.sock` and then mount that file, 
-Rauthy will most probably not be able to bind to it properly because of the container runtime 
-preventing some actions. To fix this, you always want to mount a directory inside the container and 
-let Rauthy create the socket inside that directory.
-```
+> [!TIP]
+> If you want to listen on a socket that you mount inside a container, you most probably will have 
+> issues when you mount a file directly. Like when you `touch rauthy.sock` and then mount that file,
+> 
+> Rauthy will most probably not be able to bind to it properly because of the container runtime 
+> preventing some actions. To fix this, you always want to mount a directory inside the container
+> and 
+> let Rauthy create the socket inside that directory.

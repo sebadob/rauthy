@@ -21,14 +21,14 @@ window.search = window.search || {};
         };
     }
 
-    const search_wrap = document.getElementById('search-wrapper'),
-        searchbar_outer = document.getElementById('searchbar-outer'),
-        searchbar = document.getElementById('searchbar'),
-        searchresults = document.getElementById('searchresults'),
-        searchresults_outer = document.getElementById('searchresults-outer'),
-        searchresults_header = document.getElementById('searchresults-header'),
-        searchicon = document.getElementById('search-toggle'),
-        content = document.getElementById('content'),
+    const search_wrap = document.getElementById('mdbook-search-wrapper'),
+        searchbar_outer = document.getElementById('mdbook-searchbar-outer'),
+        searchbar = document.getElementById('mdbook-searchbar'),
+        searchresults = document.getElementById('mdbook-searchresults'),
+        searchresults_outer = document.getElementById('mdbook-searchresults-outer'),
+        searchresults_header = document.getElementById('mdbook-searchresults-header'),
+        searchicon = document.getElementById('mdbook-search-toggle'),
+        content = document.getElementById('mdbook-content'),
 
         // SVG text elements don't render if inside a <mark> tag.
         mark_exclude = ['text'],
@@ -142,7 +142,7 @@ window.search = window.search || {};
         const teaser = makeTeaser(escapeHTML(result.doc.body), searchterms);
         teaser_count++;
 
-        // The ?URL_MARK_PARAM= parameter belongs inbetween the page and the #heading-anchor
+        // The ?URL_MARK_PARAM= parameter belongs in between the page and the #heading-anchor
         const url = doc_urls[result.ref].split('#');
         if (url.length === 1) { // no anchor found
             url.push('');
@@ -154,8 +154,9 @@ window.search = window.search || {};
         const encoded_search = encodeURIComponent(searchterms.join(' ')).replace(/'/g, '%27');
 
         return '<a href="' + path_to_root + url[0] + '?' + URL_MARK_PARAM + '=' + encoded_search
-            + '#' + url[1] + '" aria-details="teaser_' + teaser_count + '">'
-            + result.doc.breadcrumbs + '</a>' + '<span class="teaser" id="teaser_' + teaser_count
+            + '#' + url[1] + '" aria-details="mdbook-teaser_' + teaser_count + '">'
+            + result.doc.breadcrumbs + '</a>'
+            + '<span class="teaser" id="mdbook-teaser_' + teaser_count
             + '" aria-label="Search Result Teaser">' + teaser + '</span>';
     }
 
@@ -340,6 +341,9 @@ window.search = window.search || {};
                         marker.unmark();
                     }, 300);
                 }
+                // also removes the `?URL_MARK_PARAM=` search param so that
+                // in-page navigation doesn't make highlights unexpectedly appear again
+                setSearchUrlParameters('', 'replace');
             };
 
             for (let i = 0; i < markers.length; i++) {
@@ -356,7 +360,7 @@ window.search = window.search || {};
             e.shiftKey ||
             e.target.type === 'textarea' ||
             e.target.type === 'text' ||
-            !hasFocus() && /^(?:input|select|textarea)$/i.test(e.target.nodeName)
+            !hasFocus() && mdbook_something_else_has_focus(e)
         ) {
             return;
         }
@@ -436,8 +440,8 @@ window.search = window.search || {};
         if (yes) {
             loadSearchScript(
                 window.path_to_searchindex_js ||
-                path_to_root + 'searchindex.js',
-                'search-index');
+                path_to_root + 'searchindex-9d116cea.js',
+                'mdbook-search-index');
             search_wrap.classList.remove('hidden');
             searchicon.setAttribute('aria-expanded', 'true');
         } else {

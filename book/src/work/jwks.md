@@ -48,13 +48,14 @@ If you however had a secret's leak or something like this, you can of course rot
 in to the Admin UI:  
 `Config` -> `JWKS` -> `Rotate Keys`
 
-```admonish info
-When Rauthy does a key rotation, the old keys will not be deleted immediately, because they will be needed for some
-additional time to verify existing tokens. 
-
-A rotation generates new keys which will then be used for any upcoming token signatures. The old keys will be 
-auto-deleted after 30 days, you don't need to care about cleanup.
-```
+> [!NOTE]
+> When Rauthy does a key rotation, the old keys will not be deleted immediately, because they will
+> be needed for some
+> additional time to verify existing tokens. 
+>
+> A rotation generates new keys which will then be used for any upcoming token signatures. The old
+> keys will be 
+> auto-deleted after 30 days, you don't need to care about cleanup.
 
 ## Rotation Event
 

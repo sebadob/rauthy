@@ -13,10 +13,11 @@ If you already have a Postgres up an running with everything set up anyway, you 
 it as your main DB, but I do not recommend deploying a Postgres instance just for Rauthy. This would
 be a waste of precious resources.
 
-```admonish hint
-If you want to migrate between databases at a later point, you can do this at any time very easily.
-Just take a look at the [Reference Config](../config/config.html) and the variable `MIGRATE_DB_FROM`. 
-```
+> [!TIP]
+> If you want to migrate between databases at a later point, you can do this at any time very
+> easily.
+> Just take a look at the [Reference Config](../config/config.html) and the variable
+> `MIGRATE_DB_FROM`. 
 
 ## Container Images
 

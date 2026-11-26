@@ -42,7 +42,7 @@ setup:
     cd ..
 
     echo "Installing wasm-pack"
-    cargo install wasm-pack mdbook mdbook-admonish
+    cargo install wasm-pack mdbook
 
     echo "Building WASM modules"
     just build-wasm

@@ -26,7 +26,7 @@ set to "Ready for Review", to not waste worker time during CI.
 - `frontend/` — SvelteKit UI; the login page is `frontend/src/routes/oidc/authorize/+page.svelte`
   The whole frontend is compiled into static HTML for any production build.
 - `book/` — mdBook source for user-facing docs (`docs/` = built site). Not contributor
-  documentation. Building the book currently requires `mdbook-0.4`
+  documentation. Built with `mdbook-0.5`, which renders callouts as native admonitions
 - `rauthy-client/` — Rust client library + examples
 - `CONTRIBUTING.md` provides important information for getting started
 

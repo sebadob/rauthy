@@ -31,12 +31,15 @@ especially when you log in to a workstation with a window manager, where you can
 Passkeys will still be fine and you will get a prompt like `Passkey PIN` instead of the usual `Password` and you should
 leave this option disabled, if all your users that need local access have USB Passkeys.
 
-```admonish note
-If you log in to a window manager locally and have a MFA secured account, and Local Password Login is NOT set, you 
-usually see `Passkey PIN`. This is however not the case for all window managers. For instance, `sddm` ignores this 
-prompt from the PAM module and overwrites it with `Password`. If this is the case and you have a Passkey linked to your
-account, you need to enter your PIN at that point and touch your key. Sometimes, they don't forward the prompt properly.
-```
+> [!NOTE]
+> If you log in to a window manager locally and have a MFA secured account, and Local Password Login
+> is NOT set, you 
+> usually see `Passkey PIN`. This is however not the case for all window managers. For instance,
+> `sddm` ignores this 
+> prompt from the PAM module and overwrites it with `Password`. If this is the case and you have a
+> Passkey linked to your
+> account, you need to enter your PIN at that point and touch your key. Sometimes, they don't
+> forward the prompt properly.
 
 ## IPs and Aliases
 

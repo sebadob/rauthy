@@ -34,16 +34,17 @@ host groups. The reason is that host groups provide a more fine-grained way of m
 flexible. You can have multiple host groups in the same domain, and e.g. name your groups after teams or projects, while
 the hosts are maybe technically in the same domain.
 
-```admonish hint
-If you want to delete a host group, you can only do this, if there is not a single host left that is assigned to this
-group, to prevent invalid setups. You will only see the delete button, if the host group has no host assigned. If users
-are still assigned, the relation will simply be deleted.
-```
+> [!TIP]
+> If you want to delete a host group, you can only do this, if there is not a single host left that
+> is assigned to this
+> group, to prevent invalid setups. You will only see the delete button, if the host group has no
+> host assigned. If users
+> are still assigned, the relation will simply be deleted.
 
-```admonish note
-You will not see `host` groups in NSS lookups, like when you do `getent group`. They only exist for managing access
-to hosts. All other group types will be resolved on hosts like you would expect it.
-```
+> [!NOTE]
+> You will not see `host` groups in NSS lookups, like when you do `getent group`. They only exist
+> for managing access
+> to hosts. All other group types will be resolved on hosts like you would expect it.
 
 ### `generic` groups
 
