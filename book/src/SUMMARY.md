@@ -50,5 +50,8 @@
     - [Users](work/pam_users.md)
     - [Modules](work/pam_nss_modules.md)
 
+- [Client Integrations](integrations/index.md)
+  - [NetBird](integrations/netbird.md)
+
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
