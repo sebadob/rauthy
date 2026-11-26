@@ -547,8 +547,8 @@ impl From<s3_simple::S3Error> for ErrorResponse {
     }
 }
 
-impl From<rusqlite::Error> for ErrorResponse {
-    fn from(value: rusqlite::Error) -> Self {
+impl From<hiqlite::rusqlite::Error> for ErrorResponse {
+    fn from(value: hiqlite::rusqlite::Error) -> Self {
         debug!("rusqlite::Error: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::Database,

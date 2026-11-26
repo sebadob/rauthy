@@ -133,7 +133,6 @@ ruma-client = { version = "0.20", features = [
   "client-api",
   "reqwest-rustls-no-provider",
 ] }
-rusqlite = "0.41"
 rust-embed = "8.5.0"
 rustls = { version = "0.23.46", default-features = false, features = [
   "logging",
@@ -146,7 +145,6 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_cbor_2 = "0.13"
 serde_json = "1"
-serde_rusqlite = "0.44"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.7", features = ["server"] }
 strum = { version = "0.28", features = ["derive"] }

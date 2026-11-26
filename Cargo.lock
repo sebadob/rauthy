@@ -2882,7 +2882,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.17.0-20261117"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=main#f891b267ec69598de1578c54f30262094f4463dc"
+source = "git+https://github.com/sebadob/hiqlite.git?branch=main#8eacd38d7374039c669dfdfb35922e0999b6faa5"
 dependencies = [
  "argon2 0.6.0",
  "axum",
@@ -2939,7 +2939,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-derive"
 version = "0.17.0-20261117"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=main#f891b267ec69598de1578c54f30262094f4463dc"
+source = "git+https://github.com/sebadob/hiqlite.git?branch=main#8eacd38d7374039c669dfdfb35922e0999b6faa5"
 dependencies = [
  "hex",
  "proc-macro2",
@@ -2952,7 +2952,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.17.0-20261117"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=main#f891b267ec69598de1578c54f30262094f4463dc"
+source = "git+https://github.com/sebadob/hiqlite.git?branch=main#8eacd38d7374039c669dfdfb35922e0999b6faa5"
 dependencies = [
  "bincode-next",
  "byteorder",
@@ -3810,9 +3810,9 @@ dependencies = [
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.39.1"
+version = "0.40.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14a5f01b87b92705d07b433c06f96cbc764637d81a0bffb5734ce17cf0f9a2b3"
+checksum = "b06e69070b7e12262b0cd90832f0a7396f142a2b330181255562decf9f0c6215"
 dependencies = [
  "cc",
  "pkg-config",
@@ -5482,14 +5482,12 @@ dependencies = [
  "ring",
  "rsa 0.9.10",
  "rstest",
- "rusqlite",
  "rustls",
  "s3-simple",
  "semver",
  "serde",
  "serde_cbor_2",
  "serde_json",
- "serde_rusqlite",
  "spow",
  "strum",
  "svg-hush",
@@ -5540,7 +5538,6 @@ dependencies = [
  "reqwest",
  "ring",
  "rsa 0.9.10",
- "rusqlite",
  "s3-simple",
  "serde",
  "serde_json",
@@ -6181,9 +6178,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.41.1"
+version = "0.43.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da9bba6f3506135e120a6586df05be18b48d18896600646a4bec8f993d91a594"
+checksum = "f172c4812a19b26d1c23cdb0070e69db335503dfa378b910eb857386e5b8beba"
 dependencies = [
  "bitflags",
  "chrono",
@@ -6662,9 +6659,9 @@ dependencies = [
 
 [[package]]
 name = "serde_rusqlite"
-version = "0.44.0"
+version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "554f7555174fb6e1b86062e62fa7c086e88513d4067bc106ffba2db7b24fcca2"
+checksum = "97802a13b286a23838e5d4ce495ad82c98be4756e40ff0608596399bc0b2f625"
 dependencies = [
  "rusqlite",
  "serde_core",
@@ -7016,7 +7013,7 @@ version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e690409a034dc81758d2986dcc0e01ffe4a77c65902a120777f5182dd40b1f7f"
 dependencies = [
- "base64 0.23.1",
+ "base64 0.22.1",
  "data-url",
  "quick-error",
  "url",

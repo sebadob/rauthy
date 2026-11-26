@@ -21,7 +21,6 @@ oxrdf = { workspace = true }
 oxttl = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
-rusqlite = { workspace = true }
 rsa = { workspace = true }
 s3-simple = { workspace = true }
 serde = { workspace = true }
