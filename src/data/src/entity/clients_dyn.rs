@@ -93,20 +93,17 @@ impl ClientDyn {
             .as_secs() as i64;
         let ts: Option<i64> = client.get(Cache::IpRateLimit, ip.to_string()).await?;
 
-        match ts {
-            Some(ts) => {
-                let retry_at = ts + ttl;
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::TooManyRequests(retry_at),
-                    format!("You hit a rate limit. You may try again at: {retry_at}"),
-                ));
-            }
-            None => {
-                let now = Utc::now().timestamp();
-                client
-                    .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
-                    .await?;
-            }
+        if let Some(ts) = ts {
+            let retry_at = ts + ttl;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::TooManyRequests(retry_at),
+                format!("You hit a rate limit. You may try again at: {retry_at}"),
+            ));
+        } else {
+            let now = Utc::now().timestamp();
+            client
+                .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
+                .await?;
         }
 
         Ok(())

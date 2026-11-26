@@ -17,11 +17,19 @@
     import { genKey } from '#utils/helpers.ts';
     import InputFile from '#lib/form/InputFile.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
+    import { type UnsavedField } from '#utils/unsaved.ts';
+    import type { ThemeCss } from '#api/types/themes.ts';
 
     let {
         client,
+        fields = $bindable([]),
+        reset = $bindable(() => {}),
     }: {
         client: ClientResponse;
+        // the parent owns the `<UnsavedGuard>`, so it gets the watched values
+        fields?: UnsavedField[];
+        // the parent's guard calls this to drop local edits
+        reset?: () => void;
     } = $props();
 
     let t = useI18n();
@@ -50,14 +58,90 @@
         fetchTheme();
     });
 
+    // the theme's HSL fields are arrays, the CSS value fields are strings
+    type ColorKey = 'text' | 'text_high' | 'bg' | 'bg_high' | 'action' | 'accent' | 'error';
+    type TextKey = 'btn_text' | 'theme_sun' | 'theme_moon';
+    const COLOR_KEYS: ColorKey[] = [
+        'text',
+        'text_high',
+        'bg',
+        'bg_high',
+        'action',
+        'accent',
+        'error',
+    ];
+    const TEXT_KEYS: TextKey[] = ['btn_text', 'theme_sun', 'theme_moon'];
+
+    // the theme object is edited in place, so the baseline has to be a deep copy
+    let themeOrig = $state<ThemeRequestResponse | undefined>(undefined);
+
+    function cloneTheme(t: ThemeRequestResponse): ThemeRequestResponse {
+        let light = {} as ThemeCss;
+        let dark = {} as ThemeCss;
+        for (let key of COLOR_KEYS) {
+            light[key] = [...t.light[key]];
+            dark[key] = [...t.dark[key]];
+        }
+        for (let key of TEXT_KEYS) {
+            light[key] = t.light[key];
+            dark[key] = t.dark[key];
+        }
+        return {
+            client_id: t.client_id,
+            border_radius: t.border_radius,
+            light,
+            dark,
+        };
+    }
+
     async function fetchTheme() {
         let res = await fetchPost<ThemeRequestResponse>(url);
         if (res.body) {
             theme = res.body;
+            themeOrig = cloneTheme(res.body);
         } else {
             err = res.error?.message || 'Error';
         }
     }
+
+    function resetForm() {
+        if (!theme || !themeOrig) {
+            return;
+        }
+        theme.border_radius = themeOrig.border_radius;
+        for (let key of COLOR_KEYS) {
+            theme.light[key] = [...themeOrig.light[key]];
+            theme.dark[key] = [...themeOrig.dark[key]];
+        }
+        for (let key of TEXT_KEYS) {
+            theme.light[key] = themeOrig.light[key];
+            theme.dark[key] = themeOrig.dark[key];
+        }
+    }
+
+    let watched = $derived.by(() => {
+        if (!theme || !themeOrig) {
+            return [];
+        }
+        let fields: UnsavedField[] = [
+            { value: theme.border_radius, original: themeOrig.border_radius },
+        ];
+        for (let key of COLOR_KEYS) {
+            fields.push({ value: theme.light[key], original: themeOrig.light[key] });
+            fields.push({ value: theme.dark[key], original: themeOrig.dark[key] });
+        }
+        for (let key of TEXT_KEYS) {
+            fields.push({ value: theme.light[key], original: themeOrig.light[key] });
+            fields.push({ value: theme.dark[key], original: themeOrig.dark[key] });
+        }
+        return fields;
+    });
+
+    // the parent owns navigation guards, so it needs to know about the form state
+    $effect(() => {
+        fields = watched;
+        reset = resetForm;
+    });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         if (!theme) {
@@ -76,6 +160,8 @@
         if (res.error) {
             err = res.error.message;
         } else {
+            // `payload` is the live theme object, so the baseline becomes what was just saved
+            themeOrig = cloneTheme(theme);
             success = true;
             setTimeout(() => {
                 success = false;
@@ -83,7 +169,7 @@
         }
     }
 
-    async function reset() {
+    async function resetTheme() {
         pending = true;
         err = '';
         const res = await fetchDelete(url);
@@ -221,7 +307,7 @@
                 {#if err}<p class="err" role="alert">{err}</p>{/if}
                 <div class="reset-actions">
                     <Button level={2} onclick={() => closeReset?.()}>{t.common.cancel}</Button>
-                    <Button level={-1} onclick={reset} isLoading={pending}
+                    <Button level={-1} onclick={resetTheme} isLoading={pending}
                         >{branding.resetTheme}</Button
                     >
                 </div>

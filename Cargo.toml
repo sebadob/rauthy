@@ -51,7 +51,7 @@ async-compression = { version = "0.4.41", features = [
 atrium-api = "0.26"
 atrium-common = "0.1.4"
 atrium-identity = "0.2"
-atrium-oauth = "0.2"
+atrium-oauth = { version = "0.2", default-features = false }
 base64 = "0.23"
 bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
 bytes = "1.11.1"
@@ -109,8 +109,6 @@ maxminddb = "0.32"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
-openssl = { version = "0.10.79", features = ["vendored"] }
-openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxrdf = "0.3.5"
 oxttl = "0.2.5"
 percent-encoding = "2"
@@ -188,12 +186,12 @@ uuid = { version = "1.24.0", features = ["v4"] }
 validator = { version = "0.21", features = ["derive"] }
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.55"
-webauthn-rs = { version = "0.5", features = [
+webauthn-rs = { version = "0.6", features = [
   "danger-allow-state-serialisation",
   "danger-credential-internals",
   "resident-key-support",
 ] }
-webauthn-rs-proto = "0.5"
+webauthn-rs-proto = "0.6"
 webpki-roots = "1"
 zeroize = "1.8"
 
@@ -230,18 +228,15 @@ inconsistent_struct_constructor = "allow"
 inline_always = "allow"
 items_after_statements = "allow"
 large_futures = "allow"
-manual_assert_eq = "allow"
 manual_string_new = "allow"
 map_unwrap_or = "allow"
 match_same_arms = "allow"
-match_wild_err_arm = "allow"
 missing_panics_doc = "allow"
 must_use_candidate = "allow"
 option_option = "allow"
 pub_underscore_fields = "allow"
 redundant_else = "allow"
 return_self_not_must_use = "allow"
-single_match_else = "allow"
 struct_excessive_bools = "allow"
 struct_field_names = "allow"
 unnecessary_wraps = "allow"

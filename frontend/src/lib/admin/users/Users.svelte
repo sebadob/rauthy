@@ -12,6 +12,7 @@
     import NavSub from '#lib/nav/NavSub.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import { useParam } from '#state/param.svelte.ts';
+    import type { UnsavedField } from '#utils/unsaved.ts';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import UserAddNew from '#lib/admin/users/UserAddNew.svelte';
@@ -22,8 +23,6 @@
     import UserPicture from '#lib/UserPicture.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
-    import Button from '#lib/button/Button.svelte';
-    import IconEnvelope from '#icons/IconEnvelope.svelte';
     import SendMail from '#lib/SendMail.svelte';
     import EmailJobs from '#lib/EmailJobs.svelte';
 
@@ -46,6 +45,10 @@
     let usersPaginated: UserResponseSimple[] = $state([]);
     let uid = useParam('uid');
     let userId: undefined | string = $state();
+    let fields: UnsavedField[] = $state([]);
+    // set by the guard inside UserDetails; a `uid` change is applied to the reactive state
+    // before `goto` resolves, so switching users must be asked for here, not in beforeNavigate
+    let guard: (run: () => void) => void = $state(run => run());
 
     let providers: AuthProviderTemplate[] = $state([]);
     let groups: GroupResponse[] = $state([]);
@@ -265,7 +268,7 @@
     async function onAddNew(id: string) {
         closeModal?.();
         await fetchUsers();
-        uid.set(id);
+        guard(() => uid.set(id));
     }
 
     function onSave() {
@@ -277,7 +280,11 @@
 </script>
 
 {#snippet navTile(user: UserResponseSimple)}
-    <NavButtonTile onclick={() => uid.set(user.id)} selected={uid.get() === user.id} pictureLeft>
+    <NavButtonTile
+        onclick={() => guard(() => uid.set(user.id))}
+        selected={uid.get() === user.id}
+        pictureLeft
+    >
         <div class="navBtn">
             <div class="picture">
                 <UserPicture
@@ -300,7 +307,7 @@
 
 <NavSub
     detail={!!userId}
-    onBack={() => uid.set(undefined)}
+    onBack={() => guard(() => uid.set(undefined))}
     error={err}
     buttonTilesAriaControls="users"
 >
@@ -364,7 +371,16 @@
 
     <div id="users">
         {#if userId && userValuesConfig}
-            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave} />
+            <UserDetails
+                {userValuesConfig}
+                {userId}
+                {providers}
+                {roles}
+                {groups}
+                bind:fields
+                bind:guard
+                {onSave}
+            />
         {/if}
     </div>
 </ContentAdmin>

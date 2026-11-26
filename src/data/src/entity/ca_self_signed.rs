@@ -4,7 +4,7 @@ use cryptr::EncValue;
 use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rcgen::{
     BasicConstraints, CertificateParams, DnType, ExtendedKeyUsagePurpose, IsCa, Issuer, KeyPair,
     KeyUsagePurpose,
@@ -98,7 +98,12 @@ SET data = $2
             pub_url
         };
 
-        let mut params = CertificateParams::new(vec![name.to_string()]).unwrap();
+        let mut params = CertificateParams::new(vec![name.to_string()]).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!("`server.pub_url` host '{name}' is not a valid certificate name: {err}"),
+            )
+        })?;
         params.distinguished_name.push(DnType::CommonName, name);
         params.use_authority_key_identifier_extension = true;
         params.key_usages.push(KeyUsagePurpose::DigitalSignature);

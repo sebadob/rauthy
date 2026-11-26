@@ -48,8 +48,8 @@ impl I18nEmailLoginLocation<'_> {
         Self {
             subject: "Sicherheitswarnung",
             unknown_location: "Login von unbekannter Adresse",
-            if_invalid: "Sollte es sicher hierbei um einen ungültigen Login handeln, sollte dieser\
-                sofort widerrufen werden und Login-Daten erneuert werden!",
+            if_invalid: "Sollte es sich um einen ungültigen Login handeln, sollte dieser\
+                sofort widerrufen und Login-Daten erneuert werden!",
             revoke_link: "Zugriff Entziehen",
             account_link: "Account Dashboard",
         }

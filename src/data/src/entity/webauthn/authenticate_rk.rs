@@ -201,3 +201,25 @@ pub async fn auth_finish_discover(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use webauthn_rs::prelude::{PasskeyAuthentication, Url, WebauthnBuilder};
+
+    #[test]
+    fn rk_auth_state_local_roundtrip() {
+        let origin = Url::parse("https://localhost:8080").unwrap();
+        let webauthn = WebauthnBuilder::new("localhost", &origin)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let (_rcr, auth_state) = webauthn.start_passkey_authentication(&[]).unwrap();
+        let json = serde_json::to_string(&auth_state).unwrap();
+
+        let state_local = serde_json::from_str::<PasskeyAuthenticationLocal>(&json).unwrap();
+        let reserialized = serde_json::to_string(&state_local).unwrap();
+        let _restored = serde_json::from_str::<PasskeyAuthentication>(&reserialized).unwrap();
+    }
+}

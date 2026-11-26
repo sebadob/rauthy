@@ -32,17 +32,14 @@ pub(crate) fn init(client: hiqlite::Client) {
 /// If the database / cache layer was not started yet, there is nothing to shut down, and the
 /// process exits right away.
 pub fn trigger(reason: impl Display) {
-    match TX_SHUTDOWN.get() {
-        Some(tx) => {
-            error!("FATAL: {reason}");
-            // `try_send()` because only the first fatal error needs to start the shutdown
-            let _ = tx.try_send(());
-        }
-        None => {
-            // logging may not be set up yet at this point
-            eprintln!("FATAL: {reason}");
-            std::process::exit(1);
-        }
+    if let Some(tx) = TX_SHUTDOWN.get() {
+        error!("FATAL: {reason}");
+        // `try_send()` because only the first fatal error needs to start the shutdown
+        let _ = tx.try_send(());
+    } else {
+        // logging may not be set up yet at this point
+        eprintln!("FATAL: {reason}");
+        std::process::exit(1);
     }
 }
 

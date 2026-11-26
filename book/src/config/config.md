@@ -890,10 +890,11 @@ backup_keep_for_local = '3d'
 #
 # While it is enabled:
 # - the login page asks for consent, the Admin UI included: a login
-#   without a valid session, which includes one forced by
+#   whose user is not proven yet, which includes one forced by
 #   `prompt=login` or an exceeded `max_age`, always shows the
-#   consent block, while a valid session skips it only when the
-#   user's consent grant for the client and `resource` covers the
+#   consent block, while a valid session, or a valid MFA cookie for
+#   the user the form signs in, skips it only when the user's
+#   consent grant for the client and `resource` covers the
 #   requested scopes for the current consent content and there is
 #   no `prompt=consent`. With `prompt=none`, an uncovered request is
 #   answered with `consent_required`. The client's `default_scopes`

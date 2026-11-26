@@ -20,6 +20,19 @@ full restart of all nodes, independent of `consent.enable`.
   issued before this version, nor device refresh tokens that were already rotated. With
   `consent.enable`, those need a new login.
 
+#### SMTP Settings Are Validated At Startup
+
+When `email.smtp_url` is set, `email.smtp_conn_mode` is `default` or `xoauth2`, and
+`email.smtp_tls_mode` is not `danger-insecure`, Rauthy now refuses to start if:
+
+- `email.smtp_username` is not set
+- `email.smtp_password` is not set (`default` only)
+- `email.root_ca` is set but does not contain a valid PEM certificate
+
+The first two aborted the process before, but only later, when the mailer connected after the
+start. A `root_ca` without any certificate in it was silently ignored, so the connection used no
+custom root at all. Such a config needs to be fixed before the upgrade.
+
 ### Security
 
 #### Additional `device_code` checks
@@ -88,6 +101,60 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### OpenSSL Removed (`webauthn-rs` 0.6 & Pure Rust Crypto)
+
+The vendored `openssl` / `openssl-sys` dependency has been removed completely from Rauthy.
+`webauthn-rs` has been upgraded to `0.6` (using the pure-Rust RustCrypto backend), `atrium-oauth`
+now uses Rauthy's `rustls`-backed `[http_client]` instead of `native-tls`, and the release binary
+is ~5.3 MB smaller.
+
+Existing Passkeys stay compatible without migration. Note that RustCrypto's ASN.1/DER parser is
+stricter than OpenSSL: if you use FIDO device attestation (`webauthn.force_passkey_*` or
+`webauthn.optimistic_attestation`), non-canonical X.509 attestation root certificates in the FIDO
+MDS dataset are now skipped with a warning, and authenticators presenting malformed DER
+attestation certificates will fail attestation (falling back to plain registration when
+`optimistic_attestation = true`).
+
+#### User Consent
+
+- `consent.content_cache_ttl` is a Duration like `'10m'` or `'1h'` (default), an Integer is still
+  read as seconds.
+- Remote consent sources may resolve to non-public addresses: only an admin configures them. A
+  redirect from a source on a public address into the internal network is refused. The
+  `consent.danger_allow_private_addresses` switch is gone. Ephemeral client documents keep their
+  address checks and `ephemeral_clients.danger_allow_private_addresses`.
+- A consent revoke deletes all sessions of the user, with a backchannel logout, whoever revokes it:
+  the user itself on the account page, an admin, a group admin or an API key. The user has to sign
+  in again.
+- `DELETE /users/{id}/consents/all` revokes all consents of a user at once, each like a single
+  revoke with its refresh tokens and event, and deletes all sessions of the user. The same users,
+  admins, group admins and API keys as for a single revoke are allowed.
+- For local development, a debug build serves a custom consent document in `en` and `de` from
+  `GET /auth/v1/dev/consent`, which the dev `config.toml` uses as a `[[consent.sources]]` entry.
+  Debug builds accept a plain `http://localhost` consent source for it.
+
+#### Credential Stuffing Detection Can Be Disabled
+
+`cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config
+switch is.
+
+```toml
+[cred_stuff_detection]
+# Switches the detector on or off. It records every login
+# attempt with a password against a non-existing email or a
+# wrong password per source IP, and it blacklists that IP for
+# `blacklist_duration` once `blacklist_threshold` different
+# combinations appear inside `scan_window`. Set this to
+# `false` when a big group of users shares one source address,
+# like a corporate NAT gateway, where the detector would
+# blacklist all of them. A blacklist lives in the database, so
+# it survives restarts until it expires.
+#
+# default: true
+# overwritten by: CRED_STUFF_ENABLE
+enable = true
+```
+
 #### ID-JAG via Token Exchange
 
 The token exchange can issue an Identity Assertion JWT Authorization Grant (ID-JAG) for an ID token
@@ -131,46 +198,6 @@ book chapter *Token Exchange* for the details.
 ```
 
 [#1896](https://github.com/sebadob/rauthy/issues/1896)
-
-#### User Consent
-
-- `consent.content_cache_ttl` is a Duration like `'10m'` or `'1h'` (default), an Integer is still
-  read as seconds.
-- Remote consent sources may resolve to non-public addresses: only an admin configures them. A
-  redirect from a source on a public address into the internal network is refused. The
-  `consent.danger_allow_private_addresses` switch is gone. Ephemeral client documents keep their
-  address checks and `ephemeral_clients.danger_allow_private_addresses`.
-- A consent revoke deletes all sessions of the user, with a backchannel logout, whoever revokes it:
-  the user itself on the account page, an admin, a group admin or an API key. The user has to sign
-  in again.
-- `DELETE /users/{id}/consents/all` revokes all consents of a user at once, each like a single
-  revoke with its refresh tokens and event, and deletes all sessions of the user. The same users,
-  admins, group admins and API keys as for a single revoke are allowed.
-- For local development, a debug build serves a custom consent document in `en` and `de` from
-  `GET /auth/v1/dev/consent`, which the dev `config.toml` uses as a `[[consent.sources]]` entry.
-  Debug builds accept a plain `http://localhost` consent source for it.
-
-#### Credential Stuffing Detection Can Be Disabled
-
-`cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config
-switch is.
-
-```toml
-[cred_stuff_detection]
-# Switches the detector on or off. It records every login
-# attempt with a password against a non-existing email or a
-# wrong password per source IP, and it blacklists that IP for
-# `blacklist_duration` once `blacklist_threshold` different
-# combinations appear inside `scan_window`. Set this to
-# `false` when a big group of users shares one source address,
-# like a corporate NAT gateway, where the detector would
-# blacklist all of them. A blacklist lives in the database, so
-# it survives restarts until it expires.
-#
-# default: true
-# overwritten by: CRED_STUFF_ENABLE
-enable = true
-```
 
 #### Rolling App Log Files
 
@@ -677,6 +704,12 @@ passwords. The default password policy is untouched.
   `x-session-expired` header, and the login page restarts its flow on its own when it gets that
   header, without claiming anything about the credentials.
   [#1929](https://github.com/sebadob/rauthy/issues/1929)
+- With `consent.enable`, a login that only needed its Passkey because of a valid MFA cookie asked
+  for consent on every single login, because the cookie proved no first factor and the user's
+  consent grant was never used. A valid MFA cookie for the email the form signs in now proves that
+  user, both on the login page and on the login itself, so its grant covers the request and the
+  consent block is skipped. The cookie of another user on a shared device still proves nothing, and
+  that login needs its password.
 
 ## v0.37.2
 

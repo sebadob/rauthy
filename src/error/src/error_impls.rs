@@ -12,7 +12,6 @@ use cryptr::utils::secure_random_alnum;
 use css_color::ParseColorError;
 use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
-use openssl::error::ErrorStack;
 use oxrdf::IriParseError;
 use oxttl::TurtleSyntaxError;
 use ring::error::{KeyRejected, Unspecified};
@@ -588,16 +587,6 @@ impl From<ed25519_compact::Error> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("ed25519 error: {value:?}"),
-        )
-    }
-}
-
-impl From<openssl::error::ErrorStack> for ErrorResponse {
-    fn from(value: ErrorStack) -> Self {
-        debug!("openssl::error::ErrorStack: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("openssl::error::ErrorStack: {value:?}"),
         )
     }
 }
