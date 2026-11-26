@@ -44,14 +44,14 @@ impl WebId {
 
     /// Returns the WebId from the database, if it exists, and a default otherwise.
     pub async fn find(user_id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::User, Self::cache_idx(&user_id)).await? {
             return Ok(slf);
         }
 
         let sql = "SELECT * FROM webids WHERE user_id = $1";
         let slf = if is_hiqlite() {
-            client
+            DB::hql()
                 .query_as_one(sql, params!(&user_id))
                 .await
                 .unwrap_or(Self {
@@ -101,7 +101,7 @@ SET custom_triples = $2, expose_email = $3";
             .await?;
         }
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::User,
                 Self::cache_idx(&web_id.user_id),

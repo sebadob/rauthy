@@ -108,7 +108,7 @@ VALUES ($1, $2, $3, $4, $5)";
         }
 
         scopes.push(new_scope.clone());
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
@@ -178,7 +178,7 @@ VALUES ($1, $2, $3, $4, $5)";
 
         // The write-through refill after the delay is what makes the fresh list win over any
         // fill that raced with this delete.
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
@@ -199,7 +199,7 @@ VALUES ($1, $2, $3, $4, $5)";
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX_SCOPES).await? {
             return Ok(slf);
         }
@@ -370,7 +370,7 @@ WHERE id = $5",
 
         // The write-through refill after the delay is what makes the fresh list win over any
         // fill that raced with this update.
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 

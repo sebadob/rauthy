@@ -58,7 +58,7 @@ impl MdsEntrySimple {
 
     pub async fn find(aaguid: &[u8]) -> Result<Self, ErrorResponse> {
         let uuid = Uuid::from_slice(aaguid).unwrap_or_default();
-        if let Some(slf) = DB::hql()
+        if let Some(slf) = DB::cache()
             .get(Cache::Webauthn, Self::cache_idx(&uuid))
             .await?
         {
@@ -72,7 +72,7 @@ impl MdsEntrySimple {
             DB::pg_query_one(sql, &[&aaguid]).await?
         };
 
-        DB::hql()
+        DB::cache()
             .put(Cache::Webauthn, Self::cache_idx(&uuid), &slf, Some(3600))
             .await?;
 

@@ -21,8 +21,8 @@ impl IpBlacklist {
         };
 
         // make sure to reset TTL properly
-        DB::hql().delete(Cache::IpBlacklist, ip.clone()).await?;
-        DB::hql()
+        DB::cache().delete(Cache::IpBlacklist, ip.clone()).await?;
+        DB::cache()
             .put(Cache::IpBlacklist, ip, &slf, Some(ttl.as_secs() as i64))
             .await?;
 
@@ -30,15 +30,15 @@ impl IpBlacklist {
     }
 
     pub async fn get(ip: String) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::hql().get(Cache::IpBlacklist, ip).await?)
+        Ok(DB::cache().get(Cache::IpBlacklist, ip).await?)
     }
 
     pub async fn get_all() -> Result<BTreeMap<String, Self>, ErrorResponse> {
-        Ok(DB::hql().get_snapshot(Cache::IpBlacklist).await?)
+        Ok(DB::cache().get_snapshot(Cache::IpBlacklist).await?)
     }
 
     pub async fn delete(ip: String) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::IpBlacklist, ip).await?;
+        DB::cache().delete(Cache::IpBlacklist, ip).await?;
         Ok(())
     }
 }

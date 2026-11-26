@@ -20,7 +20,7 @@ pub struct LatestAppVersion {
 
 impl LatestAppVersion {
     pub async fn find() -> Option<Self> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Ok(Some(slf)) = client.get(Cache::App, IDX_APP_VERSION).await {
             return Some(slf);
@@ -87,7 +87,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1";
             DB::pg_execute(sql, &[&data]).await?;
         }
 
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_APP_VERSION, &slf, CACHE_TTL_APP)
             .await?;
 

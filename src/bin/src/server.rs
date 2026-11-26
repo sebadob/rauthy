@@ -119,7 +119,7 @@ pub async fn run(
     tokio::spawn(password_hasher::run());
 
     debug!("Waiting for Raft-Node to be in sync with the cluster");
-    if let Err(err) = DB::hql()
+    if let Err(err) = DB::cache()
         .wait_for_cluster_sync_timeout(Duration::from_secs(30))
         .await
     {
@@ -159,30 +159,30 @@ pub async fn run(
     }
 
     // We need to clear some caches
-    DB::hql().clear_cache(Cache::Html).await?;
+    DB::cache().clear_cache(Cache::Html).await?;
     // whole App cache to make sure config changes are always updated
-    DB::hql().clear_cache(Cache::App).await?;
+    DB::cache().clear_cache(Cache::App).await?;
     // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
     // anymore. They are rebuilt from their document on the next request.
-    DB::hql().clear_cache(Cache::ClientEphemeral).await?;
+    DB::cache().clear_cache(Cache::ClientEphemeral).await?;
 
     #[cfg(debug_assertions)]
     {
-        DB::hql().clear_cache(Cache::Atproto).await?;
-        DB::hql().clear_cache(Cache::DeviceCode).await?;
-        DB::hql().clear_cache(Cache::ClientDynamic).await?;
-        DB::hql().clear_cache(Cache::ClientSecret).await?;
-        DB::hql().clear_cache(Cache::DPoPNonce).await?;
-        DB::hql().clear_cache(Cache::JwksRemote).await?;
-        DB::hql().clear_cache(Cache::ThemeTs).await?;
-        DB::hql().clear_cache(Cache::IpBlacklist).await?;
-        DB::hql().clear_cache(Cache::IpRateLimit).await?;
-        DB::hql().clear_cache(Cache::Session).await?;
-        DB::hql().clear_cache(Cache::PoW).await?;
-        DB::hql().clear_cache(Cache::ToS).await?;
-        DB::hql().clear_cache(Cache::User).await?;
-        DB::hql().clear_cache(Cache::PAM).await?;
-        DB::hql().clear_cache(Cache::ConsentContent).await?;
+        DB::cache().clear_cache(Cache::Atproto).await?;
+        DB::cache().clear_cache(Cache::DeviceCode).await?;
+        DB::cache().clear_cache(Cache::ClientDynamic).await?;
+        DB::cache().clear_cache(Cache::ClientSecret).await?;
+        DB::cache().clear_cache(Cache::DPoPNonce).await?;
+        DB::cache().clear_cache(Cache::JwksRemote).await?;
+        DB::cache().clear_cache(Cache::ThemeTs).await?;
+        DB::cache().clear_cache(Cache::IpBlacklist).await?;
+        DB::cache().clear_cache(Cache::IpRateLimit).await?;
+        DB::cache().clear_cache(Cache::Session).await?;
+        DB::cache().clear_cache(Cache::PoW).await?;
+        DB::cache().clear_cache(Cache::ToS).await?;
+        DB::cache().clear_cache(Cache::User).await?;
+        DB::cache().clear_cache(Cache::PAM).await?;
+        DB::cache().clear_cache(Cache::ConsentContent).await?;
     }
 
     {

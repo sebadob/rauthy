@@ -98,7 +98,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     pub async fn find(user_id: &str) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
-        let client = DB::hql();
+        let client = DB::cache();
 
         let opt: Option<Option<Self>> = client.get(Cache::User, &idx).await?;
         if let Some(slf) = opt {
@@ -107,7 +107,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
         let sql = "SELECT * FROM users_values WHERE id = $1";
         let slf = if is_hiqlite() {
-            client.query_map_optional(sql, params!(user_id)).await?
+            DB::hql().query_map_optional(sql, params!(user_id)).await?
         } else {
             DB::pg_query_opt(sql, &[&user_id]).await?
         };
@@ -119,7 +119,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     pub async fn find_preferred_username(user_id: &str) -> Result<Option<String>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
-        let client = DB::hql();
+        let client = DB::cache();
 
         let opt: Option<Option<Self>> = client.get(Cache::User, &idx).await?;
         if let Some(slf) = opt {
@@ -128,7 +128,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
         let sql = "SELECT preferred_username FROM users_values WHERE id = $1";
         let slf = if is_hiqlite() {
-            let mut rows = client.query_raw(sql, params!(user_id)).await?;
+            let mut rows = DB::hql().query_raw(sql, params!(user_id)).await?;
             if rows.is_empty() {
                 None
             } else {
@@ -195,7 +195,7 @@ RETURNING *";
         };
 
         let slf = Some(values);
-        DB::hql()
+        DB::cache()
             .put(Cache::User, idx, &slf, CACHE_TTL_USER)
             .await?;
 
@@ -246,7 +246,7 @@ RETURNING *";
         };
 
         let slf = Some(values);
-        DB::hql()
+        DB::cache()
             .put(Cache::User, idx, &slf, CACHE_TTL_USER)
             .await?;
 
@@ -284,7 +284,7 @@ RETURNING *";
             DB::pg_query_one(sql, &[&user_id]).await?
         };
 
-        DB::hql()
+        DB::cache()
             .put(Cache::User, idx, &Some(values), CACHE_TTL_USER)
             .await?;
 

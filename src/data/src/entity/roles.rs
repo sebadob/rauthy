@@ -120,7 +120,7 @@ impl Role {
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX_ROLES).await? {
             return Ok(slf);
         }

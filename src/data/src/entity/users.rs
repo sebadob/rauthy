@@ -293,7 +293,7 @@ impl User {
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         // TODO migrate to the new distributed counter from hiqlite
         if let Some(count) = client.get(Cache::App, IDX_USER_COUNT).await? {
@@ -302,7 +302,7 @@ impl User {
 
         let sql = "SELECT COUNT (*) AS count FROM users";
         let count: i64 = if is_hiqlite() {
-            client
+            DB::hql()
                 .query_raw(sql, params!())
                 .await?
                 .remove(0)
@@ -323,7 +323,7 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
         count += 1;
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -334,7 +334,7 @@ impl User {
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
         count -= 1;
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_USER_COUNT, &count, CACHE_TTL_APP)
             .await?;
         Ok(())
@@ -628,7 +628,7 @@ WHERE user_id = $1
     pub async fn exists(id: String) -> Result<(), ErrorResponse> {
         let idx = format!("{IDX_USERS}_{id}");
 
-        let opt: Option<Self> = DB::hql().get(Cache::User, idx).await?;
+        let opt: Option<Self> = DB::cache().get(Cache::User, idx).await?;
         if opt.is_some() {
             return Ok(());
         }
@@ -652,7 +652,7 @@ WHERE user_id = $1
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{IDX_USERS}_{id}");
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
@@ -660,7 +660,7 @@ WHERE user_id = $1
 
         let sql = "SELECT * FROM users WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            client.query_as_one(sql, params!(id)).await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
         };
@@ -673,7 +673,7 @@ WHERE user_id = $1
         let email = email.to_lowercase();
 
         let idx = format!("{IDX_USERS}_{email}");
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
@@ -681,7 +681,7 @@ WHERE user_id = $1
 
         let sql = "SELECT * FROM users WHERE email = $1";
         let slf = if is_hiqlite() {
-            client.query_as_one(sql, params!(email)).await?
+            DB::hql().query_as_one(sql, params!(email)).await?
         } else {
             DB::pg_query_one(sql, &[&email]).await?
         };
@@ -1212,10 +1212,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
         }
 
         let lang = self.language.as_str();
-        let client = DB::hql();
 
         if is_hiqlite() {
-            client
+            DB::hql()
                 .execute(
                     SQL_SAVE,
                     params!(
@@ -2929,7 +2928,7 @@ mod tests {
     }
 
     async fn hql_cached(idx: String) -> Option<User> {
-        DB::hql().get(Cache::User, idx).await.unwrap()
+        DB::cache().get(Cache::User, idx).await.unwrap()
     }
 
     async fn hql_picture_ids() -> Vec<String> {
@@ -2978,7 +2977,7 @@ mod tests {
         let idx_id = format!("{IDX_USERS}_{}", user.id);
         let idx_email = format!("{IDX_USERS}_{}", user.email);
         for idx in [&idx_id, &idx_email] {
-            DB::hql()
+            DB::cache()
                 .put(Cache::User, idx.clone(), &stale, CACHE_TTL_USER)
                 .await
                 .unwrap();

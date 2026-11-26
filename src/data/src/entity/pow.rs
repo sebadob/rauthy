@@ -20,7 +20,7 @@ impl PowEntity {
             min(cfg.pow.exp.as_secs(), u64::from(u32::MAX)) as u32,
         )?;
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::PoW,
                 pow.challenge.clone(),
@@ -36,7 +36,7 @@ impl PowEntity {
     /// consumed atomically: `get_remove` claims it in one raft entry, so two
     /// concurrent requests cannot both consume it.
     pub async fn check_prevent_reuse(challenge: String) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         let claimed: Option<Pow> = client.get_remove(Cache::PoW, challenge).await?;
         match claimed {

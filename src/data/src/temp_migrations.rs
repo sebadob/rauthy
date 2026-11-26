@@ -25,7 +25,7 @@ pub async fn apply_temp_migrations(
     }
 
     // We changed a few cached entities which would lead to decode errors from old data.
-    DB::hql().clear_cache_all().await?;
+    DB::cache().clear_cache_all().await?;
     rotate_empty_otp_secrets().await?;
 
     Ok(())

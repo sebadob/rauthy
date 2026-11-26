@@ -9,7 +9,7 @@ pub enum EmailRateLimit {
 
 impl EmailRateLimit {
     pub async fn limit(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .put(Cache::EmailRateLimit, self.key(), &(), Some(3600))
             .await?;
 
@@ -17,7 +17,7 @@ impl EmailRateLimit {
     }
 
     pub async fn is_limited(&self) -> Result<bool, ErrorResponse> {
-        if DB::hql()
+        if DB::cache()
             .get::<_, _, ()>(Cache::EmailRateLimit, self.key())
             .await?
             .is_some()

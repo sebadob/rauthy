@@ -31,7 +31,7 @@ pub async fn handle_login_delay<T>(
     user_failed_logins: Option<i64>,
     ip_checks: bool,
 ) -> Result<T, ErrorResponse> {
-    let client = DB::hql();
+    let client = DB::cache();
     let success_time: i64 = client
         .get(Cache::App, IDX_LOGIN_TIME)
         .await?

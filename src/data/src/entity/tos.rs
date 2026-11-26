@@ -46,7 +46,7 @@ VALUES ($1, $2, $3, $4, $5)";
             opt_until,
             content,
         };
-        DB::hql()
+        DB::cache()
             .put(Cache::ToS, CACHE_IDX, &Some(&slf), None)
             .await?;
 
@@ -75,7 +75,7 @@ VALUES ($1, $2, $3, $4, $5)";
     }
 
     pub async fn find_latest() -> Result<Option<Self>, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::ToS, CACHE_IDX).await? {
+        if let Some(slf) = DB::cache().get(Cache::ToS, CACHE_IDX).await? {
             return Ok(slf);
         }
 
@@ -86,7 +86,7 @@ VALUES ($1, $2, $3, $4, $5)";
             DB::pg_query_opt(sql, &[]).await?
         };
 
-        DB::hql().put(Cache::ToS, CACHE_IDX, &slf, None).await?;
+        DB::cache().put(Cache::ToS, CACHE_IDX, &slf, None).await?;
 
         Ok(slf)
     }

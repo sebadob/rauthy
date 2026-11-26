@@ -390,7 +390,7 @@ $21, $22, $23)";
         Self::invalidate_cache_all(None).await?;
         slf.cache_compiled_mappings()?;
 
-        DB::hql()
+        DB::cache()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
@@ -398,14 +398,14 @@ $21, $22, $23)";
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(id)).await? {
             return Ok(slf);
         }
 
         let sql = "SELECT * FROM auth_providers WHERE id = $1";
         let slf = if is_hiqlite() {
-            client.query_map_one(sql, params!(id)).await?
+            DB::hql().query_map_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
         };
@@ -430,14 +430,14 @@ $21, $22, $23)";
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(res) = client.get(Cache::App, Self::cache_idx("all")).await? {
             return Ok(res);
         }
 
         let sql = "SELECT * FROM auth_providers";
         let mut res: Vec<Self> = if is_hiqlite() {
-            client.query_map(sql, params!()).await?
+            DB::hql().query_map(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 0).await?
         };
@@ -566,7 +566,7 @@ WHERE id = $23";
         Self::invalidate_cache_all(None).await?;
         self.cache_compiled_mappings()?;
 
-        DB::hql()
+        DB::cache()
             .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
 
@@ -871,7 +871,7 @@ impl AuthProvider {
 
         // We don't really need to clean all HTML caches, but rebuilding all of them
         // is a lot easier to maintain and auth providers are not updated often anyway.
-        DB::hql().clear_cache(Cache::Html).await?;
+        DB::cache().clear_cache(Cache::Html).await?;
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
@@ -1052,7 +1052,7 @@ impl AuthProviderCallback {
     /// Atomically takes the callback out of the cache, so that it can only ever be used once,
     /// even with concurrent requests.
     pub async fn find_remove(callback_id: String) -> Result<Self, ErrorResponse> {
-        let opt: Option<Self> = DB::hql()
+        let opt: Option<Self> = DB::cache()
             .get_remove(Cache::AuthProviderCallback, callback_id)
             .await?;
 
@@ -1066,7 +1066,7 @@ impl AuthProviderCallback {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::AuthProviderCallback,
                 self.callback_id.clone(),
@@ -1322,7 +1322,7 @@ pub struct AuthProviderTemplate {
 
 impl AuthProviderTemplate {
     pub async fn get_all_json_template() -> Result<String, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE).await? {
             return Ok(slf);
         }

@@ -554,7 +554,7 @@ struct HqlConsentCache;
 
 impl ConsentCache for HqlConsentCache {
     async fn get(&self, idx: &str) -> Result<Option<Option<RemoteConsent>>, ErrorResponse> {
-        Ok(DB::hql().get(Cache::ConsentContent, idx).await?)
+        Ok(DB::cache().get(Cache::ConsentContent, idx).await?)
     }
 
     async fn put(
@@ -563,7 +563,7 @@ impl ConsentCache for HqlConsentCache {
         value: Option<&RemoteConsent>,
         ttl: Duration,
     ) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::ConsentContent,
                 idx.to_string(),

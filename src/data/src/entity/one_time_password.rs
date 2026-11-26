@@ -451,14 +451,14 @@ pub struct OtpData {
 // CRUD
 impl OtpData {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .delete(Cache::OneTimePassword, self.code.clone())
             .await?;
         Ok(())
     }
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
-        let res = DB::hql().get(Cache::OneTimePassword, code).await?;
+        let res = DB::cache().get(Cache::OneTimePassword, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -470,7 +470,7 @@ impl OtpData {
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
-        DB::hql()
+        DB::cache()
             .put(Cache::OneTimePassword, self.code.clone(), &self, ttl)
             .await?;
         Ok(())
@@ -579,7 +579,7 @@ pub struct OtpToSAwaitData {
 // CRUD
 impl OtpLoginReq {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .delete(Cache::OneTimePassword, self.code.clone())
             .await?;
         Ok(())
@@ -589,9 +589,9 @@ impl OtpLoginReq {
     /// `WebauthnLoginReq` offered with the same `code`.
     pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
         if RauthyConfig::get().vars.mfa.optional_select_mfa {
-            DB::hql().delete(Cache::Webauthn, code.clone()).await?;
+            DB::cache().delete(Cache::Webauthn, code.clone()).await?;
         }
-        let res: Option<Self> = DB::hql().get_remove(Cache::OneTimePassword, code).await?;
+        let res: Option<Self> = DB::cache().get_remove(Cache::OneTimePassword, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -603,7 +603,7 @@ impl OtpLoginReq {
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
-        DB::hql()
+        DB::cache()
             .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
             .await?;
         Ok(())
@@ -626,14 +626,14 @@ impl OtpServiceReq {
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .delete(Cache::OneTimePassword, self.code.clone())
             .await?;
         Ok(())
     }
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
-        let res = DB::hql().get(Cache::OneTimePassword, code).await?;
+        let res = DB::cache().get(Cache::OneTimePassword, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -645,7 +645,7 @@ impl OtpServiceReq {
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
-        DB::hql()
+        DB::cache()
             .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
             .await?;
         Ok(())

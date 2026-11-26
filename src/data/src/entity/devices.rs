@@ -247,7 +247,7 @@ impl DeviceAuthCode {
             resource,
         };
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::DeviceCode,
                 slf.user_code().to_string(),
@@ -268,12 +268,12 @@ impl DeviceAuthCode {
     }
 
     pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
-        let slf = DB::hql().get_remove(Cache::DeviceCode, user_code).await?;
+        let slf = DB::cache().get_remove(Cache::DeviceCode, user_code).await?;
         Self::validate_expiry(slf).await
     }
 
     pub async fn find_pending(user_code: String) -> Result<Option<Self>, ErrorResponse> {
-        let slf = DB::hql().get(Cache::DeviceCode, user_code).await?;
+        let slf = DB::cache().get(Cache::DeviceCode, user_code).await?;
         Self::validate_expiry(slf).await
     }
 
@@ -292,7 +292,7 @@ impl DeviceAuthCode {
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .delete(Cache::DeviceCode, self.user_code().to_string())
             .await?;
         Ok(())
@@ -304,7 +304,7 @@ impl DeviceAuthCode {
             .device_grant
             .code_lifetime
             .as_secs() as i64;
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::DeviceCode,
                 self.user_code().to_string(),

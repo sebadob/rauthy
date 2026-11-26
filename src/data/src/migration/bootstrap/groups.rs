@@ -55,7 +55,7 @@ pub async fn reconcile(groups: Vec<Group>) -> Result<(), ErrorResponse> {
 
     if created > 0 {
         // `insert()` bypasses the entity and therefore its cache
-        DB::hql().delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache().delete(Cache::App, IDX_GROUPS).await?;
     }
     info!("Reconciled groups: {created} created, {updated} updated.");
 

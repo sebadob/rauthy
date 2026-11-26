@@ -81,7 +81,7 @@ impl PasskeyEntity {
         };
 
         let user_email = user.as_ref().map(|u| u.email.clone());
-        let client = DB::hql();
+        let client = DB::cache();
 
         let sql = r"
 INSERT INTO passkeys (
@@ -114,7 +114,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
                 ),
             ));
 
-            client.txn(txn).await?;
+            DB::hql().txn(txn).await?;
         } else {
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
@@ -261,7 +261,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
         user_email: Option<String>,
         name: &str,
     ) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(email) = user_email {
             User::invalidate_cache(user_id, &email).await?;
@@ -285,7 +285,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
     pub async fn find(user_id: &str, name: &str) -> Result<Self, ErrorResponse> {
         let idx = Self::cache_idx_single(user_id, name);
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
             return Ok(slf);
@@ -293,7 +293,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
         let sql = "SELECT * FROM passkeys WHERE user_id = $1 AND name = $2";
         let slf = if is_hiqlite() {
-            client.query_as_one(sql, params!(user_id, name)).await?
+            DB::hql().query_as_one(sql, params!(user_id, name)).await?
         } else {
             DB::pg_query_one(sql, &[&user_id, &name]).await?
         };
@@ -325,7 +325,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
     pub async fn find_cred_ids_for_user(user_id: &str) -> Result<Vec<CredentialID>, ErrorResponse> {
         let idx = Self::cache_idx_creds(user_id);
-        let client = DB::hql();
+        let client = DB::cache();
 
         let opt: Option<Vec<Vec<u8>>> = client.get(Cache::Webauthn, &idx).await?;
         if let Some(bytes) = opt {
@@ -334,7 +334,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
         let sql = "SELECT credential_id FROM passkeys WHERE user_id = $1";
         let creds = if is_hiqlite() {
-            client
+            DB::hql()
                 .query_raw(sql, params!(user_id))
                 .await?
                 .into_iter()
@@ -356,7 +356,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user(user_id);
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
             return Ok(slf);
@@ -364,7 +364,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
         let sql = "SELECT * FROM passkeys WHERE user_id = $1";
         let pks = if is_hiqlite() {
-            client.query_as(sql, params!(user_id)).await?
+            DB::hql().query_as(sql, params!(user_id)).await?
         } else {
             DB::pg_query(sql, &[&user_id], 2).await?
         };
@@ -377,7 +377,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
     pub async fn find_for_user_with_uv(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx_user_with_uv(user_id);
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::Webauthn, &idx).await? {
             return Ok(slf);
@@ -385,7 +385,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
         let sql = "SELECT * FROM passkeys WHERE user_id = $1 AND user_verified = true";
         let pks = if is_hiqlite() {
-            client.query_as(sql, params!(user_id)).await?
+            DB::hql().query_as(sql, params!(user_id)).await?
         } else {
             DB::pg_query(sql, &[&user_id], 2).await?
         };
@@ -427,7 +427,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
     }
 
     pub async fn update_passkey(&self) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         let sql = r"
 UPDATE passkeys
@@ -435,7 +435,7 @@ SET passkey = $1, last_used = $2
 WHERE user_id = $3 AND name = $4";
 
         if is_hiqlite() {
-            client
+            DB::hql()
                 .execute(
                     sql,
                     params!(&self.passkey, self.last_used, &self.user_id, &self.name),

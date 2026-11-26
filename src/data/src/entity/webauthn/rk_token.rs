@@ -35,7 +35,7 @@ impl ResidentKeyToken {
             browser_id: browser_id.as_str().unwrap_or_default().to_string(),
         };
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::Webauthn,
                 Self::cache_idx(&slf.code),
@@ -59,7 +59,7 @@ impl ResidentKeyToken {
             ));
         }
 
-        let Some(slf) = DB::hql()
+        let Some(slf) = DB::cache()
             .get_remove::<_, _, Self>(Cache::Webauthn, Self::cache_idx(code))
             .await?
         else {

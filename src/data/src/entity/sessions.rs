@@ -195,7 +195,7 @@ impl Session {
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::Session, id.clone()).await? {
             return Ok(slf);
@@ -203,7 +203,7 @@ impl Session {
 
         let sql = "SELECT * FROM sessions WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            client.query_map_one(sql, params!(id)).await?
+            DB::hql().query_map_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
         };
@@ -470,7 +470,7 @@ WHERE sessions.exp > $11";
             ));
         }
 
-        DB::hql()
+        DB::cache()
             .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
 
@@ -490,7 +490,7 @@ WHERE sessions.exp > $11";
 
         if rows_affected == 1 {
             self.last_seen = now;
-            DB::hql()
+            DB::cache()
                 .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
                 .await?;
         }
@@ -619,7 +619,7 @@ WHERE id = $7 AND exp > $8 AND (state = $9 OR state = $10)";
             ));
         }
 
-        DB::hql()
+        DB::cache()
             .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
 

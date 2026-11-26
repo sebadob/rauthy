@@ -57,7 +57,7 @@ impl MdsAuthenticator {
     }
 
     pub async fn get_ca_list() -> Result<Option<AttestationCaList>, ErrorResponse> {
-        if let Some(json) = DB::hql()
+        if let Some(json) = DB::cache()
             .get::<_, _, Option<String>>(Cache::App, IDX_WEBAUTHN_MDS_CA_LIST)
             .await?
         {
@@ -71,7 +71,7 @@ impl MdsAuthenticator {
             .map(|list| serde_json::to_string(list).unwrap());
 
         // App cache on purpose. It's being cleared on startup so that config changes are reflected.
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_WEBAUTHN_MDS_CA_LIST, &json, Some(12 * 3600))
             .await?;
 

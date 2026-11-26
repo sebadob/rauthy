@@ -244,7 +244,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
-    let login_time: i64 = DB::hql()
+    let login_time: i64 = DB::cache()
         .get(Cache::App, IDX_LOGIN_TIME)
         .await?
         .unwrap_or(2000);
@@ -347,7 +347,7 @@ pub async fn put_password_policy(
         .user_registration
         .danger_reg_acc_init_immediate
     {
-        DB::hql().clear_cache(Cache::Html).await?;
+        DB::cache().clear_cache(Cache::Html).await?;
     }
 
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
@@ -516,7 +516,7 @@ pub async fn get_health() -> impl Responder {
         })
     } else {
         let db_healthy = is_db_alive().await;
-        let cache_healthy = DB::hql().is_healthy_cache().await.is_ok();
+        let cache_healthy = DB::cache().is_healthy_cache().await.is_ok();
 
         let body = HealthResponse {
             db_healthy,

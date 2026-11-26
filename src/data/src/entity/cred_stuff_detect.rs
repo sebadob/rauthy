@@ -31,7 +31,7 @@ impl CredStuffDetect {
         let hash = sha256!(format!("{email}/{password}").as_bytes()).to_vec();
         let ip = ip.to_string();
 
-        let mut hashes = DB::hql()
+        let mut hashes = DB::cache()
             .get::<_, _, BTreeSet<Vec<u8>>>(Cache::CredStuffDetect, ip.clone())
             .await?
             .unwrap_or_default();
@@ -44,7 +44,7 @@ impl CredStuffDetect {
             IpBlacklist::put(ip.clone(), vars.blacklist_duration).await?;
         }
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::CredStuffDetect,
                 ip,

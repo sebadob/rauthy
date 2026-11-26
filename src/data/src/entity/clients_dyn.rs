@@ -22,14 +22,14 @@ impl ClientDyn {
     /// This only deletes a `ClientDyn` from the cache.
     /// The deletion at database level happens via the foreign key cascade.
     pub async fn delete_from_cache(id: &str) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .delete(Cache::App, ClientDyn::get_cache_entry(id))
             .await?;
         Ok(())
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client
             .get(Cache::ClientDynamic, ClientDyn::get_cache_entry(&id))
@@ -84,7 +84,7 @@ impl ClientDyn {
     /// Returns an Err(_) if the IP is currently existing inside the cache.
     /// If not, the IP will be cached with an Ok(()).
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         let ttl = RauthyConfig::get()
             .vars

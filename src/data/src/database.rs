@@ -113,6 +113,14 @@ impl DB {
             .expect("cache::start_cache() must be called at startup")
     }
 
+    /// Returns the cache client (Hiqlite or Redis based on configuration)
+    #[inline]
+    pub fn cache() -> &'static hiqlite::Client {
+        HIQLITE_CLIENT
+            .get()
+            .expect("cache::start_cache() must be called at startup")
+    }
+
     /// Deletes cache entries after a database write.
     ///
     /// Sleeps [`CACHE_INVALIDATION_DELAY`] before it deletes: a concurrent fill reads the
@@ -130,7 +138,7 @@ impl DB {
     {
         sleep(CACHE_INVALIDATION_DELAY).await;
 
-        let client = Self::hql();
+        let client = Self::cache();
         for (cache, key) in entries {
             match key {
                 Some(key) => client.delete(cache, key).await?,
