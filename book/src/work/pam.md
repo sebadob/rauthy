@@ -22,10 +22,12 @@ This module is published in a separate repo to avoid licensing issues, since it 
 dependencies. You can take a look at it
 here: [rauthy-pam-nss](https://github.com/sebadob/rauthy-pam-nss).
 
-```admonish note
-You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite 
-a few resources and values are immutable after their initial creation. The reason is simply to avoid 
-things like accidentally leaking left-over user data, when for instance a user was deleted and a new 
-one with the exact same name was created, but maybe some files are left on some hosts, and so on. 
-The same is true for instance for group names and types, just to avoid confusion for admins.
-```
+> [!NOTE]
+> You will notice on the following pages and when testing the PAM setup via the Admin UI, that quite
+> 
+> a few resources and values are immutable after their initial creation. The reason is simply to
+> avoid 
+> things like accidentally leaking left-over user data, when for instance a user was deleted and a
+> new 
+> one with the exact same name was created, but maybe some files are left on some hosts, and so on. 
+> The same is true for instance for group names and types, just to avoid confusion for admins.

@@ -18,9 +18,10 @@ The way it works is the following:
 5. Close the connection to `MIGRATE_DB_FROM`
 6. Start normal operation
 
-```admonish danger
-`MIGRATE_DB_FROM` overwrites any data in the target database! Be very careful with this option.
-
-If you do not remove the `MIGRATE_DB_FROM` after the migration has been done, it will overwrite the target again with
-the next restart of the application. Remove the config variable immediately after the migration has finished.
-```
+> [!CAUTION]
+> `MIGRATE_DB_FROM` overwrites any data in the target database! Be very careful with this option.
+>
+> If you do not remove the `MIGRATE_DB_FROM` after the migration has been done, it will overwrite
+> the target again with
+> the next restart of the application. Remove the config variable immediately after the migration
+> has finished.

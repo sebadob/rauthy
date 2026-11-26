@@ -34,12 +34,12 @@ exchange is only allowed for confidential clients.
 | `scope` | optional | Narrows the scopes. It can never widen the `subject_token`'s scopes. |
 | `requested_token_type` | optional | Only `urn:ietf:params:oauth:token-type:access_token` is supported, which is also the default. |
 
-```admonish note
-Rauthy only accepts **access tokens** as `subject_token` / `actor_token`, and the exchanged token is
-always an access token. The exchanged token never comes with a refresh token: a refresh must come
-from the client that owns the original token, with a fresh exchange on top. The `may_act` claim is
-not supported yet.
-```
+> [!NOTE]
+> Rauthy only accepts **access tokens** as `subject_token` / `actor_token`, and the exchanged token
+> is
+> always an access token. The exchanged token never comes with a refresh token: a refresh must come
+> from the client that owns the original token, with a fresh exchange on top. The `may_act` claim is
+> not supported yet.
 
 ## Per-client configuration
 

@@ -11,10 +11,10 @@ If you need to modify the content of these E-Mails, you have 2 options:
 - Use the pre-defined config variables
 - Clone the repo, modify the templates and build it from source
 
-```admonish info
-You can only modify the *New Password* and *Password Reset* E-Mail currently. There was no need yet for any of the
-others.
-```
+> [!NOTE]
+> You can only modify the *New Password* and *Password Reset* E-Mail currently. There was no need
+> yet for any of the
+> others.
 
 ## Existing Config Values
 

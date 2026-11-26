@@ -11,20 +11,20 @@ fine, but at some point, the write throughput will degrade.
 The Cache layer uses [Hiqlite](https://github.com/sebadob/hiqlite). It uses the Raft algorithm under
 the hood to achieve consistency.
 
-```admonish caution
-Even though everything is authenticated, you should not expose the Hiqlite ports to the public, if 
-not really necessary for some reason. You configure these ports with the `cluster.nodes` config 
-value.
-```
+> [!WARNING]
+> Even though everything is authenticated, you should not expose the Hiqlite ports to the public, if
+> 
+> not really necessary for some reason. You configure these ports with the `cluster.nodes` config 
+> value.
 
-```admonish note
-Some container runtimes will force-kill very quickly. When Rauthy is deployed as a HA cluster, it
-will usually take at least 15 seconds to do a graceful shutdown. Depending on the config and current
-cluster state (maybe there is a leader election ongoing and so on), it may take up to 25 - 30 
-seconds.
-
-<b>Makre sure to adjust your container config.</b>
-```
+> [!NOTE]
+> Some container runtimes will force-kill very quickly. When Rauthy is deployed as a HA cluster, it
+> will usually take at least 15 seconds to do a graceful shutdown. Depending on the config and
+> current
+> cluster state (maybe there is a leader election ongoing and so on), it may take up to 25 - 30 
+> seconds.
+>
+> <b>Makre sure to adjust your container config.</b>
 
 ## Configuration
 
@@ -33,22 +33,21 @@ cache layer. While `redhac` was working fine, it had a few design issues I wante
 Since `v0.26.0`, Rauthy uses the above-mentioned [Hiqlite](https://github.com/sebadob/hiqlite)
 instead. You only need to configure a few variables.
 
-```admonish caution
-Even when using Postgres as your DB of choice, you should provide a persistent volume for your 
-Rauthy instances. The reason is that the cache is disk-backed. By default, it will store at least
-WAL logs and snapshots on disk. All working data will be kept in memory for the fastest access.
-Having the WAL logs on disk though is a huge advantage when it comes to restarts or rolling 
-releases. The Raft cluster needs a persistent state, which lives inside the WAL logs. If they are
-being wiped with each restart (no persistent volume), the node has to re-join the Raft cluster 
-each time, which takes time.
-
-However, you can choose to run the cache fully in-memory as well. In that scenario, nodes will 
-gracefully leave the Raft cluster on shutdown and cleanly re-join with the next start. However, it
-is very important that the data dir exists. You don't need to care about this in a container, but
-when running it natively for instance. Even a fully in-memory cache, Rauthy will use the data dir 
-for temporarily storing WAL snapshots. These are necessary when other nodes join the cluster, and
-to clean up WAL logs from memory at some point. 
-```
+> [!WARNING]
+> Even when using Postgres as your DB of choice, you should provide a persistent volume for your 
+> Rauthy instances. The reason is that the cache is disk-backed. By default, it will store at least
+> WAL logs and snapshots on disk. All working data will be kept in memory for the fastest access.
+> Having the WAL logs on disk though is a huge advantage when it comes to restarts or rolling 
+> releases. The Raft cluster needs a persistent state, which lives inside the WAL logs. If they are
+> being wiped with each restart (no persistent volume), the node has to re-join the Raft cluster 
+> each time, which takes time.
+>
+> However, you can choose to run the cache fully in-memory as well. In that scenario, nodes will 
+> gracefully leave the Raft cluster on shutdown and cleanly re-join with the next start. However, it
+> is very important that the data dir exists. You don't need to care about this in a container, but
+> when running it natively for instance. Even a fully in-memory cache, Rauthy will use the data dir 
+> for temporarily storing WAL snapshots. These are necessary when other nodes join the cluster, and
+> to clean up WAL logs from memory at some point. 
 
 ### `node_id`
 

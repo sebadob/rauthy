@@ -13,9 +13,9 @@ check of WAL files and a full rebuild of the DB (when
 using [Hiqlite](https://github.com/sebadob/hiqlite)) during the next startup, so that a consistent
 state can always be guaranteed.
 
-```admonish caution
-Some container runtimes do force-kill automatically after 10 seconds. This is for instance the case
-for `podman`, or for `docker compose`.  
-
-Make sure to adjust your shutdown timeout to at least 30 seconds.
-```
+> [!WARNING]
+> Some container runtimes do force-kill automatically after 10 seconds. This is for instance the
+> case
+> for `podman`, or for `docker compose`.  
+>
+> Make sure to adjust your shutdown timeout to at least 30 seconds.

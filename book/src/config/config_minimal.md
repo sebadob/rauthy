@@ -166,8 +166,7 @@ rp_id = "localhost"
 rp_origin = "http://localhost:5173"
 ```
 
-```admonish hint
-TL;DR for generating a `encryption.keys`:
-
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
-```
+> [!TIP]
+> TL;DR for generating a `encryption.keys`:
+>
+> <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>

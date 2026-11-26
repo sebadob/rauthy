@@ -4,14 +4,14 @@
 
 Rauthy - OpenID Connect Single Sign-On Identity & Access Management
 
-```admonish hint
-This application received an independent security audit from 
-[Radically Open Security](https://www.radicallyopensecurity.com/)
-([Frank Plattel](https://github.com/Sp0Q1) and [Morgan Hill](https://github.com/pcwizz)) as part
-of the [NGI Zero Core](https://nlnet.nl/core) funding. There were some findings that were addressed 
-in `v0.32.1`. The full report can be found
-[here](https://raw.githubusercontent.com/sebadob/rauthy/refs/heads/main/assets/security_audit_report_v0.32.pdf).
-```
+> [!TIP]
+> This application received an independent security audit from 
+> [Radically Open Security](https://www.radicallyopensecurity.com/)
+> ([Frank Plattel](https://github.com/Sp0Q1) and [Morgan Hill](https://github.com/pcwizz)) as part
+> of the [NGI Zero Core](https://nlnet.nl/core) funding. There were some findings that were
+> addressed 
+> in `v0.32.1`. The full report can be found
+> [here](https://raw.githubusercontent.com/sebadob/rauthy/refs/heads/main/assets/security_audit_report_v0.32.pdf).
 
 ## What it is
 
@@ -49,12 +49,11 @@ Rauthy supports Passkey-Only-Accounts: you provide your E-Mail address and log i
 Passkey. Your account will not even have / need a password. This login flow is restricted, though,
 to only those passkeys that can provide User Verification (UV) to always have at least 2FA security.
 
-```admonish info
-Discoverable credentials are discouraged with Rauthy (for good reason). This means you will need
-to enter your E-Mail for the login (which will be autofilled after the first one), but Rauthy
-passkeys do not use any storage on your device. For instance when you have a Yubikey which can
-store 25 passkeys, it will not use a single slot there even having full support.
-```
+> [!NOTE]
+> Discoverable credentials are discouraged with Rauthy (for good reason). This means you will need
+> to enter your E-Mail for the login (which will be autofilled after the first one), but Rauthy
+> passkeys do not use any storage on your device. For instance when you have a Yubikey which can
+> store 25 passkeys, it will not use a single slot there even having full support.
 
 ### Fast and efficient
 
