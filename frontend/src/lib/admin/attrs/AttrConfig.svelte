@@ -75,6 +75,9 @@
     $effect(() => {
         fields = watched;
         reset = resetForm;
+        // watched values describe the form that is mounted right now: switching the attribute
+        // destroys this form, and a guard that keeps the old snapshot would block the next switch
+        return () => (fields = []);
     });
 
     async function submitMakeEditable() {

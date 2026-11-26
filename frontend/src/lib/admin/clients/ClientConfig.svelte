@@ -318,6 +318,9 @@
     $effect(() => {
         fields = watched;
         reset = resetForm;
+        // watched values describe the form that is mounted right now: leaving the tab destroys
+        // this form, and a guard that keeps the old snapshot would block the next tab switch
+        return () => (fields = []);
     });
 
     function isConsentUrl(consent?: string) {
