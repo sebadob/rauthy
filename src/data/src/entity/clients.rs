@@ -2965,7 +2965,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             confidential: false,
             secret: None,
             secret_kid: None,
-            redirect_uris: "".to_string(),
+            redirect_uris: String::new(),
             post_logout_redirect_uris: None,
             allowed_origins: Some(
                 "http://localhost:8082,sample://localhost,tauri://localhost".to_string(),

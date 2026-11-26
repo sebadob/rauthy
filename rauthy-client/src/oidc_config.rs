@@ -85,11 +85,11 @@ mod tests {
     fn test_claim_mapping() -> Result<(), RauthyError> {
         let mapping = ClaimMapping::None;
         // no matter which roles / group we have - None should always deny access
-        assert!(!mapping.matches(&["".to_string()], &["".to_string()]));
+        assert!(!mapping.matches(&[String::new()], &[String::new()]));
 
         let mapping = ClaimMapping::Any;
         // no matter which roles / group we have - Any should always allow access
-        assert!(mapping.matches(&["".to_string()], &["".to_string()]));
+        assert!(mapping.matches(&[String::new()], &[String::new()]));
 
         let test_roles = vec![
             "role1".to_string(),
