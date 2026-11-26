@@ -25,6 +25,9 @@
     let client: undefined | ClientResponse = $state();
     let cid = useParam('cid');
     let scopesAll: string[] = $state([]);
+    // set by the guard inside ClientDetails; a `cid` change is applied to the reactive state
+    // before `goto` resolves, so switching clients must be asked for here, not in beforeNavigate
+    let guard: (run: () => void) => void = $state(run => run());
 
     const searchOptions = ['ID'];
     let searchOption = $state(searchOptions[0]);
@@ -81,13 +84,13 @@
     async function onAddNew(id: string) {
         closeModal?.();
         await fetchClients();
-        cid.set(id);
+        guard(() => cid.set(id));
     }
 </script>
 
 <NavSub
     detail={!!client}
-    onBack={() => cid.set(undefined)}
+    onBack={() => guard(() => cid.set(undefined))}
     error={err}
     buttonTilesAriaControls="groups"
 >
@@ -108,7 +111,7 @@
         <div class="clientsList">
             {#each clientsFiltered as client (client.id)}
                 <NavButtonTile
-                    onclick={() => cid.set(client.id)}
+                    onclick={() => guard(() => cid.set(client.id))}
                     selected={cid.get() === client.id}
                 >
                     <div class="navBtn">
@@ -133,7 +136,7 @@
 
     <div id="groups">
         {#if client}
-            <ClientDetails {client} {clients} {scopesAll} {onSave} />
+            <ClientDetails {client} {clients} {scopesAll} bind:guard {onSave} />
         {/if}
     </div>
 </ContentAdmin>

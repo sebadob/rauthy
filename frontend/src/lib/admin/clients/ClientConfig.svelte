@@ -37,6 +37,7 @@
     import InputPassword from '#lib/form/InputPassword.svelte';
     import InputArea from '#lib/form/InputArea.svelte';
     import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
+    import { type UnsavedField } from '#utils/unsaved.ts';
     import {
         invalidPostLogoutRedirectUrisMsg,
         invalidRedirectUrisMsg,
@@ -49,12 +50,18 @@
         client,
         clients,
         scopesAll,
+        fields = $bindable([]),
+        reset = $bindable(() => {}),
         onSave,
     }: {
         section: number;
         client: ClientResponse;
         clients: ClientResponse[];
         scopesAll: string[];
+        // the parent owns the `<UnsavedGuard>`, so it gets the watched values
+        fields?: UnsavedField[];
+        // the parent's guard calls this to drop local edits
+        reset?: () => void;
         onSave: () => void;
     } = $props();
 
@@ -169,68 +176,148 @@
     let claimsAtRoot = $state(untrack(() => initialClient.claims_at_root));
     let actorSameClient = $state(untrack(() => initialClient.actor_same_client));
 
+    // SCIM is only in the detail GET, so its baseline comes from that response
+    let scimOrig = $state(scimOf(initialClient));
+    let scimEnabledOrig = $state(initialClient.scim !== undefined);
+
+    function selectedScopes(items: SelectItem[]): string[] {
+        return items
+            .filter(s => s.selected)
+            .map(s => s.name)
+            .sort();
+    }
+
+    function flowsOf(client: ClientResponse) {
+        return {
+            authorizationCode: client.flows_enabled.includes('authorization_code'),
+            clientCredentials: client.flows_enabled.includes('client_credentials'),
+            password: client.flows_enabled.includes('password'),
+            refreshToken: client.flows_enabled.includes('refresh_token'),
+            deviceCode: client.flows_enabled.includes(AuthFlowDeviceCode),
+            tokenExchange: client.flows_enabled.includes(AuthFlowTokenExchange),
+        };
+    }
+
+    function challengesOf(client: ClientResponse) {
+        return {
+            plain: client.challenges?.includes('plain') || false,
+            s256: client.challenges?.includes('S256') || false,
+        };
+    }
+
+    function scimOf(client: ClientResponse): ScimClientRequestResponse {
+        return {
+            base_uri: client.scim?.base_uri || '',
+            bearer_token: client.scim?.bearer_token || '',
+            sync_groups: client.scim ? client.scim.sync_groups : true,
+            group_sync_prefix: client.scim?.group_sync_prefix || '',
+        };
+    }
+
+    function resetForm() {
+        name = client.name || '';
+        enabled = client.enabled;
+        forceMfa = client.force_mfa;
+        confidential = client.confidential;
+        uri = client.client_uri || '';
+        backchannel_logout_uri = client.backchannel_logout_uri || '';
+        restrict_group_prefix = client.restrict_group_prefix || '';
+        contacts = client.contacts ? Array.from(client.contacts) : [];
+        origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
+        allowedResources = client.allowed_resources ? Array.from(client.allowed_resources) : [];
+        defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
+        consentMode = isConsentUrl(client.consent) ? consentUrl : ta.clients.consent.builtIn;
+        consentSourceUrl = isConsentUrl(client.consent) ? client.consent || '' : '';
+        redirectURIs = Array.from(client.redirect_uris);
+        postLogoutRedirectURIs = client.post_logout_redirect_uris
+            ? Array.from(client.post_logout_redirect_uris)
+            : [];
+
+        flows = flowsOf(client);
+        challenges = challengesOf(client);
+
+        accessTokenAlg = client.access_token_alg;
+        idTokenAlg = client.id_token_alg;
+        tokenLifetime = client.access_token_lifetime.toString();
+        authCodeLifetime = client.auth_code_lifetime.toString();
+
+        scopes = scopesAll.map(n => ({ name: n, selected: client.scopes.includes(n) }));
+        defaultScopes = scopesAll.map(n => ({
+            name: n,
+            selected: client.default_scopes.includes(n),
+        }));
+
+        jsonClaims = stringifyJsonValue(client.claims) || '';
+        claimsAtRoot = client.claims_at_root;
+        actorSameClient = client.actor_same_client;
+
+        scim = scimOrig;
+        scimEnabled = scimEnabledOrig;
+    }
+
+    function consentModeOf(client: ClientResponse): string {
+        return isConsentUrl(client.consent) ? consentUrl : ta.clients.consent.builtIn;
+    }
+
+    function consentSourceUrlOf(client: ClientResponse): string {
+        return isConsentUrl(client.consent) ? client.consent || '' : '';
+    }
+
     $effect(() => {
         if (client.id) {
-            name = client.name || '';
-            enabled = client.enabled;
-            forceMfa = client.force_mfa;
-            confidential = client.confidential;
-            uri = client.client_uri || '';
-            backchannel_logout_uri = client.backchannel_logout_uri || '';
-            restrict_group_prefix = client.restrict_group_prefix || '';
-            contacts = client.contacts ? Array.from(client.contacts) : [];
-            origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
-            allowedResources = client.allowed_resources ? Array.from(client.allowed_resources) : [];
-            defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
-            consentMode = isConsentUrl(client.consent) ? consentUrl : ta.clients.consent.builtIn;
-            consentSourceUrl = isConsentUrl(client.consent) ? client.consent || '' : '';
-            redirectURIs = Array.from(client.redirect_uris);
-            postLogoutRedirectURIs = client.post_logout_redirect_uris
-                ? Array.from(client.post_logout_redirect_uris)
-                : [];
-
-            flows.authorizationCode = client.flows_enabled.includes('authorization_code');
-            flows.clientCredentials = client.flows_enabled.includes('client_credentials');
-            flows.password = client.flows_enabled.includes('password');
-            flows.refreshToken = client.flows_enabled.includes('refresh_token');
-            flows.deviceCode = client.flows_enabled.includes(AuthFlowDeviceCode);
-            flows.tokenExchange = client.flows_enabled.includes(AuthFlowTokenExchange);
-
-            accessTokenAlg = client.access_token_alg;
-            idTokenAlg = client.id_token_alg;
-            tokenLifetime = client.access_token_lifetime.toString();
-            authCodeLifetime = client.auth_code_lifetime.toString();
-
-            scopes = scopesAll.map(name => {
-                let i: SelectItem = {
-                    name,
-                    selected: client.scopes.includes(name) || false,
-                };
-                return i;
-            });
-            defaultScopes = scopesAll.map(name => {
-                let i: SelectItem = {
-                    name,
-                    selected: client.default_scopes.includes(name) || false,
-                };
-                return i;
-            });
-            challenges.plain = client.challenges?.includes('plain') || false;
-            challenges.s256 = client.challenges?.includes('S256') || false;
-
-            jsonClaims = stringifyJsonValue(client.claims) || '';
-            claimsAtRoot = client.claims_at_root;
-            actorSameClient = client.actor_same_client;
-
-            scim = {
-                base_uri: client.scim?.base_uri || '',
-                bearer_token: client.scim?.bearer_token || '',
-                sync_groups: client.scim ? client.scim.sync_groups : true,
-                group_sync_prefix: client.scim?.group_sync_prefix || '',
-            };
-
+            resetForm();
             fetchClientDetails();
         }
+    });
+
+    // `scopes` and `defaultScopes` only become arrays in the submit payload, so the guard
+    // watches the selection itself. Roles and scopes are sets: sort both sides.
+    let watched = $derived.by(() => {
+        if (!client.id) {
+            return [];
+        }
+        return [
+            { value: name, original: client.name || '' },
+            { value: enabled, original: client.enabled },
+            { value: confidential, original: client.confidential },
+            { value: forceMfa, original: client.force_mfa },
+            { value: uri, original: client.client_uri || '' },
+            { value: backchannel_logout_uri, original: client.backchannel_logout_uri || '' },
+            { value: restrict_group_prefix, original: client.restrict_group_prefix || '' },
+            { value: contacts, original: client.contacts || [] },
+            { value: origins, original: client.allowed_origins || [] },
+            { value: allowedResources, original: client.allowed_resources || [] },
+            { value: defaultAud, original: client.default_aud || [] },
+            { value: redirectURIs, original: client.redirect_uris },
+            {
+                value: postLogoutRedirectURIs,
+                original: client.post_logout_redirect_uris || [],
+            },
+            { value: consentMode, original: consentModeOf(client) },
+            { value: consentSourceUrl, original: consentSourceUrlOf(client) },
+            { value: flows, original: flowsOf(client) },
+            { value: challenges, original: challengesOf(client) },
+            { value: accessTokenAlg, original: client.access_token_alg },
+            { value: idTokenAlg, original: client.id_token_alg },
+            {
+                value: tokenLifetime,
+                original: client.access_token_lifetime.toString(),
+            },
+            { value: authCodeLifetime, original: client.auth_code_lifetime.toString() },
+            { value: selectedScopes(scopes), original: [...client.scopes].sort() },
+            { value: selectedScopes(defaultScopes), original: [...client.default_scopes].sort() },
+            { value: jsonClaims, original: stringifyJsonValue(client.claims) || '' },
+            { value: claimsAtRoot, original: client.claims_at_root },
+            { value: actorSameClient, original: client.actor_same_client },
+            { value: scimEnabled, original: scimEnabledOrig },
+            { value: scim, original: scimOrig },
+        ];
+    });
+
+    // the parent owns navigation guards, so it needs to know about the form state
+    $effect(() => {
+        fields = watched;
+        reset = resetForm;
     });
 
     function isConsentUrl(consent?: string) {
@@ -252,6 +339,9 @@
                     group_sync_prefix: resp.scim.group_sync_prefix || '',
                 };
             }
+            // the SCIM baseline only exists after this fetch
+            scimEnabledOrig = scimEnabled;
+            scimOrig = scim;
         } else {
             console.error(res.error);
         }
