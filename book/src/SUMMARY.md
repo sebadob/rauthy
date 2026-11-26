@@ -43,13 +43,15 @@
   - [User Logout](work/logout.md)
   - [SCIM](work/scim.md)
   - [Forward Authentication](work/forward_auth.md)
-  - [NetBird](work/netbird.md)
   - [LDAP](work/ldap.md)
   - [PAM](work/pam.md)
     - [Groups](work/pam_groups.md)
     - [Hosts](work/pam_hosts.md)
     - [Users](work/pam_users.md)
     - [Modules](work/pam_nss_modules.md)
+
+- [Client Integrations](integrations/index.md)
+  - [NetBird](integrations/netbird.md)
 
 - [Reference Config](./config/config.md)
 - [Swagger UI](swagger.md)
