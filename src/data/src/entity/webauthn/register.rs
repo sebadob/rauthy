@@ -235,17 +235,15 @@ pub async fn reg_finish(
                     ExtnState::Unsigned(props) => props.rk,
                     ExtnState::NotRequested | ExtnState::Ignored => None,
                 };
-                match props {
-                    Some(v) => Some(v),
-                    None => {
-                        // If the authenticator did not send any cred props, we fall back to other
-                        // possibly known values. This improves compatibility for e.g. MacOS.
-                        let fallback = payload.allow_rk_hint.unwrap_or(
-                            RauthyConfig::get().vars.webauthn.passkey_reg_type_str()
-                                == "resident_key",
-                        );
-                        Some(fallback)
-                    }
+                if let Some(v) = props {
+                    Some(v)
+                } else {
+                    // If the authenticator did not send any cred props, we fall back to other
+                    // possibly known values. This improves compatibility for e.g. MacOS.
+                    let fallback = payload.allow_rk_hint.unwrap_or(
+                        RauthyConfig::get().vars.webauthn.passkey_reg_type_str() == "resident_key",
+                    );
+                    Some(fallback)
                 }
             };
 

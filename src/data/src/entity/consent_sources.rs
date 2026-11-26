@@ -594,13 +594,12 @@ impl InFlight {
     /// Joins the shared lookup for `idx`, or starts a new one.
     fn join(&self, idx: &str) -> InFlightLookup<'_> {
         let mut map = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        let cell = match map.get(idx).and_then(Weak::upgrade) {
-            Some(cell) => cell,
-            None => {
-                let cell = SharedLookup::default();
-                map.insert(idx.to_string(), Arc::downgrade(&cell));
-                cell
-            }
+        let cell = if let Some(cell) = map.get(idx).and_then(Weak::upgrade) {
+            cell
+        } else {
+            let cell = SharedLookup::default();
+            map.insert(idx.to_string(), Arc::downgrade(&cell));
+            cell
         };
         InFlightLookup {
             in_flight: self,

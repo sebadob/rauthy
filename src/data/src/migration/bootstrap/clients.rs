@@ -85,19 +85,16 @@ pub async fn reconcile(clients: Vec<Client>) -> Result<(), ErrorResponse> {
     let mut updated = 0;
 
     for client in clients {
-        match existing.get(client.id.as_str()).copied() {
-            Some(e) => {
-                let entity = to_entity(&client, &scopes, Some(e)).await?;
-                if &entity != e {
-                    entity.save().await?;
-                    updated += 1;
-                }
+        if let Some(e) = existing.get(client.id.as_str()).copied() {
+            let entity = to_entity(&client, &scopes, Some(e)).await?;
+            if &entity != e {
+                entity.save().await?;
+                updated += 1;
             }
-            None => {
-                let entity = to_entity(&client, &scopes, None).await?;
-                insert(&entity).await?;
-                created += 1;
-            }
+        } else {
+            let entity = to_entity(&client, &scopes, None).await?;
+            insert(&entity).await?;
+            created += 1;
         }
         upsert_scim(client).await?;
     }
