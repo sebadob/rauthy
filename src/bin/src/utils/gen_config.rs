@@ -601,9 +601,8 @@ each node 1 by 1:"
                 }
 
                 break;
-            } else {
-                eprintln!("{}", "Invalid input - try again.".red());
             }
+            eprintln!("{}", "Invalid input - try again.".red());
         }
 
         ///////////////////////
@@ -657,9 +656,8 @@ each node 1 by 1:"
 
                 slf.pg_config = Some(cfg);
                 break;
-            } else {
-                eprintln!("{}", "Invalid input - try again.".red());
             }
+            eprintln!("{}", "Invalid input - try again.".red());
         }
 
         ///////////////////////
@@ -675,9 +673,8 @@ each node 1 by 1:"
             .is_ok()
             {
                 break;
-            } else {
-                eprintln!("{}", "Invalid E-Mail address, please try again.".red());
             }
+            eprintln!("{}", "Invalid E-Mail address, please try again.".red());
         }
         println!(
             "\nDo you want to bootstrap an existing password?\n\
@@ -764,9 +761,8 @@ The default path's where Rauthy will look for TLS certificates are
                                     break;
                                 } else if v != "new" {
                                     continue 'outer;
-                                } else {
-                                    eprintln!("{}", "Invalid value, please try again.".red());
                                 }
+                                eprintln!("{}", "Invalid value, please try again.".red());
                             }
                         }
                         slf.tls_key_path = Some(p);
@@ -789,9 +785,8 @@ The default path's where Rauthy will look for TLS certificates are
                                     break;
                                 } else if v != "new" {
                                     continue 'outer;
-                                } else {
-                                    eprintln!("{}", "Invalid value, please try again.".red());
                                 }
+                                eprintln!("{}", "Invalid value, please try again.".red());
                             }
                         }
                         slf.tls_cert_path = Some(p);
@@ -825,9 +820,8 @@ with a different source will be blocked."
                                 continue 'outer;
                             } else if v == "finish" {
                                 break 'outer;
-                            } else {
-                                eprintln!("{}", "Invalid value, please try again.".red());
                             }
+                            eprintln!("{}", "Invalid value, please try again.".red());
                         }
                     }
                     Err(_) => {

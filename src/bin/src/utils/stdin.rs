@@ -37,9 +37,8 @@ pub(crate) async fn read_line_stdin_yes() -> Result<bool, StdError> {
             return Ok(true);
         } else if v == "no" || v == "n" {
             return Ok(false);
-        } else {
-            eprintln!("{}", "Please answer with '(y)es' or '(n)o'.".red());
         }
+        eprintln!("{}", "Please answer with '(y)es' or '(n)o'.".red());
     }
 }
 

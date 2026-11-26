@@ -669,12 +669,11 @@ impl Session {
                     ErrorResponseType::Forbidden,
                     "User has expired",
                 ));
-            } else {
-                let target = now
-                    .add(chrono::Duration::seconds(i64::from(exp_in)))
-                    .timestamp();
-                if ts < target { ts } else { target }
             }
+            let target = now
+                .add(chrono::Duration::seconds(i64::from(exp_in)))
+                .timestamp();
+            if ts < target { ts } else { target }
         } else {
             now.add(chrono::Duration::seconds(i64::from(exp_in)))
                 .timestamp()
