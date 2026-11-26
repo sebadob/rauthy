@@ -101,6 +101,20 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### OpenSSL Removed (`webauthn-rs` 0.6 & Pure Rust Crypto)
+
+The vendored `openssl` / `openssl-sys` dependency has been removed completely from Rauthy.
+`webauthn-rs` has been upgraded to `0.6` (using the pure-Rust RustCrypto backend), `atrium-oauth`
+now uses Rauthy's `rustls`-backed `[http_client]` instead of `native-tls`, and the release binary
+is ~5.3 MB smaller.
+
+Existing Passkeys stay compatible without migration. Note that RustCrypto's ASN.1/DER parser is
+stricter than OpenSSL: if you use FIDO device attestation (`webauthn.force_passkey_*` or
+`webauthn.optimistic_attestation`), non-canonical X.509 attestation root certificates in the FIDO
+MDS dataset are now skipped with a warning, and authenticators presenting malformed DER
+attestation certificates will fail attestation (falling back to plain registration when
+`optimistic_attestation = true`).
+
 #### User Consent
 
 - `consent.content_cache_ttl` is a Duration like `'10m'` or `'1h'` (default), an Integer is still
