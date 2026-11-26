@@ -536,6 +536,7 @@ WHERE user_id = $1
                             .query_consistent(
                                 "SELECT 1 FROM users WHERE id = $1",
                                 params!(&self.id),
+                                hiqlite::ReadPolicy::LeaseRead,
                             )
                             .await
                         {
