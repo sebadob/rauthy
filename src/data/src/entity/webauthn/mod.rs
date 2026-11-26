@@ -49,17 +49,17 @@ async fn verify_attestation(
 
     verify_mds_attestation(
         &mds,
-        &config.force_passkey_cert_level,
-        &config.force_passkey_protection,
-        &config.force_passkey_attachment,
+        config.force_passkey_cert_level.as_ref(),
+        config.force_passkey_protection.as_ref(),
+        config.force_passkey_attachment.as_ref(),
     )
 }
 
 pub(crate) fn verify_mds_attestation(
     mds: &MdsEntrySimple,
-    force_passkey_cert_level: &Option<MdsCertLevel>,
-    force_passkey_protection: &Option<KeyProtectionMask>,
-    force_passkey_attachment: &Option<AttachmentHintMask>,
+    force_passkey_cert_level: Option<&MdsCertLevel>,
+    force_passkey_protection: Option<&KeyProtectionMask>,
+    force_passkey_attachment: Option<&AttachmentHintMask>,
 ) -> Result<(), ErrorResponse> {
     debug!("Validating FIDO attestation for {mds}");
 
@@ -162,7 +162,7 @@ mod tests {
             att_mask(&[AttachmentHint::Internal]),
             MdsCertLevel::NotCertified,
         );
-        assert_eq!(verify_mds_attestation(&mds, &None, &None, &None), Ok(()));
+        assert_eq!(verify_mds_attestation(&mds, None, None, None), Ok(()));
     }
 
     #[test]
@@ -173,7 +173,7 @@ mod tests {
             MdsCertLevel::L1Plus,
         );
         assert_forbidden(
-            verify_mds_attestation(&mds, &Some(MdsCertLevel::L2), &None, &None),
+            verify_mds_attestation(&mds, Some(&MdsCertLevel::L2), None, None),
             "FIDO Authenticator certification level too low",
         );
     }
@@ -187,7 +187,7 @@ mod tests {
                 level,
             );
             assert_eq!(
-                verify_mds_attestation(&mds, &Some(MdsCertLevel::L2), &None, &None),
+                verify_mds_attestation(&mds, Some(&MdsCertLevel::L2), None, None),
                 Ok(())
             );
         }
@@ -207,7 +207,7 @@ mod tests {
             KeyProtection::SecureElement,
         ]);
         assert_eq!(
-            verify_mds_attestation(&mds, &None, &Some(allowed), &None),
+            verify_mds_attestation(&mds, None, Some(&allowed), None),
             Ok(())
         );
     }
@@ -226,7 +226,7 @@ mod tests {
             KeyProtection::SecureElement,
         ]);
         assert_forbidden(
-            verify_mds_attestation(&mds, &None, &Some(allowed), &None),
+            verify_mds_attestation(&mds, None, Some(&allowed), None),
             "FIDO Authenticator key protection not allowed",
         );
     }
@@ -242,9 +242,9 @@ mod tests {
         assert_eq!(
             verify_mds_attestation(
                 &mds,
-                &None,
-                &Some(prot_mask(&[KeyProtection::Hardware])),
-                &None
+                None,
+                Some(&prot_mask(&[KeyProtection::Hardware])),
+                None
             ),
             Ok(())
         );
@@ -262,9 +262,9 @@ mod tests {
         assert_forbidden(
             verify_mds_attestation(
                 &mds,
-                &None,
-                &Some(prot_mask(&[KeyProtection::Hardware])),
-                &None,
+                None,
+                Some(&prot_mask(&[KeyProtection::Hardware])),
+                None,
             ),
             "FIDO Authenticator key protection not allowed",
         );
@@ -279,7 +279,7 @@ mod tests {
         );
         let allowed = att_mask(&[AttachmentHint::External, AttachmentHint::Wired]);
         assert_eq!(
-            verify_mds_attestation(&mds, &None, &None, &Some(allowed)),
+            verify_mds_attestation(&mds, None, None, Some(&allowed)),
             Ok(())
         );
     }
@@ -293,7 +293,7 @@ mod tests {
         );
         let allowed = att_mask(&[AttachmentHint::External]);
         assert_forbidden(
-            verify_mds_attestation(&mds, &None, &None, &Some(allowed)),
+            verify_mds_attestation(&mds, None, None, Some(&allowed)),
             "FIDO Authenticator attachment hint not allowed",
         );
     }
@@ -309,9 +309,9 @@ mod tests {
         assert_forbidden(
             verify_mds_attestation(
                 &mds,
-                &Some(MdsCertLevel::L2),
-                &Some(prot_mask(&[KeyProtection::Hardware])),
-                &None,
+                Some(&MdsCertLevel::L2),
+                Some(&prot_mask(&[KeyProtection::Hardware])),
+                None,
             ),
             "FIDO Authenticator certification level too low",
         );

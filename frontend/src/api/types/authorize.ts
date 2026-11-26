@@ -4,7 +4,7 @@ export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
 export interface LoginRequest {
     /// Validation: `email`
     email?: string;
-    /// Validation: max 256
+    /// Validation: Applies password policy - max 1024 characters
     password?: string;
     pow: string;
     /// Validation: PATTERN_CLIENT_ID
@@ -27,6 +27,13 @@ export interface LoginRequest {
     /// Validation: max 64
     resident_key_token?: string;
     fwda?: boolean;
+    consent?: LoginConsent;
+}
+
+/// The consent given on the login page for the content that was shown.
+export interface LoginConsent {
+    content_hash: string;
+    accepted_scopes: string[];
 }
 
 export interface LoginRefreshRequest {
@@ -47,6 +54,7 @@ export interface LoginRefreshRequest {
     /// Validation: PATTERN_RESOURCE
     resource?: string;
     fwda?: boolean;
+    consent?: LoginConsent;
 }
 
 export interface RequestResetRequest {
@@ -81,3 +89,9 @@ export interface WebauthnLoginResponse {
     user_id: string;
     exp: number;
 }
+
+/**
+ * A login that needs MFA responds with a list of these, one per method the user may choose.
+ * All entries share the same `code`. An `OtpLoginResponse` is the one with `active_otps`.
+ */
+export type LoginResponse = WebauthnLoginResponse | OtpLoginResponse;

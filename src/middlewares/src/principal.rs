@@ -6,7 +6,7 @@ use actix_web::{
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, TOKEN_API_KEY};
-use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_data::entity::principal::Principal;
@@ -85,14 +85,10 @@ where
 #[inline(always)]
 async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>, ErrorResponse> {
     let headers = req.headers();
-    let auth_header = if let Some(Ok(header)) = headers.get("Authorization").map(|h| h.to_str()) {
-        header
-    } else {
+    let Some(Ok(auth_header)) = headers.get("Authorization").map(|h| h.to_str()) else {
         return Ok(None);
     };
-    let (k, v) = if let Some(res) = auth_header.split_once(' ') {
-        res
-    } else {
+    let Some((k, v)) = auth_header.split_once(' ') else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Malformed 'Authorization' header",
@@ -115,17 +111,14 @@ async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>
 
 #[inline(always)]
 async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>, ErrorResponse> {
-    let session_id = match ApiCookie::from_svc_req(req, COOKIE_SESSION) {
-        None => {
-            return Ok(None);
-        }
-        Some(session_id) => session_id,
+    let Some(session_id) = ApiCookie::from_svc_req(req, COOKIE_SESSION) else {
+        return Ok(None);
     };
 
     match Session::find(session_id).await {
         Ok(mut session) => {
             let remote_ip = if RauthyConfig::get().vars.access.session_validate_ip {
-                real_ip_from_svc_req(req).ok()
+                real_ip_from_req(req).ok()
             } else {
                 None
             };

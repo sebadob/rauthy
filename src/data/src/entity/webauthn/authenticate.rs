@@ -1,7 +1,7 @@
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{MfaAssurance, Session};
 use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
 use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
@@ -104,7 +104,7 @@ pub async fn auth_start(
         Ok((mut rcr, auth_state)) => {
             let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
-            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u32::MAX as u128) as u32);
+            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u128::from(u32::MAX)) as u32);
 
             // cannot be serialized with bincode -> no deserialize from any
             let auth_state_json = serde_json::to_string(&auth_state)?;
@@ -167,7 +167,7 @@ pub async fn auth_finish(
             // set to NULL if the cert is being removed from the MDS dataset.
             let Some(mut pk_entity) = pks
                 .into_iter()
-                .find(|e| e.credential_id.as_slice() == auth_result.cred_id().as_ref())
+                .find(|e| e.credential_id.as_slice() == auth_result.cred_id().as_slice())
             else {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -195,29 +195,28 @@ pub async fn auth_finish(
             let uid = user.id.clone();
 
             if is_login && let Some(mut session) = session {
-                if let Some(suid) = &session.user_id
-                    && suid != &user.id
-                {
+                let WebauthnAdditionalData::Login(data) = &auth_data.data else {
+                    unreachable!("is_login is only ever true for WebauthnAdditionalData::Login")
+                };
+                if data.session_id != session.id || data.user_id != uid {
                     // TODO If this happens, this can only be a try to attack and get into another
                     //  user account. We should probably blacklist the source IP after enough
                     //  testing. We must be sure that this can never happen by accident.
-
-                    let WebauthnAdditionalData::Login(data) = auth_data.data else {
-                        unreachable!()
-                    };
                     data.delete().await?;
 
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "User ID mismatch for session",
+                        "Session / User ID mismatch for login ceremony",
                     ));
                 }
 
-                session.set_authenticated(&user).await?;
-                user.last_login = Some(Utc::now().timestamp());
-                user.last_failed_login = None;
-                user.failed_login_attempts = None;
-                user.save(None).await?;
+                session
+                    .set_authenticated(&user, MfaAssurance::Ceremony)
+                    .await?;
+                user.save_login_success().await?;
+                if let Some(pending) = &data.pending_consent {
+                    pending.upsert_for_unchanged_client(&user, req).await?;
+                }
             }
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;

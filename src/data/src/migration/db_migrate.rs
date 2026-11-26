@@ -57,7 +57,7 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use tracing::{debug, info};
 
-async fn query_sqlite<T>(conn: &rusqlite::Connection, query: &str) -> Result<Vec<T>, ErrorResponse>
+fn query_sqlite<T>(conn: &rusqlite::Connection, query: &str) -> Result<Vec<T>, ErrorResponse>
 where
     T: Debug + for<'a> Deserialize<'a>,
 {
@@ -92,22 +92,22 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .await?;
     let bytes: Vec<u8> = res.get("data");
     let version = deserialize::<DbVersion>(&bytes)?.version;
-    check_feature_version_migrate(version);
+    check_feature_version_migrate(&version);
 
     // CONFIG
     debug!("Migrating table: config");
-    let before = query_sqlite::<ConfigEntity>(&conn, "SELECT * FROM config").await?;
+    let before = query_sqlite::<ConfigEntity>(&conn, "SELECT * FROM config")?;
     inserts::config(before).await?;
 
     // API KEYS
     debug!("Migrating table: api_keys");
-    let before = query_sqlite::<ApiKeyEntity>(&conn, "SELECT * FROM api_keys").await?;
+    let before = query_sqlite::<ApiKeyEntity>(&conn, "SELECT * FROM api_keys")?;
     inserts::api_keys(before).await?;
 
     // The users table has a FK to auth_providers - the order is important here!
     // AUTH PROVIDERS
     debug!("Migrating table: auth_providers");
-    let before = query_sqlite::<AuthProvider>(&conn, "SELECT * FROM auth_providers").await?;
+    let before = query_sqlite::<AuthProvider>(&conn, "SELECT * FROM auth_providers")?;
     inserts::auth_providers(before).await?;
 
     // AUTH PROVIDER LOGOS
@@ -115,35 +115,34 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = query_sqlite::<Logo>(
         &conn,
         "SELECT auth_provider_id AS id, res, content_type, data, updated FROM auth_provider_logos",
-    )
-    .await?;
+    )?;
     inserts::auth_provider_logos(before).await?;
 
     // users has an FK to pictures
     // PICTURES
     debug!("Migrating table: pictures");
-    let before = query_sqlite::<UserPicture>(&conn, "SELECT * FROM pictures").await?;
+    let before = query_sqlite::<UserPicture>(&conn, "SELECT * FROM pictures")?;
     inserts::pictures(before).await?;
 
     // USERS
     debug!("Migrating table: users");
-    let before = query_sqlite::<User>(&conn, "SELECT * FROM users").await?;
+    let before = query_sqlite::<User>(&conn, "SELECT * FROM users")?;
     inserts::users(before).await?;
 
     // PASSKEYS
     debug!("Migrating table: passkeys");
-    let before = query_sqlite::<PasskeyEntity>(&conn, "SELECT * FROM passkeys").await?;
+    let before = query_sqlite::<PasskeyEntity>(&conn, "SELECT * FROM passkeys")?;
     inserts::passkeys(before).await?;
 
     // Do not change the order - tables below have FKs to clients
     // CLIENTS
     debug!("Migrating table: clients");
-    let before = query_sqlite::<Client>(&conn, "SELECT * FROM clients").await?;
+    let before = query_sqlite::<Client>(&conn, "SELECT * FROM clients")?;
     inserts::clients(before).await?;
 
     // CLIENTS DYN
     debug!("Migrating table: clients_dyn");
-    let before = query_sqlite::<ClientDyn>(&conn, "SELECT * FROM clients_dyn").await?;
+    let before = query_sqlite::<ClientDyn>(&conn, "SELECT * FROM clients_dyn")?;
     inserts::clients_dyn(before).await?;
 
     // CLIENT LOGOS
@@ -151,8 +150,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     let before = query_sqlite::<Logo>(
         &conn,
         "SELECT client_id AS id, res, content_type, data, updated FROM client_logos",
-    )
-    .await?;
+    )?;
     inserts::client_logos(before).await?;
 
     // CLIENTS SCIM
@@ -176,37 +174,37 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // GROUPS
     debug!("Migrating table: groups");
-    let before = query_sqlite::<Group>(&conn, "SELECT * FROM groups").await?;
+    let before = query_sqlite::<Group>(&conn, "SELECT * FROM groups")?;
     inserts::groups(before).await?;
 
     // JWKS
     debug!("Migrating table: jwks");
-    let before = query_sqlite::<Jwk>(&conn, "SELECT * FROM jwks").await?;
+    let before = query_sqlite::<Jwk>(&conn, "SELECT * FROM jwks")?;
     inserts::jwks(before).await?;
 
     // MAGIC LINKS
     debug!("Migrating table: magic_links");
-    let before = query_sqlite::<MagicLink>(&conn, "SELECT * FROM magic_links").await?;
+    let before = query_sqlite::<MagicLink>(&conn, "SELECT * FROM magic_links")?;
     inserts::magic_links(before).await?;
 
     // ONE TIME PASSWORD
     debug!("Migrating table: one_time_password");
-    let before = query_sqlite::<OneTimePassword>(&conn, "SELECT * FROM one_time_password").await?;
+    let before = query_sqlite::<OneTimePassword>(&conn, "SELECT * FROM one_time_password")?;
     inserts::one_time_password(before).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = query_sqlite::<RefreshToken>(&conn, "SELECT * FROM refresh_tokens").await?;
+    let before = query_sqlite::<RefreshToken>(&conn, "SELECT * FROM refresh_tokens")?;
     inserts::refresh_tokens(before).await?;
 
     // ROLES
     debug!("Migrating table: roles");
-    let before = query_sqlite::<Role>(&conn, "SELECT * FROM roles").await?;
+    let before = query_sqlite::<Role>(&conn, "SELECT * FROM roles")?;
     inserts::roles(before).await?;
 
     // SCOPES
     debug!("Migrating table: scopes");
-    let before = query_sqlite::<Scope>(&conn, "SELECT * FROM scopes").await?;
+    let before = query_sqlite::<Scope>(&conn, "SELECT * FROM scopes")?;
     inserts::scopes(before).await?;
 
     // EVENTS
@@ -230,19 +228,17 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // USER ATTR CONFIG
     debug!("Migrating table: user_attr_config");
-    let before =
-        query_sqlite::<UserAttrConfigEntity>(&conn, "SELECT * FROM user_attr_config").await?;
+    let before = query_sqlite::<UserAttrConfigEntity>(&conn, "SELECT * FROM user_attr_config")?;
     inserts::user_attr_config(before).await?;
 
     // USER ATTR VALUES
     debug!("Migrating table: user_attr_values");
-    let before =
-        query_sqlite::<UserAttrValueEntity>(&conn, "SELECT * FROM user_attr_values").await?;
+    let before = query_sqlite::<UserAttrValueEntity>(&conn, "SELECT * FROM user_attr_values")?;
     inserts::user_attr_values(before).await?;
 
     // USERS VALUES
     debug!("Migrating table: users_values");
-    let before = query_sqlite::<UserValues>(&conn, "SELECT * FROM users_values").await?;
+    let before = query_sqlite::<UserValues>(&conn, "SELECT * FROM users_values")?;
     inserts::users_values(before).await?;
 
     // USER REVOKE
@@ -261,13 +257,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // DEVICES
     debug!("Migrating table: devices");
-    let before = query_sqlite::<DeviceEntity>(&conn, "SELECT * FROM devices").await?;
+    let before = query_sqlite::<DeviceEntity>(&conn, "SELECT * FROM devices")?;
     inserts::devices(before).await?;
 
     // REFRESH TOKENS DEVICES
     debug!("Migrating table: refresh_tokens_devices");
-    let before =
-        query_sqlite::<RefreshTokenDevice>(&conn, "SELECT * FROM refresh_tokens_devices").await?;
+    let before = query_sqlite::<RefreshTokenDevice>(&conn, "SELECT * FROM refresh_tokens_devices")?;
     inserts::refresh_tokens_devices(before).await?;
 
     // SESSIONS
@@ -296,7 +291,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // USER LOGIN STATES
     debug!("Migrating table: user_login_states");
-    let before = query_sqlite::<UserLoginState>(&conn, "SELECT * FROM user_login_states").await?;
+    let before = query_sqlite::<UserLoginState>(&conn, "SELECT * FROM user_login_states")?;
     inserts::user_login_states(before).await?;
 
     // LOGIN LOCATIONS
@@ -320,8 +315,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     // FAILED BACKCHANNEL LOGOUTS
     debug!("Migrating table: failed_backchannel_logouts");
     let before =
-        query_sqlite::<FailedBackchannelLogout>(&conn, "SELECT * FROM failed_backchannel_logouts")
-            .await?;
+        query_sqlite::<FailedBackchannelLogout>(&conn, "SELECT * FROM failed_backchannel_logouts")?;
     inserts::failed_backchannel_logouts(before).await?;
 
     // FAILED SCIM TASKS
@@ -341,8 +335,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // RECENT PASSWORDS
     debug!("Migrating table: recent_passwords");
-    let before =
-        query_sqlite::<RecentPasswordsEntity>(&conn, "SELECT * FROM recent_passwords").await?;
+    let before = query_sqlite::<RecentPasswordsEntity>(&conn, "SELECT * FROM recent_passwords")?;
     inserts::recent_passwords(before).await?;
 
     // THEMES
@@ -374,7 +367,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // WEBIDS
     debug!("Migrating table: webids");
-    let before = query_sqlite::<WebId>(&conn, "SELECT * FROM webids").await?;
+    let before = query_sqlite::<WebId>(&conn, "SELECT * FROM webids")?;
     inserts::webids(before).await?;
 
     // PAM GROUPS
@@ -473,12 +466,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // TOS
     debug!("Migrating table: tos");
-    let before = query_sqlite::<ToS>(&conn, "SELECT * FROM tos").await?;
+    let before = query_sqlite::<ToS>(&conn, "SELECT * FROM tos")?;
     inserts::tos(before).await?;
 
     // TOS USER ACCEPT
     debug!("Migrating table: tos_user_accept");
-    let before = query_sqlite::<ToSUserAccept>(&conn, "SELECT * FROM tos_user_accept").await?;
+    let before = query_sqlite::<ToSUserAccept>(&conn, "SELECT * FROM tos_user_accept")?;
     inserts::tos_user_accept(before).await?;
 
     // EMAIL JOBS
@@ -606,12 +599,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // PWD EXP MAILS
     debug!("Migrating table: pwd_exp_mails");
-    let before = query_sqlite::<PasswordExpMail>(&conn, "SELECT * FROM pwd_exp_mails").await?;
+    let before = query_sqlite::<PasswordExpMail>(&conn, "SELECT * FROM pwd_exp_mails")?;
     inserts::pwd_exp_mails(before).await?;
 
     // FIDO MDS METADATA
     debug!("Migrating table: fido_mds_metadata");
-    let before = query_sqlite::<MdsMetadata>(&conn, "SELECT * FROM fido_mds_metadata").await?;
+    let before = query_sqlite::<MdsMetadata>(&conn, "SELECT * FROM fido_mds_metadata")?;
     inserts::fido_mds_metadata(before).await?;
 
     // FIDO MDS CERTS
@@ -625,7 +618,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // FIDO MDS ENTRIES
     debug!("Migrating table: fido_mds_entries");
-    let before = query_sqlite::<MdsEntrySimple>(&conn, "SELECT * FROM fido_mds_entries").await?;
+    let before = query_sqlite::<MdsEntrySimple>(&conn, "SELECT * FROM fido_mds_entries")?;
     inserts::fido_mds_entries(before).await?;
 
     // FIDO MDS ENTRY CERTS
@@ -639,17 +632,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // USER CONSENTS
     debug!("Migrating table: user_consents");
-    // the table may not exist yet in the source DB
-    let exists: bool = conn.query_row(
-        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user_consents')",
-        [],
-        |row| row.get(0),
-    )?;
-    let before = if exists {
-        query_sqlite::<UserConsent>(&conn, "SELECT * FROM user_consents").await?
-    } else {
-        Vec::new()
-    };
+    let before = query_sqlite::<UserConsent>(&conn, "SELECT * FROM user_consents")?;
     inserts::user_consents(before).await?;
 
     Ok(())
@@ -683,7 +666,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     }
     let bytes = rows.swap_remove(0).data;
     let version = deserialize::<DbVersion>(&bytes)?.version;
-    check_feature_version_migrate(version);
+    check_feature_version_migrate(&version);
 
     // CONFIG
     debug!("Migrating table: config");
@@ -1036,21 +1019,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // USER CONSENTS
     debug!("Migrating table: user_consents");
-    // the table may not exist yet in the source DB
-    let exists: bool = DB::pg_query_rows_with(
-        &cl,
-        "SELECT to_regclass('user_consents') IS NOT NULL",
-        &[],
-        1,
-    )
-    .await?
-    .first()
-    .is_some_and(|row| row.get(0));
-    let before = if exists {
-        DB::pg_query_map_with(&cl, "SELECT * FROM user_consents", &[], 0).await?
-    } else {
-        Vec::new()
-    };
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_consents", &[], 0).await?;
     inserts::user_consents(before).await?;
 
     Ok(())
@@ -1058,7 +1027,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
 /// Makes sure that the given version matches the current app version in major and feature level.
 /// Will panic if they don't match.
-fn check_feature_version_migrate(version: semver::Version) {
+fn check_feature_version_migrate(version: &semver::Version) {
     let rauthy_version = Version::from_str(RAUTHY_VERSION).unwrap();
 
     if version.major != rauthy_version.major || version.minor != rauthy_version.minor {

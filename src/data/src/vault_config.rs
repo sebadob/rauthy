@@ -34,16 +34,16 @@ impl VaultConfig {
             vault_conf = cfg;
         }
 
-        Ok(Self::load_from_env(vault_conf).await)
+        Ok(Self::load_from_env(vault_conf))
     }
 
     async fn load(path_vault_config: &str) -> Result<Self, Box<dyn Error>> {
         let config = fs::read_to_string(path_vault_config).await?;
-        let vault_config = Self::load_from_string(&config).await?;
+        let vault_config = Self::load_from_string(&config)?;
         Ok(vault_config)
     }
 
-    async fn load_from_env(mut existing_config: VaultConfig) -> Self {
+    fn load_from_env(mut existing_config: VaultConfig) -> Self {
         if let Ok(v) = env::var("VAULT_ADDR") {
             existing_config.vault_source.addr = v;
         }
@@ -73,7 +73,7 @@ impl VaultConfig {
         existing_config
     }
 
-    async fn load_from_string(config: &str) -> Result<Self, Box<dyn Error>> {
+    fn load_from_string(config: &str) -> Result<Self, Box<dyn Error>> {
         let vault_source = VaultSource::default();
         let mut slf = Self { vault_source };
 
@@ -89,36 +89,36 @@ impl VaultConfig {
     fn parse_toml(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "vault");
 
-        self.vault_source.addr = table
+        table
             .remove("addr")
             .expect("missing in vault.toml: addr")
             .as_str()
             .unwrap()
-            .to_owned();
-        self.vault_source.token = table
+            .clone_into(&mut self.vault_source.addr);
+        table
             .remove("token")
             .expect("missing in vault.toml: token")
             .as_str()
             .unwrap()
-            .to_owned();
-        self.vault_source.mount = table
+            .clone_into(&mut self.vault_source.token);
+        table
             .remove("mount")
             .expect("missing in vault.toml: mount")
             .as_str()
             .unwrap()
-            .to_owned();
-        self.vault_source.path = table
+            .clone_into(&mut self.vault_source.mount);
+        table
             .remove("path")
             .expect("missing in vault.toml: path")
             .as_str()
             .unwrap()
-            .to_owned();
-        self.vault_source.config_key = table
+            .clone_into(&mut self.vault_source.path);
+        table
             .remove("config_key")
             .expect("missing in vault.toml: config_key")
             .as_str()
             .unwrap()
-            .to_owned();
+            .clone_into(&mut self.vault_source.config_key);
 
         if let Ok(v) = env::var("VAULT_KV_VERSION") {
             if v == "1" {
@@ -182,7 +182,7 @@ impl KvVersion {
     fn get_api_path(&self, mount: &str, path: &str) -> String {
         match self {
             KvVersion::V1 => format!("/v1/{mount}/{path}"),
-            _ => format!("/v1/{mount}/data/{path}"),
+            KvVersion::V2 => format!("/v1/{mount}/data/{path}"),
         }
     }
 }

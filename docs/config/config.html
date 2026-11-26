@@ -12,24 +12,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../favicon.svg">
-        <link rel="shortcut icon" href="../favicon.png">
-        <link rel="stylesheet" href="../css/variables.css">
-        <link rel="stylesheet" href="../css/general.css">
-        <link rel="stylesheet" href="../css/chrome.css">
-        <link rel="stylesheet" href="../css/print.css" media="print">
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="../fonts/fonts.css">
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href=".././mdbook-admonish.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -37,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex.js";
+            window.path_to_searchindex_js = "../searchindex-9d116cea.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc.js"></script>
+        <script src="../toc-a3da8eef.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -54,7 +52,7 @@
             </div>
         </div>
     </div>
-    <div id="body-container">
+    <div id="mdbook-body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
@@ -83,12 +81,12 @@
             html.classList.add("js");
         </script>
 
-        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
             let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -103,39 +101,39 @@
             }
         </script>
 
-        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
                 <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
             </div>
         </nav>
 
-        <div id="page-wrapper" class="page-wrapper">
+        <div id="mdbook-page-wrapper" class="page-wrapper">
 
             <div class="page">
-                <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
-                            <i class="fa fa-bars"></i>
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
                         </label>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
-                            <i class="fa fa-paint-brush"></i>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
                         </button>
-                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
-                            <i class="fa fa-search"></i>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
                         </button>
                     </div>
 
@@ -143,38 +141,38 @@
 
                     <div class="right-buttons">
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
-                            <i id="print-button" class="fa fa-print"></i>
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
                         </a>
 
                     </div>
                 </div>
 
-                <div id="search-wrapper" class="hidden">
-                    <form id="searchbar-outer" class="searchbar-outer">
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
                         <div class="search-wrapper">
-                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
                             <div class="spinner-wrapper">
-                                <i class="fa fa-spinner fa-spin"></i>
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
                             </div>
                         </div>
                     </form>
-                    <div id="searchresults-outer" class="searchresults-outer hidden">
-                        <div id="searchresults-header" class="searchresults-header"></div>
-                        <ul id="searchresults">
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
                         </ul>
                     </div>
                 </div>
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script>
-                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
-                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
                         link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
                     });
                 </script>
 
-                <div id="content" class="content">
+                <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="reference-config"><a class="header" href="#reference-config">Reference Config</a></h1>
 <p>This shows a full example config with (hopefully) every value nicely described.</p>
@@ -189,23 +187,16 @@ order matches their location in the reference config below.</p>
 <li>!!! <code>[encryption]</code></li>
 <li><code>hashing.max_hash_threads</code> in combination with <code>server.http_workers</code></li>
 <li>!!! <code>server.pub_url</code> + <code>server.proxy_mode</code> + <code>server.trusted_proxies</code></li>
-<li><code>[tls]</code> if you don't terminate TLS on your reverse proxy</li>
+<li><code>[tls]</code> if you don’t terminate TLS on your reverse proxy</li>
 <li>!!! <code>webauthn.rp_id</code> + <code>webauthn.rp_origin</code> + <code>webauthn.rp_name</code></li>
 </ul>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
-<div class="admonition-title">
-<div id="admonition-caution-title">
-<p>Caution</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-caution"></a>
-</div>
-<div>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
 <p>When you go into production, make sure that you provide the included secrets / sensitive
 information in this file in an appropriate way. With docker, you can leave them inside this file
 (with proper access rights!), but when deploying with Kubernetes, either extract these values into
 Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).</p>
-</div>
-</div>
+</blockquote>
 <pre><code class="language-toml">[access]
 # If set to true, the `/userinfo` endpoint will do additional
 # validations. The non-strict mode will fetch the user by id from
@@ -320,6 +311,8 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # Cloudflare, which adds custom headers in this case. For instance,
 # if your requests are proxied through cloudflare, your would set
 # `CF-Connecting-IP`.
+# Needs a single IP address as its value and is only used with
+# `proxy_mode = true`.
 #
 # overwritten by: PEER_IP_HEADER_NAME
 #peer_ip_header_name = ''
@@ -438,6 +431,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: false
 # overwritten by: ADMIN_BUTTON_HIDE
 #admin_button_hide = false
+
+# By default, the 'Password forgotten?' link on the login page will
+# only show up after a failed login. If set to `true`, it will be
+# visible from the start, even before the password input is shown.
+#
+# default: false
+# overwritten by: PASSWORD_RESET_LINK_ALWAYS
+#password_reset_link_always = false
 
 # If set to `true`, requests to `/auth/v1/` will be redirected to
 # `/auth/v1/account` (the account dashboard). This is useful if you want
@@ -676,6 +677,18 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: '10m'
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
 #generated_secrets_ttl = '10m'
+
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+#reconcile = false
 
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
@@ -1041,10 +1054,139 @@ backup_keep_for_local = '3d'
 # default: false
 #HQL_DANGER_RAFT_STATE_RESET=true
 
+[consent]
+# Set to `true` to ask users for their consent to a client on the
+# login page. The consent content comes from `[[consent.sources]]`
+# below, the client's consent source in the Admin UI, or the
+# built-in one, which shows the requested scopes. Without it,
+# configured `[[consent.sources]]` log a warning at startup.
+#
+# While it is enabled:
+# - the login page asks for consent, the Admin UI included: a login
+#   whose user is not proven yet, which includes one forced by
+#   `prompt=login` or an exceeded `max_age`, always shows the
+#   consent block, while a valid session, or a valid MFA cookie for
+#   the user the form signs in, skips it only when the user's
+#   consent grant for the client and `resource` covers the
+#   requested scopes for the current consent content and there is
+#   no `prompt=consent`. With `prompt=none`, an uncovered request is
+#   answered with `consent_required`. The client's `default_scopes`
+#   are always accepted, other requested scopes can be declined.
+#   The grant is stored with the time, IP and user agent of the
+#   login.
+# - the authorization code exchange, FedCM and a refresh require the
+#   user's consent grant for the client (password, device code and
+#   token exchange tokens issued by this version are exempt). FedCM
+#   has no consent screen: it needs a grant from an earlier login
+#   on the login page.
+# - a client deletion also deletes all legacy refresh tokens (issued
+#   before refresh tokens were bound to a client) of all users, and a
+#   user's consent revoke also deletes that user's legacy refresh
+#   tokens.
+# - every non-exempt refresh token without a consent grant is
+#   deleted, and its access token revoked, on its next refresh.
+#   Turning the flag off again does not restore them.
+#
+# default: false
+# overwritten by: CONSENT_ENABLE
+#enable = false
+
+# Lifetime of cached consent content fetched from a remote consent
+# source (see `[[consent.sources]]` below and the per-client
+# consent source in the Admin UI). Accepts Durations like '60s',
+# '10m', '1h', or an Integer as seconds. Only the TOML value takes
+# a bare Integer, the env var needs a unit, e.g. `3600s`.
+# Must be at least 1s.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60s)`,
+# so an unavailable source is not requested on every lookup.
+#
+# default: 1h
+# overwritten by: CONSENT_CONTENT_CACHE_TTL
+#content_cache_ttl = '1h'
+
+# Remote consent sources are configured by an admin, so the source
+# itself may resolve to a loopback, private or otherwise non-public
+# address, unlike ephemeral client documents, and may redirect to
+# another one. A redirect from a source on a public address into
+# the internal network is refused. Consent source fetches follow
+# redirects only to https, never use system proxies and time out
+# after 3 seconds.
+
+#[[consent.sources]]
+# The consent source per RFC 8707 resource indicator, with
+# precedence over the client's own consent source.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different resources. Each `resource` may only exist
+# once.
+#
+# The resource indicator, an absolute URI without a fragment.
+# It is matched verbatim against the requested `resource` and
+# must only contain the characters allowed there:
+# [a-zA-Z0-9,.:/_\-&amp;?=~!$'()*+%@]
+#resource = 'https://api.example.com'
+# Either `local` for the built-in consent content (the requested
+# scopes), or an `https://` URL of at most 1024 bytes of the
+# `resource` characters above, without userinfo, fragment or a
+# `lang` query key in any case or form (`LANG`, `lang[]`,
+# `lang.x`, `l%61ng`, ...). Rauthy fetches
+# `GET &lt;url&gt;?lang=&lt;BCP47 language&gt;` and expects:
+# {
+#   "name": "Example API",
+#   "scopes": {
+#     "data.read": {
+#       "title": "Read your data",
+#       "description": "...",
+#       "warning": false
+#     }
+#   },
+#   "intro": "...",
+#   "terms_url": "https://example.com/terms"
+# }
+# The `lang=en` response is required and the default: the
+# response for the user's language is used, the `lang=en` one
+# if that is unavailable.
+# All fields are shown as plain text: HTML in a scope
+# `description` is not rendered, only its text is shown.
+# The version of the consent content is the hash of the content
+# as shown: the name, intro, terms_url and the requested scopes
+# with their title, description and warning (the warnings of
+# the `lang=en` response are shown in every language). The hash
+# covers the field values as received, HTML markup included, so
+# an edit that only changes the markup asks for consent again.
+# Any edit to a shown field asks for consent again, an edit to a
+# scope that was not requested does not. A user who switches the
+# language may be asked again.
+# If the `lang=en` response is unavailable or invalid, the
+# built-in content is used instead.
+# These fallbacks change the version as well and may ask again:
+# the built-in content while `lang=en` is unavailable or
+# invalid, and the `lang=en` content while the translation is
+# unavailable.
+#source = 'local'
+# The name of the resource shown on the consent screen. It wins
+# over the `name` of a remote consent document, which is only
+# used for a client's own consent source from the Admin UI.
+#name = 'Example API'
+
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing
 ## detection algorithm. In most cases the defaults should be
 ## fine.
+
+# Switches the detector on or off. It records every login
+# attempt with a password against a non-existing email or a
+# wrong password per source IP, and it blacklists that IP for
+# `blacklist_duration` once `blacklist_threshold` different
+# combinations appear inside `scan_window`. Set this to
+# `false` when a big group of users shares one source address,
+# like a corporate NAT gateway, where the detector would
+# blacklist all of them. A blacklist lives in the database, so
+# it survives restarts until it expires.
+#
+# default: true
+# overwritten by: CRED_STUFF_ENABLE
+#enable = true
 
 # The duration for how long an IP will be blacklisted after
 # it was considered harmful, doing credential stuffing.
@@ -1573,6 +1715,9 @@ smtp_url = 'localhost'
 # You can generally use all options from
 # https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
 #
+# default: '%-d. %-m. %Y %T (%Z)'
+# overwritten by: TZ_FMT_CS
+#cs = '%-d. %-m. %Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_DE
 #de = '%d.%m.%Y %T (%Z)'
@@ -1585,6 +1730,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_IT
+#it = '%d/%m/%Y %T (%Z)'
 # default: '%Y/%m/%d %T (%Z)'
 # overwritten by: TZ_FMT_JA
 #ja = '%Y/%m/%d %T (%Z)'
@@ -1990,6 +2138,19 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user gave
+# consent to a client on the login page.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_GRANTED
+level_consent_granted = 'notice'
+# The level for the generated Event after a user consent
+# for a client has been revoked, either by the user
+# themselves, by an admin or through an API key.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_REVOKED
+level_consent_revoked = 'notice'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.
@@ -2009,6 +2170,12 @@ level_suspicious_request = 'notice'
 # default: info
 # overwritten by: EVENT_LEVEL_TOKEN_ISSUED
 level_token_issued = 'info'
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP
@@ -2185,13 +2352,13 @@ argon2_t_cost = 4
 # overwritten by: ARGON2_P_COST
 argon2_p_cost = 8
 
-# Limits the maximum amount of parallel password hashes at 
-# the exact same time to never exceed system memory while 
-# still allowing a good amount of memory for the Argon2ID 
+# Limits the maximum amount of parallel password hashes at
+# the exact same time to never exceed system memory while
+# still allowing a good amount of memory for the Argon2ID
 # algorithm
 #
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory 
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory
 # of your deployment available.
 #
 # default: 2
@@ -2296,13 +2463,17 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans',
+]
 # Languages for the Admin UI.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans',
+]
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2382,6 +2553,80 @@ filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru',
 # overwritten by: JWK_AUTOROTATE_CRON
 #jwk_autorotate_cron = '0 30 3 1 * * *'
 
+[ldap]
+# Enables a minimal, read-only LDAPS server for clients that can
+# only log in via an LDAP bind, like the Jellyfin LDAP plugin.
+# Only implicit TLS (LDAPS) is supported, no StartTLS.
+# See the book chapter "LDAP" for the directory layout.
+#
+# default: false
+# overwritten by: LDAP_ENABLE
+#enable = false
+
+# The address the LDAPS server listens on.
+#
+# default: '0.0.0.0'
+# overwritten by: LDAP_LISTEN_ADDRESS
+#listen_address = '0.0.0.0'
+
+# The port the LDAPS server listens on.
+#
+# default: 6360
+# overwritten by: LDAP_PORT
+#port = 6360
+
+# The base DN of the directory. Each client gets its own subtree
+# below it at `cn=&lt;client_id&gt;,ou=clients,&lt;base_dn&gt;`.
+#
+# default: 'dc=rauthy,dc=local'
+# overwritten by: LDAP_BASE_DN
+#base_dn = 'dc=rauthy,dc=local'
+
+# TLS certificate and key for the LDAPS server, in PEM format.
+# Both must be set together. If not set, the `[tls]` certificate
+# is used. Set them when Rauthy itself runs plain HTTP behind a
+# reverse proxy that does not terminate TLS for LDAP as well.
+# They are hot-reloaded like the `[tls]` certificate and use
+# `tls.poll_watch_interval` as well.
+#
+# overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
+#cert_path = 'tls/ldap.crt'
+#key_path = 'tls/ldap.key'
+
+# Serves plain LDAP without TLS instead of LDAPS, for a reverse
+# proxy that terminates TLS and forwards the raw TCP stream. As a
+# safeguard, this requires `server.proxy_mode = true`. Rauthy
+# then sees the proxy's IP for every LDAP connection, so the
+# per-IP brute-force protection applies to the proxy as a whole.
+# Never expose the plain LDAP port to anything but the proxy.
+#
+# default: false
+# overwritten by: LDAP_PLAIN_TEXT
+#plain_text = false
+
+# Disables the per-IP brute-force protection for LDAP user binds:
+# no credential stuffing detection, no per-IP failed login counter
+# and no IP blacklisting because of failed user binds. Apps like
+# Jellyfin send the binds of all users from a single IP, so a few
+# failed logins from different users would otherwise block the
+# app's IP for everyone. The per-user failed login counter and its
+# login delays still apply, and an already blacklisted IP is still
+# refused. Service binds keep the per-IP protection.
+# CAUTION: a client connecting directly to the LDAPS port can then
+# try passwords across many users without an IP limit. Only enable
+# it when the LDAPS port is reachable for your apps only.
+#
+# default: false
+# overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
+#disable_ip_brute_force_protection = false
+
+# The maximum number of open LDAP connections. Further ones wait
+# until a connection is closed.
+#
+# default: 1000
+# overwritten by: LDAP_MAX_CONNECTIONS
+#max_connections = 1000
+
 [logging]
 # This is the log level for stdout logs
 # Accepts: error, warn, info, debug, trace
@@ -2418,6 +2663,40 @@ filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru',
 # overwritten by: LOG_LEVEL_ACCESS
 level_access = 'modifying'
 
+# If you want Rauthy to log into a file instead of stdout, set the
+# path to that log file here. The file is rolled over every day into
+# `&lt;file_name&gt;.&lt;YYYY-MM-DD&gt;` files and stdout will get no logs at all,
+# including the ASCII banner.
+# The parent directory is created if it does not exist.
+#
+# default: None - logs go to stdout
+# overwritten by: LOG_FILE
+#log_file = './rauthy.log'
+
+# When the rolling log file cleanup task runs.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 3 * * * *" - every day at 03:00
+# overwritten by: LOG_FILE_CLEANUP
+#log_file_cleanup = "0 0 3 * * * *"
+
+# How long rolling log files are kept before the cleanup task deletes
+# them. Accepts Durations like '60s', '10h', '7d', ...
+# '0' disables the cleanup task entirely, including compression.
+#
+# default: 30d
+# overwritten by: LOG_FILE_KEEP_FOR
+#log_file_keep_for = '30d'
+
+# Rolling log files older than this Duration are compressed into a
+# `.gz` file before the cleanup deletes them, for instance '3d'.
+# Needs `log_file` to be set.
+#
+# default: None - log files are never compressed
+# overwritten by: LOG_FILE_ARCHIVE_AFTER
+#log_file_archive_after = '3d'
+
 # You can change the log output format to JSON, if you set:
 # `log_fmt=json`.
 # Keep in mind, that some logs will include escaped values,
@@ -2447,6 +2726,28 @@ level_access = 'modifying'
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
 
+# If 'true', users with both WebAuthn passkeys and OTP configured
+# will see a selection screen where they can choose their preferred
+# MFA method. If 'false', the original behavior is used where
+# WebAuthn is forced and OTP is only shown if no WebAuthn exists.
+#
+# For admin users this option has no effect if 'admin_passkey_only =
+# true'.
+#
+# default: false
+# overwritten by: OPTIONAL_SELECT_MFA
+#optional_select_mfa = false
+
+# If 'true', forces the WebAuthn-first policy for admin users.
+# This means admins with both WebAuthn and OTP configured will be
+# forced to use WebAuthn and won't see the selection screen, even if
+# 'optional_select_mfa = true'.  This provides additional security for
+# the admin interface.
+#
+# default: true
+# overwritten by: ADMIN_PASSKEY_ONLY
+#admin_passkey_only = true
+
 [otp]
 # Enable E-Mail or HMAC-based One Time Passwords as 2FA.
 #
@@ -2464,7 +2765,7 @@ enable = false
 # overwritten by: OTP_LENGTH
 #length = 6
 
-# The lifetime for OTP requests. Within this time, an OTP 
+# The lifetime for OTP requests. Within this time, an OTP
 # request must have been validated.
 #
 # default: '5m'
@@ -2474,7 +2775,7 @@ enable = false
 # Default digest algorithm's length, HMAC using SHA-X.
 # SHA-1 is forbidden.
 #
-# NOTE: This value currently has no effect. It's a 
+# NOTE: This value currently has no effect. It's a
 # preparation for future support for TOTP. At the time
 # of writing, only E-Mail-based OTP is implemented.
 #
@@ -2700,10 +3001,9 @@ pub_url = 'localhost:8080'
 proxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests with a
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -2777,6 +3077,17 @@ swagger_ui_enable = false
 # overwritten by: SSP_THRESHOLD
 #ssp_threshold = 1000
 
+# An optional label for this Rauthy instance.
+# If set, it will be displayed in the Admin UI in the bottom left
+# corner next to the version number.  This can be useful when you have
+# multiple Rauthy instances (e.g. staging, production, or in a HA
+# cluster) to quickly identify which one you are currently working
+# with.
+#
+# default: not set
+# overwritten by: INSTANCE_LABEL
+#instance_label = 'Production'
+
 [suspicious_requests]
 # The "catch all" route handler on `/` will compare the request
 # path against a hardcoded list of common scan targets from bots
@@ -2832,7 +3143,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de es fr ja ko nb nl pt ru uk zh_hans
+# one of: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset
@@ -3045,6 +3356,48 @@ storage_type = 'db'
 # overwritten by: USER_REG_OPEN_REDIRECT
 #allow_open_redirect = false
 
+# The default redirect target for a browser after a user has
+# successfully reset their password via a magic link, or completed  the
+# initial setup of a new account. It can be a relative path, like
+# '/auth/v1/account', or a full URL to your own application.
+#
+# Only used when the magic link itself did not carry a 'redirect_uri',
+# which can be set during a user registration, or with a password reset
+# request from a client. Such a 'redirect_uri' always has priority.
+#
+# If this is not set, no 'Location' header will be returned, and the
+# frontend redirects to the account dashboard, which keeps the current
+# behavior.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+#post_reset_redirect_uri = 'https://example.com'
+
+# Reject any E-Mail address which contains a `+` in its local part,
+# for the open registration and for a self-service E-Mail change.
+#
+# default: false
+# overwritten by: USER_REG_REJECT_PLUS_SUBADDRESSING
+#reject_plus_subaddressing = false
+
+# The local parts of an E-Mail address that are blocked for the open
+# registration and for a self-service E-Mail change. The match is exact
+# and case-insensitive.
+#
+# default: [ 'abuse', 'admin', 'administrator', 'daemon', 'ftp',
+#   'hostmaster', 'mailnull', 'mailer-daemon', 'noc', 'no-reply',
+#   'noreply', 'null', 'operator', 'postmaster', 'proxy', 'root',
+#   'security', 'support', 'uucp', 'usenet', 'webmaster', 'www'
+# ]
+# overwritten by: USER_REG_RESERVED_NAMES - single String, \n separated values
+#reserved_names = ['ceo', 'root']
+
+# Ask for the password in the open registration form and init the account
+# right away, instead of sending out the password reset Magic Link.
+#
+# default: false
+# overwritten by: USER_REG_DANGER_REG_ACC_INIT_IMEDIATE
+#danger_reg_acc_init_immediate = false
+
 [user_values]
 # In this section, you can configure the requirements for different
 # user values to adjust them to your needs. The `preferred_username`
@@ -3103,6 +3456,24 @@ storage_type = 'db'
 # default: false
 # overwritten by: USER_VALUES_NAME_ORDER_REVERSE
 #name_order_reverse = false
+
+# Seconds after a successful password reset until the reset
+# page redirects the user, either to the `redirect_uri` of the
+# reset request or to the account dashboard. Set to `0` to
+# disable the redirect: the success message then stays visible
+# with a link to continue.
+#
+# default: 5
+# overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
+#password_reset_redirect_timeout = 5
+
+# Deny any self-service E-Mail address change. The account dashboard
+# will disable the E-Mail field. Changing the address of a user is an
+# admin only action.
+#
+# default: false
+# overwritten by: USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY
+#self_service_email_change_deny = false
 
 [user_values.preferred_username]
 
@@ -3416,12 +3787,12 @@ rp_origin = 'http://localhost:8080'
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../work/pam_nss_modules.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
+                            <a rel="prev" href="../integrations/netbird.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
                             <a rel="next prefetch" href="../swagger.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
                         <div style="clear: both"></div>
@@ -3430,17 +3801,22 @@ rp_origin = 'http://localhost:8080'
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../work/pam_nss_modules.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
+                    <a rel="prev" href="../integrations/netbird.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
                     <a rel="next prefetch" href="../swagger.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
 
         </div>
 
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
 
 
@@ -3449,13 +3825,13 @@ rp_origin = 'http://localhost:8080'
         </script>
 
 
-        <script src="../elasticlunr.min.js"></script>
-        <script src="../mark.min.js"></script>
-        <script src="../searcher.js"></script>
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
-        <script src="../clipboard.min.js"></script>
-        <script src="../highlight.js"></script>
-        <script src="../book.js"></script>
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 

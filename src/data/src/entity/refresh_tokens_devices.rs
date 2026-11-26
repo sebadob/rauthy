@@ -1,5 +1,5 @@
 use crate::database::DB;
-use crate::entity::refresh_tokens::{DiscardSql, RefreshToken, discard_txn, finish_rotation_with};
+use crate::entity::refresh_tokens::{RefreshToken, finish_rotation_with};
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
@@ -27,18 +27,6 @@ fn sql_invalidate_for_user(devices: bool) -> &'static [&'static str] {
         &SQL_INVALIDATE_FOR_USER[1..]
     }
 }
-
-/// The statements of [`RefreshTokenDevice::discard`], like
-/// [`SQL_RT_DISCARD`](crate::entity::refresh_tokens::SQL_RT_DISCARD).
-pub(crate) const SQL_RTD_DISCARD: DiscardSql = DiscardSql {
-    hql: [
-        r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti = (SELECT access_token_jti FROM refresh_tokens_devices WHERE id = $1)"#,
-        "DELETE FROM refresh_tokens_devices WHERE id = $1",
-    ],
-    pg_delete: "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING access_token_jti",
-};
 
 #[derive(Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct RefreshTokenDevice {
@@ -123,12 +111,6 @@ impl RefreshTokenDevice {
         }
     }
 
-    /// Deletes the device refresh token `id` and revokes the access token issued with it, in
-    /// one transaction, like [`RefreshToken::discard`]. An `id` that is already gone is fine.
-    pub async fn discard(id: &str) -> Result<(), ErrorResponse> {
-        discard_txn(&SQL_RTD_DISCARD, id).await
-    }
-
     /// Ends the rotation of this device refresh token into `replacement_id`, a `refresh_tokens`
     /// row: a refresh re-issues a device token as a regular one. The source is kept until the
     /// replacement exists. If it is gone by then (a consent revocation, a device deletion or a
@@ -200,21 +182,6 @@ impl RefreshTokenDevice {
         Ok(())
     }
 
-    /// Finds and delete the refresh token in an atomic operation.
-    pub async fn find_delete(id: &str) -> Result<Self, ErrorResponse> {
-        let sql = "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING *";
-
-        let slf = if is_hiqlite() {
-            DB::hql()
-                .execute_returning_map_one(sql, params!(id))
-                .await?
-        } else {
-            DB::pg_query_one(sql, &[&id]).await?
-        };
-
-        Ok(slf)
-    }
-
     pub async fn find_opt(id: &str) -> Result<Option<Self>, ErrorResponse> {
         let sql = "SELECT * FROM refresh_tokens_devices WHERE id = $1";
 
@@ -246,12 +213,12 @@ impl RefreshTokenDevice {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO refresh_tokens_devices
 (id, device_id, user_id, nbf, exp, scope, access_token_jti)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT(id) DO UPDATE
-SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7"#;
+SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7";
 
         if is_hiqlite() {
             DB::hql()
@@ -288,6 +255,11 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_j
     }
 }
 
+// NOT a template for new tests. These `#[ignore]` tests open a real Postgres schema from
+// `RAUTHY_TEST_PG_URL` inside a `#[cfg(test)]` module. Anything that touches a DB is an integration
+// test in `src/bin/tests/` against a running backend: via the public API, or via dev handlers when
+// the public API cannot reach the case. Never inside a `#[cfg(test)]` module, and never with a
+// fake DB.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -313,50 +285,11 @@ mod tests {
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_invalidate_for_user_device_refresh_race_postgres() {
-        use deadpool_postgres::{Config, Runtime};
-        use tokio_postgres::NoTls;
-
-        let url = std::env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let schema = format!("rtd_race_{}_{nanos}", std::process::id());
-        let cfg = Config {
-            url: Some(url),
-            ..Default::default()
-        };
-        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
-
-        let dir =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
-        let mut files = std::fs::read_dir(dir)
-            .unwrap()
-            .map(|e| e.unwrap().path())
-            .map(|p| {
-                let name = p.file_name().unwrap().to_str().unwrap();
-                let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
-                (nr, p)
-            })
-            .collect::<Vec<_>>();
-        files.sort();
-
-        let setup = pool.get().await.unwrap();
-        setup
-            .batch_execute(&format!(
-                "CREATE SCHEMA {schema}; SET search_path TO {schema};"
-            ))
-            .await
-            .unwrap();
-        for (_, path) in files {
-            setup
-                .batch_execute(&std::fs::read_to_string(path).unwrap())
-                .await
-                .unwrap();
-        }
+        let (pool, schema) = crate::database::pg_test_pool("rtd_race").await;
+        let setup = crate::database::pg_test_conn(&pool, &schema).await;
         setup
             .batch_execute(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -376,19 +309,13 @@ VALUES ('rt_u1', 'u1', 1, 2, 'j_u1', 'c1'),
        ('rt_u2', 'u2', 1, 2, 'j_u2_rt', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_u1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
         drop(setup);
 
-        let conn = async || {
-            let cl = pool.get().await.unwrap();
-            cl.batch_execute(&format!("SET search_path TO {schema}"))
-                .await
-                .unwrap();
-            cl
-        };
+        let conn = async || crate::database::pg_test_conn(&pool, &schema).await;
         let mut invalidator = conn().await;
         let refresher = conn().await;
         let monitor = conn().await;
@@ -406,9 +333,9 @@ VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_u1', 'u1', 2);
         // `TokenSet::from_user` inserts the replacement
         refresher
             .execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
-VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#,
+VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')",
                 &[],
             )
             .await
@@ -464,11 +391,7 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#,
             }
         };
         let res = finish_rotation_with(delete_checked, || {
-            crate::entity::refresh_tokens::pg_discard_txn(
-                &mut refresher,
-                &crate::entity::refresh_tokens::SQL_RT_DISCARD,
-                "rt_new",
-            )
+            crate::entity::refresh_tokens::pg_discard_txn(&mut refresher, "rt_new")
         })
         .await;
 

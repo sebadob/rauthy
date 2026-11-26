@@ -638,9 +638,7 @@ pub async fn post_login(
 
     #[inline]
     async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
-        user.last_failed_login = Some(Utc::now().timestamp());
-        user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
-        user.save(None).await?;
+        user.save_login_failure().await?;
 
         // Note: We don't want to increase the FailedLoginCounter for the IP here, because
         // this could be abused for DoS and block remote hosts with enough failed login attempts.
@@ -708,10 +706,7 @@ pub async fn post_login(
 
     // TODO should we even do this user update here? The PAM user belongs to this user, but on the
     //  other hand, these metrics are for all non-PAM logins.
-    user.last_login = Some(Utc::now().timestamp());
-    user.last_failed_login = None;
-    user.failed_login_attempts = None;
-    user.save(None).await?;
+    user.save_login_success().await?;
 
     info!("New PAM login for user {}", user.email);
 
@@ -909,6 +904,20 @@ pub async fn post_pam_users(
     let user = User::find_by_email(payload.email).await?;
     let pam_user = PamUser::insert(payload.username, user.email).await?;
 
+    if let Some(mut groups) = payload.groups {
+        for g in &mut groups {
+            g.uid = pam_user.id;
+        }
+        // update_groups does delete-all + re-insert, so include the user's
+        // own group (already created by insert) to avoid removing it.
+        groups.push(rauthy_api_types::pam::PamGroupUserLink {
+            uid: pam_user.id,
+            gid: pam_user.gid,
+            wheel: false,
+        });
+        PamUser::update_groups(pam_user.id, groups).await?;
+    }
+
     Ok(HttpResponse::Ok().json(pam_user.build_response(None)))
 }
 
@@ -1031,7 +1040,7 @@ pub async fn get_pam_users_authorized_keys(
         };
         let mut bytes = base64_decode(b64)?;
         let data = String::from_utf8_lossy(bytes.as_ref());
-        let Some((host_id, host_secret)) = data.split_once(":") else {
+        let Some((host_id, host_secret)) = data.split_once(':') else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "'Authorization' invalid format",

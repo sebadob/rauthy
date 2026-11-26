@@ -6,9 +6,9 @@ use validator::Validate;
 pub struct ToSRequest {
     pub is_html: bool,
     /// Unix timestamp in seconds
-    #[validate(range(min = 1761951600))]
+    #[validate(range(min = 1_761_951_600))]
     pub opt_until: Option<i64>,
-    #[validate(length(min = 1, max = 100000))]
+    #[validate(length(min = 1, max = 100_000))]
     pub content: String,
 }
 

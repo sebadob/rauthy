@@ -68,5 +68,5 @@ async fn check_app_version(last_version_notification: &mut Option<Version>) {
         Err(err) => {
             error!(?err, "LatestAppVersion::lookup()");
         }
-    };
+    }
 }

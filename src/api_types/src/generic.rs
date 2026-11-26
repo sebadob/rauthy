@@ -1,6 +1,8 @@
 use crate::sessions::SessionState;
+use rauthy_common::constants::PASSWORD_MAX_LEN_I32;
 use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
@@ -35,14 +37,17 @@ pub enum I18nContent {
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
+    Cs,
     De,
     En,
     Es,
     Fr,
+    It,
     Ja,
     Ko,
     Nb,
     Nl,
+    Pl,
     Pt,
     Ru,
     Uk,
@@ -82,11 +87,11 @@ pub struct PasswordHashTimesRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordPolicyRequest {
-    /// Validation: `8 <= length_min <= 128`
-    #[validate(range(min = 8, max = 128))]
+    /// Validation: `8 <= length_min <= 1024`
+    #[validate(range(min = 8, max = PASSWORD_MAX_LEN_I32))]
     pub length_min: i32,
-    /// Validation: `8 <= length_max <= 128`
-    #[validate(range(min = 8, max = 128))]
+    /// Validation: `8 <= length_max <= 1024`
+    #[validate(range(min = 8, max = PASSWORD_MAX_LEN_I32))]
     pub length_max: i32,
     /// Validation: `1 <= include_lower_case <= 32`
     #[validate(range(min = 1, max = 32))]
@@ -114,8 +119,13 @@ pub struct SearchParams {
     pub ty: SearchParamsType,
     /// Index
     pub idx: SearchParamsIdx,
-    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+@]+`
-    #[validate(regex(path = "*RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+@]+"))]
+    /// The actual search query - validation: `[,:/_&?=~#!$()*+@\p{L}\p{M}\p{N}\p{Zs}'.-]+`, which
+    /// is the `given_name` / `family_name` characters plus everything of an email, id, username,
+    /// session id, or IP
+    #[validate(regex(
+        path = "*RE_SEARCH",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.\\-,:/_&?=~#!$()*+@]+"
+    ))]
     pub q: String,
     pub limit: Option<u16>,
 }
@@ -126,6 +136,8 @@ pub enum SearchParamsIdx {
     // user params
     Id,
     Email,
+    Name,
+    Username,
     // session params
     UserId,
     SessionId,
@@ -175,6 +187,16 @@ pub struct I18nConfigResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct KeepAliveResponse {
+    /// The session's next idle timeout deadline.
+    /// format: `OffsetDateTime`
+    #[schema(value_type = str)]
+    #[serde(with = "time::serde::rfc3339")]
+    pub timeout: OffsetDateTime,
+}
+
+#[derive(Serialize, ToSchema)]
 pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,
     pub login_time: i64,
@@ -198,4 +220,41 @@ pub struct PasswordPolicyResponse {
     pub valid_days: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_recently_used: Option<i32>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct InstanceLabelResponse<'a> {
+    pub label: Option<&'a str>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn password_policy_max_length_matches_the_hard_limit() {
+        let policy = |length_max: i32| PasswordPolicyRequest {
+            length_min: 8,
+            length_max,
+            include_lower_case: None,
+            include_upper_case: None,
+            include_digits: None,
+            include_special: None,
+            valid_days: None,
+            not_recently_used: None,
+        };
+        assert!(
+            policy(128).validate().is_ok(),
+            "the seeded default policy stays valid"
+        );
+        assert!(
+            policy(PASSWORD_MAX_LEN_I32).validate().is_ok(),
+            "the policy can be raised up to the request limit"
+        );
+        assert!(
+            policy(PASSWORD_MAX_LEN_I32 + 1).validate().is_err(),
+            "anything above the request limit is rejected"
+        );
+    }
 }

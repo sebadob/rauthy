@@ -1,6 +1,8 @@
 export const IS_DEV = import.meta.env.MODE === 'development';
 export const PKCE_VERIFIER = 'pkce_verifier';
 export const PKCE_VERIFIER_UPSTREAM = 'pkce_verifier_upstream';
+// the page a provider login started from, in the `sessionStorage`
+export const PROVIDER_LOGIN_PAGE = 'provider_login_page';
 export const CSRF_TOKEN = 'sct';
 export const ACCESS_TOKEN = 'access_token';
 export const ID_TOKEN = 'id_token';
@@ -17,6 +19,7 @@ export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 export const EVENT_LEVELS = ['info', 'notice', 'warning', 'critical'];
 export const EVENT_TYPES = [
     '-',
+    'ConsentGranted',
     'ConsentRevoked',
     'ForcedLogout',
     'InvalidLogins',
@@ -48,6 +51,7 @@ export const TPL_ATPROTO_ID = 'tpl_atproto_id';
 export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
 export const TPL_CLIENT_NAME = 'tpl_client_name';
 export const TPL_CLIENT_URL = 'tpl_client_url';
+export const TPL_CONSENT_CONTENT = 'tpl_consent_content';
 export const TPL_CLIENT_FAVICON_UPDATED = 'tpl_client_favicon_updated';
 export const TPL_CLIENT_LOGO_UPDATED = 'tpl_client_logo_updated';
 export const TPL_CSRF_TOKEN = 'tpl_csrf_token';
@@ -63,6 +67,7 @@ export const TPL_OTP_LENGTH = 'tpl_otp_length';
 export const TPL_PASSKEY_REG_TYPE = 'tpl_passkey_reg_type';
 export const TPL_PASSWORD_RESET = 'tpl_password_reset';
 export const TPL_PASSWORD_RESET_LINK_ALWAYS = 'tpl_password_reset_link_always';
+export const TPL_REG_ACC_INIT_IMMEDIATE = 'tpl_reg_acc_init_immediate';
 export const TPL_STATUS_CODE = 'tpl_status_code';
 export const TPL_RESTRICTED_EMAIL_DOMAIN = 'tpl_restricted_email_domain';
 export const TPL_USER_VALUES_CONFIG = 'tpl_user_values_config';

@@ -31,7 +31,7 @@ use tokio::task::JoinSet;
 use tracing::{debug, error, info};
 
 // Allow a small clock-skew margin for logout token validation.
-const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_secs(600);
+const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_mins(10);
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
@@ -274,9 +274,7 @@ pub async fn execute_backchannel_logout(
                 sid,
                 kp.as_ref().unwrap(),
                 &mut tasks,
-            )
-            .await
-            {
+            ) {
                 error!("Error executing Backchannel Logout: {}", err);
             }
         }
@@ -342,14 +340,12 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
     for state in states {
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
-            uri.to_string(),
+            uri.clone(),
             Some(state.user_id),
             None,
             &kp,
             &mut tasks,
-        )
-        .await
-        {
+        ) {
             error!(?err, "executing Backchannel Logout");
         }
     }
@@ -370,7 +366,7 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
 /// Sends a backchannel logout to the given client. Successful deliveries delete any pending
 /// failure record for this (client_id, sub, sid); failed ones upsert / increment it. Callers
 /// must join their `JoinSet` before assuming all attempts have finished.
-pub async fn send_backchannel_logout(
+pub fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
     sub: Option<String>,

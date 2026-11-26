@@ -28,7 +28,7 @@ pub async fn trigger() {
         } else {
             format!("^(http|https|{additional_schemes})://[a-z0-9.:-]+$")
         };
-        RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap()
+        RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap();
     }
 
     {
@@ -38,7 +38,7 @@ pub async fn trigger() {
             "https"
         };
         let uri = format!("{scheme}://{}/auth/v1/oidc/token", vars.server.pub_url);
-        DPOP_TOKEN_ENDPOINT.set(uri).unwrap()
+        DPOP_TOKEN_ENDPOINT.set(uri).unwrap();
     }
 
     DEV_MODE.set(vars.dev.dev_mode).unwrap();
@@ -77,6 +77,9 @@ pub async fn trigger() {
     // fail the boot on a bad TLS / resolver config instead of the first CIMD request
     if vars.ephemeral_clients.enable {
         rauthy_data::http_client::init_ephemeral_fetcher();
+    }
+    if vars.consent.enable {
+        rauthy_data::http_client::init_consent_fetcher();
     }
 
     // constants
@@ -130,5 +133,5 @@ pub async fn trigger() {
 
     let json = serde_json::to_string(&zones).unwrap();
     let data = compress_br(json.as_bytes()).await.unwrap();
-    TIMEZONES_BR.set(data.clone()).unwrap();
+    TIMEZONES_BR.set(data).unwrap();
 }

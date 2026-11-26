@@ -1,4 +1,4 @@
-use rauthy_api_types::oidc::{Audience, JktClaim};
+use rauthy_api_types::oidc::{ActClaim, Audience, JktClaim};
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -105,7 +105,7 @@ impl AddressClaim<'_> {
 impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
     fn from(value: &rauthy_api_types::oidc::AddressClaim) -> AddressClaim<'_> {
         AddressClaim {
-            formatted: value.formatted.to_string(),
+            formatted: value.formatted.clone(),
             street_address: value.street_address.as_deref(),
             locality: value.locality.as_deref(),
             postal_code: value.postal_code.as_deref(),
@@ -143,16 +143,6 @@ pub struct JwtAccessClaims<'a> {
     /// collides with a reserved claim; see [`validate_no_reserved_collision`].
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub custom_flattened: Option<HashMap<String, serde_json::Value>>,
-}
-
-/// RFC 8693 §4.1 `act` (actor) claim. Identifies the party acting on behalf of the `sub`.
-/// Nests recursively, so a chain of delegation keeps the whole history: the outermost `act`
-/// is the current actor, and each nested `act` is the one it in turn acts for.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ActClaim<'a> {
-    pub sub: &'a str,
-    #[serde(borrow, skip_serializing_if = "Option::is_none")]
-    pub act: Option<Box<ActClaim<'a>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -289,7 +279,7 @@ pub fn validate_no_reserved_collision(
     let mut collisions = flattened
         .keys()
         .filter(|k| RESERVED_ROOT_CLAIMS.contains(&k.as_str()))
-        .map(|k| k.as_str())
+        .map(String::as_str)
         .collect::<Vec<_>>();
     collisions.sort_unstable();
     Err(ErrorResponse::new(
@@ -331,6 +321,11 @@ pub struct JwtRefreshClaims<'a> {
     /// `default` for backwards compatibility with tokens issued by an older version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resource: Option<&'a str>,
+    /// Issued by a grant without a consent step (password, device code), carried through
+    /// rotation. `false` for tokens issued by an older version, which are still exempt if they
+    /// carry a signed `did`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub consent_exempt: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -401,8 +396,8 @@ impl JwtAmrValue {
 #[cfg(test)]
 mod tests {
     use super::{
-        ActClaim, Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtTokenType,
-        validate_no_reserved_collision,
+        ActClaim, Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims,
+        JwtTokenType, validate_no_reserved_collision,
     };
     use serde_json::json;
     use std::borrow::Cow;
@@ -677,5 +672,35 @@ mod tests {
             v.get("act").is_none(),
             "a token issued without an `actor_token` must not carry `act`"
         );
+    }
+
+    #[test]
+    fn refresh_consent_exempt_claim() {
+        let claims = |consent_exempt| JwtRefreshClaims {
+            common: JwtCommonClaims {
+                typ: JwtTokenType::Refresh,
+                sub: None,
+                scope: None,
+                ..common()
+            },
+            uid: "user-id",
+            auth_time: Some(1_700_000_000),
+            resource: None,
+            consent_exempt,
+        };
+
+        // only serialized when set
+        let v = serde_json::to_value(claims(false)).unwrap();
+        assert!(v.get("consent_exempt").is_none());
+        let v = serde_json::to_value(claims(true)).unwrap();
+        assert_eq!(v["consent_exempt"], json!(true));
+
+        // round trip, a token without the claim (older version) is not exempt
+        let json = serde_json::to_string(&claims(true)).unwrap();
+        let parsed: JwtRefreshClaims = serde_json::from_str(&json).unwrap();
+        assert!(parsed.consent_exempt);
+        let json = serde_json::to_string(&claims(false)).unwrap();
+        let parsed: JwtRefreshClaims = serde_json::from_str(&json).unwrap();
+        assert!(!parsed.consent_exempt);
     }
 }

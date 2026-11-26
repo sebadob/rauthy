@@ -25,11 +25,10 @@ groups:
 You assign these roles like any other role. Create a role named e.g. `rauthy_admin:engineering`,
 then assign it to the users who should administer that group.
 
-```admonish note
-This is non-breaking: unless you already had a custom role that happens to start with
-`rauthy_admin:`, nothing changes. On startup, Rauthy logs a warning listing any pre-existing roles
-that match this scheme so you can double-check they are intended.
-```
+> [!NOTE]
+> This is non-breaking: unless you already had a custom role that happens to start with
+> `rauthy_admin:`, nothing changes. On startup, Rauthy logs a warning listing any pre-existing roles
+> that match this scheme so you can double-check they are intended.
 
 ## What a group admin can do
 
@@ -46,7 +45,8 @@ not themselves any kind of `rauthy_admin`. For those users it can:
 - upload or remove the profile picture of a managed user,
 - view and invalidate (force-logout) sessions,
 - list and revoke the app consents of a managed user (a revoke also deletes that user's refresh
-  tokens for the client and revokes the latest access token issued with each of them),
+  tokens for the client, revokes the latest access token issued with each of them and deletes all
+  sessions of the user),
 - send a custom E-Mail to the users of a group it manages, and view the resulting E-Mail jobs.
   The recipient filter is locked to a single one of its managed groups (a full admin may also
   send to all users or filter by role).

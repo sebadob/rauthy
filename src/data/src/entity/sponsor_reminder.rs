@@ -31,11 +31,11 @@ impl SponsorReminder {
     pub async fn upsert(timestamp: i64) -> Result<(), ErrorResponse> {
         let data = serialize(&Self { timestamp })?;
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO config (id, data)
 VALUES ('sponsor_reminder', $1)
 ON CONFLICT(id)
-DO UPDATE SET data = $1"#;
+DO UPDATE SET data = $1";
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(data)).await?;

@@ -40,6 +40,9 @@ pub enum ErrorResponseType {
     JwtToken,
     JoseError,
     MfaRequired,
+    /// The request carried no session at all, so nothing inside it was ever validated. Its 401
+    /// answers with the `x-session-expired` header, which tells a login page that its own session is
+    /// gone and that it has to restart its flow, instead of reporting anything about credentials.
     NoSession,
     NotFound,
     PasswordExpired,
@@ -53,6 +56,24 @@ pub enum ErrorResponseType {
     Unauthorized,
     NotAccepted,
     WWWAuthenticate(String),
+    // Appended at the end to keep variant indices stable, in case an error is ever cached with
+    // bincode, which encodes the variant index.
+    /// OIDC Core §3.1.2.6: the authorization requires user consent that cannot be obtained.
+    /// Serialized as the OIDC error code `consent_required`.
+    #[serde(rename = "consent_required")]
+    ConsentRequired,
+    /// RFC 6749 §5.2 / RFC 8693 §2.2.2: the request is invalid, or the `subject_token` or
+    /// `actor_token` is unacceptable based on policy. Serialized as the RFC error code
+    /// `invalid_request`.
+    #[serde(rename = "invalid_request")]
+    InvalidRequest,
+    /// The interactive sign-in form must ask for a password to complete the request.
+    PasswordRequired,
+    /// The credentials submitted through the interactive sign-in form were rejected.
+    InvalidCredentials,
+    /// A bounded outbound fetcher has no free slot, to be retried after the contained unix
+    /// timestamp. Unlike `TooManyRequests`, it says nothing about the caller's own requests.
+    ServiceUnavailable(i64),
 }
 
 impl Display for ErrorResponseType {

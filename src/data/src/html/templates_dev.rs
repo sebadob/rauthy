@@ -1,11 +1,14 @@
 use crate::api_cookie::ApiCookie;
 use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
+use crate::entity::clients::Client;
+use crate::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use crate::entity::logos::{Logo, LogoRes, LogoType};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::html::templates::{FrontendAction, HtmlTemplate, TplPasswordReset};
+use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
 use chrono::Utc;
@@ -57,6 +60,25 @@ impl HtmlTemplate {
                 };
                 Ok((Self::ClientFaviconUpdated(updated), None))
             }
+            "tpl_consent_content" => {
+                let Some(client_id) = client_id else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "no client_id",
+                    ));
+                };
+                let client = Client::find_maybe_ephemeral(client_id).await?;
+                let Some(docs) = ConsentDocs::find(&client, None, Language::default()).await?
+                else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "consent disabled",
+                    ));
+                };
+                let content = ConsentContent::build(&docs, &client.sanitize_login_scopes(None));
+                let content = LoginConsentContent::new(content, &client, None);
+                Ok((Self::ConsentContent(content), None))
+            }
             "tpl_csrf_token" => {
                 if let Some(s) = session {
                     Ok((Self::CsrfToken(s.csrf_token), None))
@@ -84,6 +106,7 @@ impl HtmlTemplate {
                 Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
                 None,
             )),
+            "tpl_reg_acc_init_immediate" => Ok((Self::reg_acc_init_immediate().await?, None)),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
@@ -107,7 +130,7 @@ impl HtmlTemplate {
                 // valid magic link automatically in DEV mode and return proper values directly.
                 // At a valid session should have been created before to make this work.
                 warn!(
-                    r#"
+                    r"
 
     The password reset form during local development does not behave like you would expect it to in
     production! To make working on this form less annoying and skip the magic link request / send
@@ -120,7 +143,7 @@ impl HtmlTemplate {
     This means it will always reset the password for the user with the current session, not any other
     user from a possibly existing magic link, for development speed.
 
-                "#
+                "
                 );
 
                 let user_id = session
@@ -129,7 +152,6 @@ impl HtmlTemplate {
                     you need to be logged in",
                     )
                     .user_id
-                    .clone()
                     .expect(
                         "To make the tpl_password_reset work automatically in local dev, \
                     you need to be logged in",

@@ -63,7 +63,7 @@ pub async fn send_email_otp(code: &str, user: &User) {
     let req = EMail {
         typ: EmailType::OtpRequest,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {subject}"),
         text: Some(text.render().expect("Template rendering: EmailOtpTxt")),
         html: Some(html.render().expect("Template rendering: EmailOtpHtml")),
@@ -71,15 +71,54 @@ pub async fn send_email_otp(code: &str, user: &User) {
 
     let res = RauthyConfig::get()
         .tx_email
-        .send_timeout((req, EMailCallback::None), Duration::from_secs(60))
+        .send_timeout((req, EMailCallback::None), Duration::from_mins(1))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 user.email, error = ?e,
                 "sending otp email",
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::language::Language;
+    use crate::rauthy_config::Vars;
+
+    #[test]
+    fn italian_otp_renders_in_html_and_plain_text() -> Result<(), askama::Error> {
+        let vars = Vars::default();
+        let template = &vars.templates.email_otp.it;
+        let text = template.text.as_deref().unwrap();
+        let code = "123456";
+        let html = EmailOtpHtml {
+            lang: Language::It.as_str(),
+            code,
+            header: &template.header,
+            text,
+            ..Default::default()
+        }
+        .render()?;
+        let plain = EmailOtpTxt {
+            code,
+            header: &template.header,
+            text,
+            ..Default::default()
+        }
+        .render()?;
+
+        assert_eq!(template.subject, "Codice monouso");
+        assert!(html.contains("<html lang=\"it\">"));
+        for body in [html, plain] {
+            assert!(body.contains("Il tuo codice monouso è:"));
+            assert!(body.contains(code));
+        }
+
+        Ok(())
     }
 }

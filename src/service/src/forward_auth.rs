@@ -56,7 +56,7 @@ pub async fn get_forward_auth_client(
             if s.validate(&req, &client.id).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
-                        Ok(_) => Some(s),
+                        Ok(()) => Some(s),
                         Err(err) => {
                             error!(?err, "CSRF token check");
                             None
@@ -91,7 +91,7 @@ pub async fn get_forward_auth_client(
                         "The first configured `redirect_uri` must start with the `X-Forwarded-Host`",
                     ));
                 }
-                if uri.ends_with("*") {
+                if uri.ends_with('*') {
                     debug!(
                         "The first configured `redirect_uri` must be absolute for `forward_auth`"
                     );
@@ -131,7 +131,7 @@ pub async fn get_forward_auth_client(
         return Ok(HttpResponse::build(status)
             .insert_header((LOCATION, location))
             .finish());
-    };
+    }
     let mut session = session.unwrap().inner;
 
     // we don't have the middleware auto-updater for last_seen at this point
@@ -203,7 +203,7 @@ pub async fn get_forward_auth_client_callback(
     let origin = format!("{proto}://{host}");
     debug!(origin);
 
-    let state = ForwardAuthCallbackState::try_from(params.state.as_str())?;
+    let state = ForwardAuthCallbackState::from_str(params.state.as_str())?;
     debug!(?state);
 
     if !state.danger_cookie_insecure
@@ -350,7 +350,7 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
                 ));
             }
         }
-    };
+    }
 
     if client.challenge.is_some() {
         return Err(ErrorResponse::new(
@@ -421,16 +421,17 @@ fn get_header_alt<'a>(
 ) -> Result<&'a str, ErrorResponse> {
     match get_header(key_first, req) {
         Ok(v) => Ok(v),
-        Err(_) => match get_header(key_second, req) {
-            Ok(v) => Ok(v),
-            Err(_) => {
+        Err(_) => {
+            if let Ok(v) = get_header(key_second, req) {
+                Ok(v)
+            } else {
                 debug!("Missing at least one of headers {key_first} / {key_second}");
                 Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     format!("Missing at least one of headers {key_first} / {key_second}"),
                 ))
             }
-        },
+        }
     }
 }
 

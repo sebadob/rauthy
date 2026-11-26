@@ -1,40 +1,37 @@
 <script lang="ts">
+    import PublicPage from '#lib/PublicPage.svelte';
     import { getProviderToken, getVerifierUpstreamFromStorage } from '#utils/helpers.ts';
     import { onMount } from 'svelte';
     import WebauthnRequest from '#lib/WebauthnRequest.svelte';
-    import LangSelector from '#lib/LangSelector.svelte';
     import Button from '#lib/button/Button.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useParam } from '#state/param.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
-    import type {
-        ActiveOtp,
-        OtpLoginResponse,
-        WebauthnLoginResponse,
-    } from '#api/types/authorize.ts';
+    import type { ActiveOtp, LoginResponse } from '#api/types/authorize.ts';
     import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
-    import { IS_DEV } from '#utils/constants.ts';
+    import { IS_DEV, PROVIDER_LOGIN_PAGE } from '#utils/constants.ts';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
     import TosAccept from '#lib/TosAccept.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import OtpRequest from '#lib/OtpRequest.svelte';
     import type { OtpAdditionalData } from '#mfa/otp/types.ts';
+    import MfaSelection from '#lib/MfaSelection.svelte';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
     let error = $state('');
 
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' | 'selection' = $state();
     let activeOtps: undefined | ActiveOtp[] = $state();
 
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
     let tosForceAccept = $state(false);
     let needsValuesUpdate = $state(false);
+    // the login page to ask the consent again is unknown, the account is the way on
+    let consentLost = $state(false);
 
     onMount(async () => {
         let pErr = useParam('error').get();
@@ -69,17 +66,16 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >(url, payload);
+        let res = await fetchPost<undefined | LoginResponse[] | ToSAwaitLoginResponse>(
+            url,
+            payload,
+        );
 
         await handleAuthRes(res);
     });
 
     async function handleAuthRes(
-        res?: IResponse<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >,
+        res?: IResponse<undefined | LoginResponse[] | ToSAwaitLoginResponse>,
     ) {
         if (!res) {
             return;
@@ -92,11 +88,13 @@
             // -> all good, but needs additional passkey validation
             error = '';
             let body = res.body;
-            if (body && 'code' in body) {
-                mfaPurpose = { Login: body.code as string };
-                if ('active_otps' in body) {
-                    activeOtps = body.active_otps;
-                    mfaKind = 'otp';
+            if (Array.isArray(body) && body.length > 0) {
+                // one entry per MFA method the user may choose, all with the same code
+                mfaPurpose = { Login: body[0].code };
+                let otp = body.find(r => 'active_otps' in r);
+                if (otp && 'active_otps' in otp) {
+                    activeOtps = otp.active_otps;
+                    mfaKind = body.length > 1 ? 'selection' : 'otp';
                 } else {
                     mfaKind = 'webauthn';
                 }
@@ -126,6 +124,17 @@
             setTimeout(() => {
                 window.location.replace('/auth/v1/');
             }, 5000);
+        } else if (res.error?.error === 'consent_required') {
+            // The consent is missing or changed meanwhile. The login page asks for it again with the
+            // original request.
+            let loginPage = sessionStorage.getItem(PROVIDER_LOGIN_PAGE);
+            sessionStorage.removeItem(PROVIDER_LOGIN_PAGE);
+            if (loginPage?.startsWith(`${window.location.origin}/`)) {
+                window.location.replace(loginPage);
+            } else {
+                error = t.authorize.consent.changed;
+                consentLost = true;
+            }
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             error = t.authorize.clientForceMfa;
@@ -177,9 +186,11 @@
     <title>Callback</title>
 </svelte:head>
 
-<ContentCenter>
+<PublicPage>
     {#if mfaPurpose}
-        {#if mfaKind == 'webauthn'}
+        {#if mfaKind == 'selection'}
+            <MfaSelection {activeOtps} onSelect={kind => (mfaKind = kind)} onError={onMfaError} />
+        {:else if mfaKind == 'webauthn'}
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {:else if mfaKind == 'otp' && activeOtps}
             <OtpRequest
@@ -190,11 +201,11 @@
             />
         {/if}
     {:else if clientMfaForce}
-        <div class="btn flex-col">
+        <div class="public-card">
             <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>
         </div>
     {:else if needsValuesUpdate}
-        <div>
+        <div class="public-card ui-section-stack">
             <p>{t.authorize.needsUserUpdate}</p>
             <Button onclick={() => window.location.replace('/auth/v1/account')}>
                 {t.authorize.navigateToAccount}
@@ -208,24 +219,16 @@
             onToSAccept={handleAuthRes}
             {onToSCancel}
         />
+    {:else if consentLost}
+        <div class="public-card ui-section-stack">
+            <p class="err">{error}</p>
+            <Button onclick={() => window.location.replace('/auth/v1/account')}>
+                {t.authorize.navigateToAccount}
+            </Button>
+        </div>
     {:else if error}
-        <div class="err">
+        <div class="public-card err">
             {error}
         </div>
     {/if}
-</ContentCenter>
-
-<ThemeSwitch absolute />
-<LangSelector absolute />
-
-<style>
-    .btn {
-        margin: 5px 0;
-        display: flex;
-    }
-
-    .flex-col {
-        display: flex;
-        flex-direction: column;
-    }
-</style>
+</PublicPage>

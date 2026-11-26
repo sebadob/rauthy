@@ -20,7 +20,7 @@ pub mod password_reset_info;
 pub mod smtp_oauth_token;
 
 /// Prettifies unix timestamps for E-Mails in a better readable format for end users
-fn email_ts_prettify(ts: i64, lang: &Language, user_tz: Option<&str>) -> String {
+fn email_ts_prettify(ts: i64, lang: Language, user_tz: Option<&str>) -> String {
     let config = &RauthyConfig::get().vars.email.tz_fmt;
     email_ts_prettify_with(config, ts, lang, user_tz)
 }
@@ -29,7 +29,7 @@ fn email_ts_prettify(ts: i64, lang: &Language, user_tz: Option<&str>) -> String 
 fn email_ts_prettify_with(
     config: &VarsEmailTzFmt,
     ts: i64,
-    lang: &Language,
+    lang: Language,
     user_tz: Option<&str>,
 ) -> String {
     let dt = DateTime::from_timestamp(ts, 0).unwrap_or_default();
@@ -38,14 +38,17 @@ fn email_ts_prettify_with(
         .unwrap_or_else(|| Tz::from_str(&config.tz_fallback).unwrap());
 
     let fmt_str = match lang {
+        Language::Cs => config.cs.as_ref(),
         Language::De => config.de.as_ref(),
         Language::En => config.en.as_ref(),
         Language::Es => config.es.as_ref(),
         Language::Fr => config.fr.as_ref(),
+        Language::It => config.it.as_ref(),
         Language::Ja => config.ja.as_ref(),
         Language::Ko => config.ko.as_ref(),
         Language::Nb => config.no.as_ref(),
         Language::Nl => config.nl.as_ref(),
+        Language::Pl => config.pl.as_ref(),
         Language::Pt => config.pt.as_ref(),
         Language::Ru => config.ru.as_ref(),
         Language::Uk => config.uk.as_ref(),
@@ -62,35 +65,28 @@ mod tests {
 
     #[test]
     fn test_email_ts_prettify() {
-        let config = VarsEmailTzFmt {
-            de: "%d.%m.%Y %T (%Z)".into(),
-            en: "%m/%d/%Y %T (%Z)".into(),
-            es: "%d/%m/%Y %T (%Z)".into(),
-            fr: "%d/%m/%Y %T (%Z)".into(),
-            ja: "%Y/%m/%d %T (%Z)".into(),
-            ko: "%Y-%m-%d %T (%Z)".into(),
-            nl: "%d-%m-%Y %T (%Z)".into(),
-            no: "%d.%m.%Y %T (%Z)".into(),
-            pt: "%d/%m/%Y %T (%Z)".into(),
-            ru: "%d.%m.%Y %T (%Z)".into(),
-            uk: "%d.%m.%Y %T (%Z)".into(),
-            zhhans: "%d-%m-%Y %T (%Z)".into(),
-            tz_fallback: "UTC".into(),
-        };
+        let config = crate::rauthy_config::Vars::default().email.tz_fmt;
 
         let now = Utc
             .with_ymd_and_hms(2000, 10, 20, 13, 23, 33)
             .unwrap()
             .timestamp();
 
-        let p = email_ts_prettify_with(&config, now, &Language::En, None);
+        let p = email_ts_prettify_with(&config, now, Language::En, None);
         assert_eq!(&p, "10/20/2000 13:23:33 (UTC)");
-        let p = email_ts_prettify_with(&config, now, &Language::En, Some("Europe/Berlin"));
+        let p = email_ts_prettify_with(&config, now, Language::It, None);
+        assert_eq!(&p, "20/10/2000 13:23:33 (UTC)");
+        let p = email_ts_prettify_with(&config, now, Language::It, Some("Europe/Rome"));
+        assert_eq!(&p, "20/10/2000 15:23:33 (CEST)");
+        let p = email_ts_prettify_with(&config, now, Language::En, Some("Europe/Berlin"));
         assert_eq!(&p, "10/20/2000 15:23:33 (CEST)");
 
-        let p = email_ts_prettify_with(&config, now, &Language::De, None);
+        let p = email_ts_prettify_with(&config, now, Language::De, None);
         assert_eq!(&p, "20.10.2000 13:23:33 (UTC)");
-        let p = email_ts_prettify_with(&config, now, &Language::De, Some("Europe/Berlin"));
+        let p = email_ts_prettify_with(&config, now, Language::De, Some("Europe/Berlin"));
         assert_eq!(&p, "20.10.2000 15:23:33 (CEST)");
+
+        let p = email_ts_prettify_with(&config, now, Language::Cs, Some("Europe/Prague"));
+        assert_eq!(&p, "20. 10. 2000 15:23:33 (CEST)");
     }
 }

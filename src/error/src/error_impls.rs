@@ -12,12 +12,11 @@ use cryptr::utils::secure_random_alnum;
 use css_color::ParseColorError;
 use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
-use openssl::error::ErrorStack;
+use oxrdf::IriParseError;
+use oxttl::TurtleSyntaxError;
 use ring::error::{KeyRejected, Unspecified};
-use rio_turtle::TurtleError;
 use rsa::pkcs1::Error;
 use s3_simple::S3Error;
-use serde_json_path::ParseError;
 use spow::pow::PowError;
 use std::borrow::Cow;
 use std::string::FromUtf8Error;
@@ -30,6 +29,9 @@ const APPLICATION_JSON: &str = "application/json";
 const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
+/// Marks a 401 that was raised because the request had no session at all, which tells a login page
+/// to restart its flow instead of showing an error. Changing the name breaks every consumer of it.
+const HEADER_SESSION_EXPIRED: &str = "x-session-expired";
 
 impl ErrorResponse {
     pub fn new<C>(error: ErrorResponseType, message: C) -> Self
@@ -59,9 +61,13 @@ impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
             ErrorResponseType::BadRequest
+            | ErrorResponseType::ConsentRequired
+            | ErrorResponseType::InvalidCredentials
             | ErrorResponseType::InvalidClientMetadata
             | ErrorResponseType::InvalidGrant
+            | ErrorResponseType::InvalidRequest
             | ErrorResponseType::InvalidTarget
+            | ErrorResponseType::PasswordRequired
             | ErrorResponseType::UseDpopNonce(_) => StatusCode::BAD_REQUEST,
             ErrorResponseType::Blocked
             | ErrorResponseType::Forbidden
@@ -75,6 +81,7 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::CSRFTokenError
             | ErrorResponseType::DPoP(_)
             | ErrorResponseType::JwtToken
+            | ErrorResponseType::NoSession
             | ErrorResponseType::PasswordExpired
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
@@ -82,6 +89,9 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::WWWAuthenticate(_) => StatusCode::UNAUTHORIZED,
             ErrorResponseType::TooManyRequests(_not_before_timestamp) => {
                 StatusCode::TOO_MANY_REQUESTS
+            }
+            ErrorResponseType::ServiceUnavailable(_not_before_timestamp) => {
+                StatusCode::SERVICE_UNAVAILABLE
             }
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -99,6 +109,17 @@ impl ResponseError for ErrorResponse {
                     .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
                     .insert_header(HEADER_HTML)
                     .body(self.message.clone())
+            }
+
+            ErrorResponseType::ServiceUnavailable(not_before_timestamp) => {
+                // RFC 9110 delta-seconds, at least 1 so a past timestamp still asks for a pause
+                let retry_after =
+                    (*not_before_timestamp - OffsetDateTime::now_utc().unix_timestamp()).max(1);
+                HttpResponseBuilder::new(status)
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
+                    .insert_header((header::RETRY_AFTER, retry_after))
+                    .content_type(APPLICATION_JSON)
+                    .body(serde_json::to_string(self).unwrap())
             }
 
             ErrorResponseType::DPoP(header_origin) => {
@@ -137,6 +158,13 @@ impl ResponseError for ErrorResponse {
 
             ErrorResponseType::WWWAuthenticate(msg) => HttpResponseBuilder::new(status)
                 .insert_header((WWW_AUTHENTICATE, msg.as_str()))
+                .content_type(APPLICATION_JSON)
+                .body(serde_json::to_string(self).unwrap()),
+
+            // Only the header is the signal - the body stays the generic 401 of every other error.
+            ErrorResponseType::NoSession => HttpResponseBuilder::new(status)
+                .insert_header((HEADER_SESSION_EXPIRED, "true"))
+                .append_header((WWW_AUTHENTICATE, "OAuth"))
                 .content_type(APPLICATION_JSON)
                 .body(serde_json::to_string(self).unwrap()),
 
@@ -283,26 +311,22 @@ impl From<hiqlite::Error> for ErrorResponse {
             hiqlite::Error::ClientWriteError(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
-            hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.to_string().into()),
-            hiqlite::Error::ConstraintViolation(err) => {
-                (ErrorResponseType::BadRequest, err.to_string().into())
-            }
+            hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.into()),
+            hiqlite::Error::ConstraintViolation(err) => (ErrorResponseType::BadRequest, err.into()),
             hiqlite::Error::LeaderChange(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
             hiqlite::Error::QueryReturnedNoRows(err) => {
                 (ErrorResponseType::NotFound, err.to_string().into())
             }
-            hiqlite::Error::Request(err) => (ErrorResponseType::Connection, err.to_string().into()),
-            hiqlite::Error::S3(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            hiqlite::Error::Request(err) => (ErrorResponseType::Connection, err.into()),
+            hiqlite::Error::S3(err) => (ErrorResponseType::Connection, err.into()),
             hiqlite::Error::Sqlite(err) => (ErrorResponseType::Database, err.to_string().into()),
-            hiqlite::Error::Timeout(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            hiqlite::Error::Timeout(err) => (ErrorResponseType::Connection, err.into()),
             hiqlite::Error::Transaction(err) => {
                 (ErrorResponseType::Database, err.to_string().into())
             }
-            hiqlite::Error::WebSocket(err) => {
-                (ErrorResponseType::Connection, err.to_string().into())
-            }
+            hiqlite::Error::WebSocket(err) => (ErrorResponseType::Connection, err.into()),
             err => (ErrorResponseType::Database, err.to_string().into()),
         };
 
@@ -400,7 +424,7 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
         debug!("reqwest::header::ToStrError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("Request headers contained non ASCII characters: {value:?}",),
+            format!("Request headers contained non ASCII characters: {value:?}"),
         )
     }
 }
@@ -415,12 +439,22 @@ impl From<reqwest::Error> for ErrorResponse {
     }
 }
 
-impl From<TurtleError> for ErrorResponse {
-    fn from(value: TurtleError) -> Self {
-        debug!("TurtleError: {value:?}");
+impl From<TurtleSyntaxError> for ErrorResponse {
+    fn from(value: TurtleSyntaxError) -> Self {
+        debug!("TurtleSyntaxError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot format / parse turtle data: {value:?}"),
+        )
+    }
+}
+
+impl From<IriParseError> for ErrorResponse {
+    fn from(value: IriParseError) -> Self {
+        debug!("IriParseError: {value:?}");
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Invalid iri given: {value:?}"),
         )
     }
 }
@@ -436,16 +470,6 @@ impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
         debug!("PowError: {value:?}");
         ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
-    }
-}
-
-impl From<serde_json_path::ParseError> for ErrorResponse {
-    fn from(value: ParseError) -> Self {
-        debug!("serde_json_path::ParseError: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("JsonPath error: {value}"),
-        )
     }
 }
 
@@ -566,16 +590,6 @@ impl From<ed25519_compact::Error> for ErrorResponse {
     }
 }
 
-impl From<openssl::error::ErrorStack> for ErrorResponse {
-    fn from(value: ErrorStack) -> Self {
-        debug!("openssl::error::ErrorStack: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("openssl::error::ErrorStack: {value:?}"),
-        )
-    }
-}
-
 impl From<ring::error::KeyRejected> for ErrorResponse {
     fn from(value: KeyRejected) -> Self {
         debug!("ring::error::KeyRejected: {value:?}");
@@ -593,5 +607,67 @@ impl From<ring::error::Unspecified> for ErrorResponse {
             ErrorResponseType::BadRequest,
             format!("ring::error::Unspecified: {value:?}"),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// OIDC Core §3.1.2.6: `consent_required` is an authorization error response, a 400 like the
+    /// other OAuth error codes.
+    #[test]
+    fn test_consent_required_status() {
+        let err = ErrorResponse::new(ErrorResponseType::ConsentRequired, "consent required");
+        assert_eq!(err.status_code(), StatusCode::BAD_REQUEST);
+        assert_eq!(err.error_response().status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            serde_json::to_value(&err.error).unwrap(),
+            serde_json::json!("consent_required")
+        );
+    }
+
+    /// Consent fetcher back pressure: a 503 that tells the client when to retry.
+    #[test]
+    fn test_service_unavailable_retry_header() {
+        let err = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(1_700_000_000), "busy");
+        let resp = err.error_response();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let retry = resp
+            .headers()
+            .get(HEADER_RETRY_NOT_BEFORE)
+            .map(|v| v.to_str().unwrap());
+        assert_eq!(retry, Some("1700000000"), "headers {:?}", resp.headers());
+        let retry_after = |resp: &HttpResponse| {
+            resp.headers()
+                .get(header::RETRY_AFTER)
+                .map(|v| v.to_str().unwrap().parse::<i64>().unwrap())
+        };
+        // a timestamp in the past still asks to wait at least a second
+        assert_eq!(retry_after(&resp), Some(1), "headers {:?}", resp.headers());
+
+        let not_before = OffsetDateTime::now_utc().unix_timestamp() + 30;
+        let err = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(not_before), "busy");
+        let resp = err.error_response();
+        let secs = retry_after(&resp).expect("Retry-After header");
+        assert!((29..=30).contains(&secs), "Retry-After {secs}");
+    }
+
+    /// bincode encodes the variant index. A new variant goes at the end to keep the indices
+    /// stable, in case an error is ever cached with bincode: otherwise cached values would decode
+    /// as another error after an upgrade.
+    #[test]
+    fn test_error_type_bincode_index() {
+        let encode = |ty: ErrorResponseType| {
+            bincode_next::serde::encode_to_vec(&ty, bincode_next::config::legacy()).unwrap()
+        };
+        assert_eq!(encode(ErrorResponseType::CSRFTokenError), [3, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::NotFound), [19, 0, 0, 0]);
+        assert_eq!(
+            encode(ErrorResponseType::WWWAuthenticate(String::new())),
+            [30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(encode(ErrorResponseType::ConsentRequired), [31, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::InvalidRequest), [32, 0, 0, 0]);
     }
 }

@@ -156,10 +156,15 @@ export const I18nNb: I18n = {
             connectedAppsDesc:
                 'Applikasjoner du har gitt samtykke til å få tilgang til kontoen din.',
             granted: 'Gitt',
+            logoutWarning:
+                'Dette logger deg også ut av alle øktene dine på alle enheter. Du må logge inn på nytt.',
             noConnectedApps: 'Ingen applikasjon har fått tilgang ennå.',
             privacy: 'Personvern',
             resource: 'Ressurs',
             revoke: 'Trekk tilbake tilgang',
+            revokeAll: 'Trekk tilbake all tilgang',
+            revokeAllDesc:
+                'Trekker tilbake samtykket ditt for alle applikasjonene som er oppført her. Hver applikasjon må be om samtykket ditt på nytt.',
             revokeDesc:
                 'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin. Tilgangstokener som ble utstedt med de slettede oppdateringstokenene, trekkes tilbake ved userinfo og introspeksjon. Applikasjoner som validerer tokenene sine selv, kan fortsatt godta dem til de utløper. Applikasjonen må be om samtykket ditt på nytt.',
             scopes: 'Scopes',
@@ -193,9 +198,32 @@ export const I18nNb: I18n = {
         zip: 'Postnummer',
     },
     authorize: {
+        busy: 'Serveren er opptatt akkurat nå. Prøv igjen om et øyeblikk.',
         clientForceMfa: `Denne påloggingen krever MFA for økt sikkerhet. For å få tilgang, må du 
             logge inn på kontoen din og legge til minst én passkey.`,
         clientGroupPrefixForbidden: 'Manglende gruppetilhørighet for denne påloggingen',
+        consent: {
+            agree: 'Jeg samtykker til [overføring av mine data]',
+            changed: 'Innholdet i samtykket er endret, sjekk det på nytt.',
+            continue: 'Fortsett',
+            details: 'Detaljer',
+            intro: '{{ CLIENT }} ber om tilgang til:',
+            introResource: '{{ CLIENT }} ber om tilgang til {{ RESOURCE }}:',
+            required: 'alltid',
+            scopes: {
+                address: 'Postadressen din',
+                email: 'E-postadressen din',
+                groups: 'Gruppemedlemskapene dine',
+                openid: 'Bruker-ID-en og rollene dine for innlogging',
+                phone: 'Telefonnummeret ditt',
+                profile:
+                    'Navn, brukernavn (kan være e-postadressen din), bilde, språk, fødselsdato og tidssone',
+                webid: 'WebID-en din',
+            },
+            terms: 'Vilkår',
+            title: 'Samtykke',
+            warning: 'Les nøye',
+        },
         email: 'E-post',
         emailBadFormat: 'Ugyldig e-postformat',
         emailRequired: 'E-post er påkrevd',
@@ -208,6 +236,10 @@ export const I18nNb: I18n = {
         login: 'Logg inn',
         mfaAck: 'Bekreftet',
         mfaOpenApp: 'Åpne appen for å fortsette',
+        mfaSelectionDesc: 'Velg bekreftelsesmetode:',
+        usePasskey: 'Bruk passnøkkel',
+        useEmailCode: 'Bruk e-postkode',
+        emailCodeDesc: 'Motta en engangskode via e-post',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,

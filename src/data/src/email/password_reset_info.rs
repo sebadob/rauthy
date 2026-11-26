@@ -39,7 +39,7 @@ pub struct EmailResetInfoTxt<'a> {
 pub async fn send_pwd_reset_info(user: User) {
     debug_assert!(user.password_expires.is_some());
 
-    let exp = email_ts_prettify(user.password_expires.unwrap(), &user.language, None);
+    let exp = email_ts_prettify(user.password_expires.unwrap(), user.language, None);
     let link = format!(
         "{}/auth/v1/account",
         RauthyConfig::get().pub_url_with_scheme
@@ -50,7 +50,7 @@ pub async fn send_pwd_reset_info(user: User) {
     let text = EmailResetInfoTxt {
         email_sub_prefix,
         link: &link,
-        exp: &exp.to_string(),
+        exp: &exp.clone(),
         expires_1: i18n.expires_1,
         expires_2: i18n.expires_2,
         update: i18n.update,
@@ -64,7 +64,7 @@ pub async fn send_pwd_reset_info(user: User) {
         theme_vars,
         email_sub_prefix,
         link: &link,
-        exp: &exp.to_string(),
+        exp: &exp.clone(),
         expires_1: i18n.expires_1,
         expires_2: i18n.expires_2,
         update: i18n.update,
@@ -74,7 +74,7 @@ pub async fn send_pwd_reset_info(user: User) {
     let req = EMail {
         typ: EmailType::PasswordResetInfo,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
         text: Some(
             text.render()
@@ -90,11 +90,11 @@ pub async fn send_pwd_reset_info(user: User) {
         .tx_email
         .send_timeout(
             (req, EMailCallback::PasswordExp { user_id: user.id }),
-            Duration::from_secs(60),
+            Duration::from_mins(1),
         )
         .await;
     match res {
-        Ok(_) => {
+        Ok(()) => {
             debug!("User {} notified about password expiry", user.email);
         }
         Err(ref e) => {

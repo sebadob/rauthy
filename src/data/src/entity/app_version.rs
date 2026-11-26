@@ -77,9 +77,9 @@ impl LatestAppVersion {
         };
         let data = serialize(&slf)?;
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO config (id, data) VALUES ('latest_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#;
+ON CONFLICT(id) DO UPDATE SET data = $1";
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(data)).await?;

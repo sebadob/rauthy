@@ -1,4 +1,5 @@
 use crate::ReqPrincipal;
+use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header;
 use actix_web::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, HeaderValue, VARY};
 use actix_web::web::{Json, Query};
@@ -7,8 +8,9 @@ use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
     AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
-    HealthResponse, I18nConfigResponse, LoginTimeResponse, PasswordHashTimesRequest,
-    PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
+    HealthResponse, I18nConfigResponse, InstanceLabelResponse, KeepAliveResponse,
+    LoginTimeResponse, PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
+    SearchParams, SearchParamsType,
 };
 use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
@@ -32,7 +34,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
 use std::fmt::Write;
-use std::ops::Sub;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
 use tracing::{error, info, warn};
@@ -42,8 +44,8 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = RauthyConfig::get().vars.i18n.filter_lang_common
         .iter()
         .map(|v| {
-                if !["de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}");
+                if !["cs", "de", "en", "es", "fr", "it", "ja", "ko", "nb", "nl", "pl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en cs de es fr it ja ko nb nl pl pt ru uk zhhans\nfound: {v}");
                 }
                 Language::from(v.as_ref()).into()
         })
@@ -55,9 +57,9 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .filter_lang_admin
         .iter()
         .map(|v| {
-            if !["de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
+            if !["cs", "de", "en", "es", "fr", "it", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
                 panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}",
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en cs de es fr it ja ko nb nl pt ru uk zhhans\nfound: {v}",
                 );
             }
             Language::from(v.as_ref()).into()
@@ -108,6 +110,33 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
         principal.validate_group_admin_session()?;
     }
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Keep the session of the current browser alive
+///
+/// Answers the session's next idle timeout deadline, which the caller schedules its next request
+/// from.
+///
+/// **Permissions**
+/// - session-auth (`Init` or `Auth`)
+#[utoipa::path(
+    get,
+    path = "/keep_alive",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = KeepAliveResponse),
+        (status = 401, description = "Session expired", body = ErrorResponse),
+    ),
+)]
+#[get("/keep_alive")]
+pub async fn get_keep_alive(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
+    let session = principal.get_session()?;
+    let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
+        .expect("session.last_seen is a unix timestamp from our own DB")
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
+
+    Ok(HttpResponse::Ok().json(KeepAliveResponse { timeout }))
 }
 
 /// Returns the existing encryption key ID's
@@ -310,8 +339,17 @@ pub async fn put_password_policy(
     payload.validate()?;
 
     let mut rules = PasswordPolicy::find().await?;
-    rules.apply_req(payload);
+    rules.apply_req(&payload);
     rules.save().await?;
+
+    if RauthyConfig::get()
+        .vars
+        .user_registration
+        .danger_reg_acc_init_immediate
+    {
+        DB::hql().clear_cache(Cache::Html).await?;
+    }
+
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
 }
 
@@ -372,7 +410,7 @@ pub async fn get_search(
         principal.validate_group_admin_session()?;
     }
 
-    let limit = params.limit.unwrap_or(100) as i64;
+    let limit = i64::from(params.limit.unwrap_or(100));
     match params.ty {
         SearchParamsType::Session => {
             let res = Session::search(&params.idx, &params.q, limit)
@@ -521,7 +559,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     let vars = &RauthyConfig::get().vars.suspicious_requests;
     if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
-        warn!("Suspicious request path '{}' from {}", path, ip)
+        warn!("Suspicious request path '{}' from {}", path, ip);
     }
 
     if !vars.blacklist.is_zero()
@@ -541,8 +579,12 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
             );
         }
 
-        let location = ipgeo::get_location_from_db(ip)?;
-        Event::suspicious_request(path, ip, location).send().await?;
+        {
+            let location = ipgeo::get_location_from_db(ip)?;
+            Event::suspicious_request(path, ip, location.as_deref())
+        }
+        .send()
+        .await?;
 
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
@@ -588,7 +630,7 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
                 current: RAUTHY_VERSION.to_string(),
                 last_check: Some(latest.timestamp),
                 latest: Some(latest.latest_version.to_string()),
-                latest_url: Some(latest.release_url.to_string()),
+                latest_url: Some(latest.release_url),
                 update_available,
             }
         }
@@ -601,6 +643,21 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
         },
     };
     Ok(HttpResponse::Ok().json(resp))
+}
+
+/// Returns the configured Instance Label
+#[utoipa::path(
+    get,
+    path = "/instance_label",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = InstanceLabelResponse),
+    ),
+)]
+#[get("/instance_label")]
+pub async fn get_instance_label() -> Result<HttpResponse, ErrorResponse> {
+    let label = RauthyConfig::get().vars.server.instance_label.as_deref();
+    Ok(HttpResponse::Ok().json(InstanceLabelResponse { label }))
 }
 
 /// Returns the remote IP that Rauthy has extracted for this client

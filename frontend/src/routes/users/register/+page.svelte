@@ -5,17 +5,18 @@
         PKCE_VERIFIER,
         REDIRECT_URI,
         TPL_AUTH_PROVIDERS,
+        TPL_CLIENT_NAME,
+        TPL_REG_ACC_INIT_IMMEDIATE,
         TPL_RESTRICTED_EMAIL_DOMAIN,
         TPL_USER_VALUES_CONFIG,
     } from '#utils/constants.ts';
     import Input from '#lib/form/Input.svelte';
-    import LangSelector from '#lib/LangSelector.svelte';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import PasswordPolicy from '#lib/PasswordPolicy.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import Form from '#lib/form/Form.svelte';
     import {
         PATTERN_ALNUM,
@@ -38,21 +39,42 @@
     import { generateNonce, generatePKCE } from '#utils/pkce.ts';
     import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
     import { execProviderLogin } from '#utils/login.ts';
-    import { genKey, saveCsrfToken } from '#utils/helpers.ts';
+    import { emailDomainMatches, genKey, saveCsrfToken, generatePassword } from '#utils/helpers.ts';
     import type { SessionInfoResponse } from '#api/types/session.ts';
+    import LoginConsent from '#lib/LoginConsent.svelte';
+    import type { ConsentContentTemplate } from '#api/templates/ConsentContent.ts';
+    import type { RegAccInitImmediate } from '#api/templates/RegAccInitImmediate.ts';
 
     let t = useI18n();
 
     let refEmail: undefined | HTMLInputElement = $state();
 
     let restrictedDomain = $state('');
+    let accInit: undefined | RegAccInitImmediate = $state();
+    let passwordConfirm = $state('');
+    let policyAccepted = $state(false);
+    let reportValidityNew: undefined | (() => void) = $state();
+    let reportValidityConfirm: undefined | (() => void) = $state();
     let config: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
     let providers: AuthProviderTemplate[] = $state([]);
+    // the name of the `rauthy` client, which a provider sign-up asks the consent for
+    let clientName = $state('Rauthy');
+    // `hide_login` providers are never rendered on this page
+    let visibleProviders = $derived(providers.filter(p => !p.hide_login));
+
+    let accInitImmediate = $derived(accInit?.enabled === true);
+    let passwordPolicy = $derived(accInit?.password_policy);
 
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
+
+    // the consent a provider sign-up was answered with `consent_required` for
+    let consent: undefined | ConsentContentTemplate = $state();
+    let consentAccepted: string[] = $state([]);
+    let consentConfirmed = $state(false);
+    let consentChoicesFor: undefined | ConsentContentTemplate = $state.raw();
 
     let tos: undefined | ToSLatestResponse = $state();
     let noTosExists = $state(false);
@@ -81,6 +103,11 @@
             if (config.given_name === 'required') {
                 values.given_name = '';
                 active += 1;
+            }
+            if (accInitImmediate) {
+                values.password = '';
+                // the password and its confirmation are two inputs in the form
+                active += 2;
             }
             if (config.family_name === 'required') {
                 values.family_name = '';
@@ -178,14 +205,37 @@
             provider_id: id,
             pkce_challenge: '',
             pow: '',
+            consent:
+                consent && consentConfirmed
+                    ? { content_hash: consent.content_hash, accepted_scopes: consentAccepted }
+                    : undefined,
         };
 
         // provider login will fail without a session in at least init state
         await createSession();
 
-        let errMsg = await execProviderLogin(payload);
-        err = errMsg || '';
+        let res = await execProviderLogin(payload);
         isLoading = false;
+        err = '';
+        if (!res) {
+            return;
+        }
+        if (res.status === 503) {
+            err = t.authorize.busy;
+        } else if (res.error?.error === 'consent_required') {
+            try {
+                consent = JSON.parse(res.error.message) as ConsentContentTemplate;
+            } catch {
+                err = res.error.message;
+                return;
+            }
+            if (payload.consent) {
+                // the confirmed consent was refused, because the content changed meanwhile
+                err = t.authorize.consent.changed;
+            }
+        } else {
+            err = res.error?.message || `HTTP ${res.status}`;
+        }
     }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -196,7 +246,17 @@
             return;
         }
 
-        if (restrictedDomain && !values.email.endsWith(restrictedDomain)) {
+        if (accInitImmediate) {
+            if (!policyAccepted) {
+                return;
+            }
+            if (values.password !== passwordConfirm) {
+                err = t.passwordReset.passwordNoMatch;
+                return;
+            }
+        }
+
+        if (restrictedDomain && !emailDomainMatches(values.email, restrictedDomain)) {
             err = t.register.domainErr;
             return;
         }
@@ -210,6 +270,21 @@
         } else {
             console.error('logic error in ToS fetch / accept');
         }
+    }
+
+    function generate() {
+        if (!passwordPolicy) {
+            return;
+        }
+
+        const pwd = generatePassword(passwordPolicy);
+        values.password = pwd;
+        passwordConfirm = pwd;
+
+        requestAnimationFrame(() => {
+            reportValidityNew?.();
+            reportValidityConfirm?.();
+        });
     }
 
     async function submitRegistration() {
@@ -249,205 +324,237 @@
 </svelte:head>
 
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
+<Template id={TPL_REG_ACC_INIT_IMMEDIATE} bind:value={accInit} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
+<Template id={TPL_CLIENT_NAME} clientId="rauthy" bind:value={clientName} />
 
-<Main>
-    <ContentCenter>
-        <div class="container">
-            <div class="domainTxt">
-                <h1>{t.register.userReg}</h1>
-                {#if restrictedDomain}
-                    {t.register.domainRestricted}<br />
-                    {t.register.domainAllowed} <code>@{restrictedDomain}</code>
+<PublicPage>
+    <div class="public-card register-card">
+        <div class="domainTxt">
+            <h1>{t.register.userReg}</h1>
+            {#if restrictedDomain}
+                {t.register.domainRestricted}<br />
+                {t.register.domainAllowed} <code>@{restrictedDomain}</code>
+            {/if}
+        </div>
+
+        <Form {action} {onSubmit}>
+            {#if accInitImmediate && passwordPolicy}
+                <div class="policy">
+                    <PasswordPolicy
+                        bind:accepted={policyAccepted}
+                        policy={passwordPolicy}
+                        password={values.password ?? ''}
+                    />
+                </div>
+            {/if}
+            <div class={valuesActive > 5 ? 'valuesMany' : ''}>
+                <Input
+                    bind:ref={refEmail}
+                    typ="email"
+                    name="email"
+                    autocomplete="email"
+                    label={t.common.email}
+                    placeholder={t.common.email}
+                    bind:value={values.email}
+                    required
+                />
+                {#if accInitImmediate && passwordPolicy}
+                    <InputPassword
+                        name="password"
+                        autocomplete="new-password"
+                        label={t.account.passwordNew}
+                        placeholder={t.account.passwordNew}
+                        bind:value={values.password}
+                        maxLength={passwordPolicy.length_max}
+                        bind:reportValidity={reportValidityNew}
+                        showCopy={(values.password ?? '').length >= passwordPolicy.length_min}
+                        required
+                    />
+                    <InputPassword
+                        autocomplete="new-password"
+                        label={t.account.passwordConfirm}
+                        placeholder={t.account.passwordConfirm}
+                        bind:value={passwordConfirm}
+                        maxLength={passwordPolicy.length_max}
+                        bind:reportValidity={reportValidityConfirm}
+                        required
+                    />
+                    <div class="generate">
+                        <Button level={2} onclick={generate}>
+                            {t.passwordReset.generate}
+                        </Button>
+                    </div>
+                {/if}
+                {#if values.preferred_username !== undefined}
+                    <Input
+                        name="preferred_username"
+                        autocomplete="off"
+                        label={t.account.preferredUsername.preferredUsername}
+                        placeholder={t.account.preferredUsername.preferredUsername}
+                        bind:value={values.preferred_username}
+                        required
+                        isError={usernameExists}
+                        errMsg={usernameExists
+                            ? t.account.preferredUsername.notAvailable
+                            : config?.preferred_username.pattern_hint}
+                        pattern={config?.preferred_username.pattern_html}
+                        onInput={() => (usernameExists = false)}
+                    />
+                {/if}
+                {#if values.given_name !== undefined}
+                    <Input
+                        name="given_name"
+                        autocomplete="given-name"
+                        label={t.account.givenName}
+                        placeholder={t.account.givenName}
+                        bind:value={values.given_name}
+                        pattern={PATTERN_USER_NAME}
+                        required
+                    />
+                {/if}
+                {#if values.family_name !== undefined}
+                    <Input
+                        name="family_name"
+                        autocomplete="family-name"
+                        label={t.account.familyName}
+                        placeholder={t.account.familyName}
+                        bind:value={values.family_name}
+                        pattern={PATTERN_USER_NAME}
+                        required
+                    />
+                {/if}
+                {#if values.user_values?.birthdate !== undefined}
+                    <InputDateTimeCombo
+                        name="birthdate"
+                        label={t.account.birthdate}
+                        bind:value={values.user_values.birthdate}
+                        required
+                        withDelete
+                    />
+                {/if}
+                {#if values.user_values?.tz !== undefined && values.user_values?.tz != null}
+                    <TZSelect bind:value={values.user_values.tz} />
+                {/if}
+
+                {#if values.user_values?.street !== undefined}
+                    <Input
+                        name="street"
+                        autocomplete="street-address"
+                        label={t.account.street}
+                        placeholder={t.account.street}
+                        bind:value={values.user_values.street}
+                        required
+                        maxLength={48}
+                        pattern={PATTERN_STREET}
+                    />
+                {/if}
+                {#if values.user_values?.zip !== undefined}
+                    <Input
+                        name="zip"
+                        autocomplete="postal-code"
+                        label={t.account.zip}
+                        placeholder={t.account.zip}
+                        bind:value={values.user_values.zip}
+                        required
+                        maxLength={24}
+                        pattern={PATTERN_ALNUM}
+                    />
+                {/if}
+                {#if values.user_values?.city !== undefined}
+                    <Input
+                        name="city"
+                        autocomplete="address-level2"
+                        label={t.account.city}
+                        placeholder={t.account.city}
+                        bind:value={values.user_values.city}
+                        required
+                        maxLength={48}
+                        pattern={PATTERN_CITY}
+                    />
+                {/if}
+                {#if values.user_values?.country !== undefined}
+                    <Input
+                        name="country"
+                        autocomplete="country"
+                        label={t.account.country}
+                        placeholder={t.account.country}
+                        bind:value={values.user_values.country}
+                        required
+                        maxLength={48}
+                        pattern={PATTERN_CITY}
+                    />
+                {/if}
+                {#if values.user_values?.phone !== undefined}
+                    <Input
+                        name="phone"
+                        autocomplete="tel"
+                        label={t.account.phone}
+                        placeholder={t.account.phone}
+                        bind:value={values.user_values.phone}
+                        required
+                        maxLength={32}
+                        pattern={PATTERN_PHONE}
+                    />
                 {/if}
             </div>
 
-            <Form {action} {onSubmit}>
-                <div class={valuesActive > 5 ? 'valuesMany' : ''}>
-                    <Input
-                        bind:ref={refEmail}
-                        typ="email"
-                        name="email"
-                        autocomplete="email"
-                        label={t.common.email}
-                        placeholder={t.common.email}
-                        bind:value={values.email}
-                        required
-                    />
-                    {#if values.preferred_username !== undefined}
-                        <Input
-                            name="preferred_username"
-                            autocomplete="off"
-                            label={t.account.preferredUsername.preferredUsername}
-                            placeholder={t.account.preferredUsername.preferredUsername}
-                            bind:value={values.preferred_username}
-                            required
-                            isError={usernameExists}
-                            errMsg={usernameExists
-                                ? t.account.preferredUsername.notAvailable
-                                : config?.preferred_username.pattern_hint}
-                            pattern={config?.preferred_username.pattern_html}
-                            onInput={() => (usernameExists = false)}
-                        />
-                    {/if}
-                    {#if values.given_name !== undefined}
-                        <Input
-                            name="given_name"
-                            autocomplete="given-name"
-                            label={t.account.givenName}
-                            placeholder={t.account.givenName}
-                            bind:value={values.given_name}
-                            pattern={PATTERN_USER_NAME}
-                            required
-                        />
-                    {/if}
-                    {#if values.family_name !== undefined}
-                        <Input
-                            name="family_name"
-                            autocomplete="family-name"
-                            label={t.account.familyName}
-                            placeholder={t.account.familyName}
-                            bind:value={values.family_name}
-                            pattern={PATTERN_USER_NAME}
-                            required
-                        />
-                    {/if}
-                    {#if values.user_values?.birthdate !== undefined}
-                        <InputDateTimeCombo
-                            name="birthdate"
-                            label={t.account.birthdate}
-                            bind:value={values.user_values.birthdate}
-                            required
-                            withDelete
-                        />
-                    {/if}
-                    {#if values.user_values?.tz !== undefined && values.user_values?.tz != null}
-                        <TZSelect bind:value={values.user_values.tz} />
-                    {/if}
-
-                    {#if values.user_values?.street !== undefined}
-                        <Input
-                            name="street"
-                            autocomplete="street-address"
-                            label={t.account.street}
-                            placeholder={t.account.street}
-                            bind:value={values.user_values.street}
-                            required
-                            maxLength={48}
-                            pattern={PATTERN_STREET}
-                        />
-                    {/if}
-                    {#if values.user_values?.zip !== undefined}
-                        <Input
-                            name="zip"
-                            autocomplete="postal-code"
-                            label={t.account.zip}
-                            placeholder={t.account.zip}
-                            bind:value={values.user_values.zip}
-                            required
-                            maxLength={24}
-                            pattern={PATTERN_ALNUM}
-                        />
-                    {/if}
-                    {#if values.user_values?.city !== undefined}
-                        <Input
-                            name="city"
-                            autocomplete="address-level2"
-                            label={t.account.city}
-                            placeholder={t.account.city}
-                            bind:value={values.user_values.city}
-                            required
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
-                        />
-                    {/if}
-                    {#if values.user_values?.country !== undefined}
-                        <Input
-                            name="country"
-                            autocomplete="country"
-                            label={t.account.country}
-                            placeholder={t.account.country}
-                            bind:value={values.user_values.country}
-                            required
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
-                        />
-                    {/if}
-                    {#if values.user_values?.phone !== undefined}
-                        <Input
-                            name="phone"
-                            autocomplete="tel"
-                            label={t.account.phone}
-                            placeholder={t.account.phone}
-                            bind:value={values.user_values.phone}
-                            required
-                            maxLength={32}
-                            pattern={PATTERN_PHONE}
-                        />
-                    {/if}
+            <div class="submit">
+                <Button type="submit" {isLoading}>{t.register.register}</Button>
+            </div>
+            {#if success}
+                <div class="success">
+                    {t.register.success}<br />
+                    {t.register.emailCheck}
                 </div>
-
-                <div class="submit">
-                    <Button type="submit" {isLoading}>{t.register.register}</Button>
+            {:else if err}
+                <div class="err">
+                    {err}
                 </div>
-                {#if success}
-                    <div class="success">
-                        {t.register.success}<br />
-                        {t.register.emailCheck}
-                    </div>
-                {:else if err}
-                    <div class="err">
-                        {err}
-                    </div>
-                {/if}
+            {/if}
 
-                {#if providers.length > 0}
-                    <div class="providers flex-col gap-05">
-                        <div class="providersSeparator">
-                            <div class="separator"></div>
-                            <div class="registerWith">
-                                <div>
-                                    {t.register.orRegisterWith}
-                                </div>
-                            </div>
-                        </div>
-                        {#each providers as provider}
-                            <ButtonAuthProvider
-                                ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
-                                {provider}
-                                onclick={() => providerLogin(provider.id)}
-                                {isLoading}
-                            />
-                        {/each}
-                    </div>
-                {/if}
-            </Form>
-        </div>
+            {#if visibleProviders.length > 0}
+                <div class="providers flex-col gap-05">
+                    <div class="public-divider">{t.register.orRegisterWith}</div>
+                    {#if consent}
+                        <LoginConsent
+                            {consent}
+                            {clientName}
+                            bind:accepted={consentAccepted}
+                            bind:confirmed={consentConfirmed}
+                            bind:choicesFor={consentChoicesFor}
+                            disabled={isLoading}
+                        />
+                    {/if}
+                    {#each visibleProviders as provider}
+                        <ButtonAuthProvider
+                            ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
+                            {provider}
+                            onclick={() => providerLogin(provider.id)}
+                            isDisabled={!!consent && !consentConfirmed}
+                            {isLoading}
+                        />
+                    {/each}
+                </div>
+            {/if}
+        </Form>
+    </div>
 
-        {#if tos}
-            <TosAccept
-                {tos}
-                forceAccept
-                onToSAccept={submitRegistration}
-                onToSCancel={() => (tos = undefined)}
-                skipRequest
-            />
-        {/if}
-
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
-</Main>
+    {#if tos}
+        <TosAccept
+            {tos}
+            forceAccept
+            onToSAccept={submitRegistration}
+            onToSCancel={() => (tos = undefined)}
+            skipRequest
+        />
+    {/if}
+</PublicPage>
 
 <style>
-    .container {
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        border-radius: var(--border-radius);
-        background: hsla(var(--bg-high) / 0.25);
+    .register-card:has(.valuesMany) {
+        --public-card-width: 40rem;
     }
 
     .err {
@@ -460,33 +567,21 @@
     }
 
     .domainTxt {
-        margin: 0.5rem 0;
+        margin-bottom: 1rem;
+    }
+
+    .generate {
+        margin-bottom: 0.66rem;
+    }
+
+    .policy {
+        max-width: 100dvw;
+        overflow: clip;
+        margin-bottom: 0.5rem;
     }
 
     .providers {
         margin-top: 1rem;
-    }
-
-    .providersSeparator {
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .registerWith {
-        display: flex;
-        justify-content: center;
-        margin-top: -0.9rem;
-    }
-
-    .registerWith > div {
-        padding: 0 0.5rem;
-        font-size: 0.8rem;
-        color: hsla(var(--text) / 0.6);
-    }
-
-    .separator {
-        height: 1px;
-        background: hsla(var(--bg-high) / 0.8);
     }
 
     .submit {
@@ -496,7 +591,7 @@
     @media (min-width: 35rem) {
         .valuesMany {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             column-gap: 1.5rem;
         }
     }

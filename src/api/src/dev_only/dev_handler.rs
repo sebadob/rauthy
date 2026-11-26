@@ -7,6 +7,8 @@ use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
 use rauthy_api_types::users::NewUserRegistrationRequest;
 use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
+use rauthy_data::entity::magic_links::MagicLink;
+use rauthy_data::entity::one_time_password::OneTimePassword;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::html::templates::HtmlTemplate;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -19,6 +21,102 @@ use validator::Validate;
 #[derive(serde::Deserialize)]
 pub struct TemplateQuery {
     client_id: Option<String>,
+}
+
+/// Dev-only: integration tests need the email OTP code which is normally never returned anywhere.
+#[derive(serde::Deserialize)]
+pub struct DevOtpCodeRequest {
+    user_id: String,
+}
+
+/// Dev-only: integration tests need the id of a password reset magic link, which is normally
+/// only ever transported via mail.
+#[derive(serde::Deserialize)]
+pub struct DevMagicLinkRequest {
+    user_id: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct DevConsentQuery {
+    pub lang: String,
+}
+
+pub fn get_consent(lang: &str) -> Result<HttpResponse, ErrorResponse> {
+    if !RauthyConfig::get().vars.dev.dev_mode {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    let doc = match lang {
+        "en" => serde_json::json!({
+            "name": "Rauthy Dev API",
+            "intro": "This consent document is served by the local dev server from \
+                `GET /auth/v1/dev/consent` and configured in `[[consent.sources]]`.",
+            "terms_url": "https://sebadob.github.io/rauthy/",
+            "scopes": {
+                "openid": {
+                    "title": "Sign you in",
+                    "description": "Confirms to the app who you are.",
+                },
+                "email": {
+                    "title": "Read your E-Mail address",
+                    "description": "The app may send you E-Mails.",
+                },
+                "profile": {
+                    "title": "Read your profile",
+                    "description": "Your name, picture, language and time zone.",
+                },
+                "groups": {
+                    "title": "Read your groups",
+                    "description": "The app may grant you access based on them.",
+                    "warning": true,
+                },
+                "address": {
+                    "title": "Read your address",
+                    "description": "Your postal address.",
+                },
+                "phone": {
+                    "title": "Read your phone number",
+                    "description": "The app may call you.",
+                },
+            },
+        }),
+        "de" => serde_json::json!({
+            "name": "Rauthy Dev API",
+            "intro": "Dieses Einwilligungsdokument liefert der lokale Dev-Server über \
+                `GET /auth/v1/dev/consent`, eingetragen in `[[consent.sources]]`.",
+            "terms_url": "https://sebadob.github.io/rauthy/",
+            "scopes": {
+                "openid": {
+                    "title": "Dich anmelden",
+                    "description": "Bestätigt der App, wer du bist.",
+                },
+                "email": {
+                    "title": "Deine E-Mail-Adresse lesen",
+                    "description": "Die App kann dir E-Mails senden.",
+                },
+                "profile": {
+                    "title": "Dein Profil lesen",
+                    "description": "Dein Name, Bild, Sprache und Zeitzone.",
+                },
+                "groups": {
+                    "title": "Deine Gruppen lesen",
+                    "description": "Die App kann dir anhand dieser Zugriff gewähren.",
+                },
+                "address": {
+                    "title": "Deine Adresse lesen",
+                    "description": "Deine Postanschrift.",
+                },
+                "phone": {
+                    "title": "Deine Telefonnummer lesen",
+                    "description": "Die App kann dich anrufen.",
+                },
+            },
+        }),
+        // Rauthy shows the `en` document for any language the source answers with 404
+        _ => return Ok(HttpResponse::NotFound().finish()),
+    };
+
+    Ok(HttpResponse::Ok().json(doc))
 }
 
 pub async fn get_template(
@@ -36,11 +134,9 @@ pub async fn get_template(
     let (tpl, cookie) = HtmlTemplate::build_from_str(id.as_str(), session, client_id).await?;
 
     if let Some(cookie) = cookie {
-        Ok(HttpResponse::Ok()
-            .cookie(cookie)
-            .body(tpl.inner().to_string()))
+        Ok(HttpResponse::Ok().cookie(cookie).body(tpl.inner()))
     } else {
-        Ok(HttpResponse::Ok().body(tpl.inner().to_string()))
+        Ok(HttpResponse::Ok().body(tpl.inner()))
     }
 }
 
@@ -110,6 +206,29 @@ pub async fn post_dev_only_endpoints(
             let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
             let principal = web::ReqData::<Principal>::extract(&req).await?;
             auth_providers::post_provider_callback_handle(req, payload, principal).await
+        }
+        "magic_link" => {
+            // Dev-only helper for integration tests: a password reset link leaves the backend
+            // only via mail, so tests have no other way to ever get the id of a valid link.
+            let payload = serde_json::from_slice::<DevMagicLinkRequest>(bytes)?;
+            let link = MagicLink::find_pwd_reset_for_user(&payload.user_id).await?;
+
+            Ok(HttpResponse::Ok().body(link.id))
+        }
+        "otp_code" => {
+            // Dev-only helper for integration tests: an email OTP code is only ever sent out via
+            // mail, so tests have no other way to ever get the value of a valid code. Not limited
+            // to `is_active` rows, because tests also need the code that activates an OTP.
+            let payload = serde_json::from_slice::<DevOtpCodeRequest>(bytes)?;
+            let otps = OneTimePassword::find_for_user(&payload.user_id).await?;
+            let Some(otp) = otps.first() else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "No OTP for this user",
+                ));
+            };
+
+            Ok(HttpResponse::Ok().body(otp.dev_current_code()?))
         }
         "register" => {
             let payload = serde_json::from_slice::<NewUserRegistrationRequest>(bytes)?;

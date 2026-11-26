@@ -2,8 +2,10 @@ use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::roles::{RoleRequest, RoleResponse};
+use rauthy_api_types::users::UserResponseSimple;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::roles::Role;
+use rauthy_data::entity::users::User;
 use rauthy_error::ErrorResponse;
 use validator::Validate;
 
@@ -117,5 +119,38 @@ pub async fn delete_role(
 
     Role::delete(id.as_str())
         .await
-        .map(|_| HttpResponse::Ok().finish())
+        .map(|()| HttpResponse::Ok().finish())
+}
+
+/// Returns all users that are assigned to this role
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/roles/{id}/users",
+    tag = "roles",
+    responses(
+        (status = 200, description = "Ok", body = [UserResponseSimple]),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/roles/{id}/users")]
+pub async fn get_role_users(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
+
+    let role = Role::find(&id.into_inner()).await?;
+
+    let users = User::find_with_role(&role.name)
+        .await?
+        .into_iter()
+        .map(UserResponseSimple::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(users))
 }

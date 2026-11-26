@@ -9,8 +9,8 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::cmp::{max, min};
 use std::net::IpAddr;
-use std::ops::{Add, Sub};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::ops::Add;
+use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
 /**
@@ -25,7 +25,7 @@ never blacklisted. The delay then only grows with `user_failed_logins`.
  */
 pub async fn handle_login_delay<T>(
     peer_ip: IpAddr,
-    start: Duration,
+    start: Instant,
     res: Result<T, ErrorResponse>,
     has_password_been_hashed: bool,
     user_failed_logins: Option<i64>,
@@ -37,8 +37,7 @@ pub async fn handle_login_delay<T>(
         .await?
         .unwrap_or(2000);
 
-    let end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let delta = end - start;
+    let delta = start.elapsed();
 
     match res {
         Ok(resp) => {
@@ -47,7 +46,7 @@ pub async fn handle_login_delay<T>(
             }
 
             if has_password_been_hashed {
-                let new_time = (success_time + delta.as_millis() as i64) / 2;
+                let new_time = i64::midpoint(success_time, delta.as_millis() as i64);
                 client
                     .put(Cache::App, IDX_LOGIN_TIME, &new_time, Some(i64::MAX))
                     .await?;
@@ -66,7 +65,7 @@ pub async fn handle_login_delay<T>(
             // value, we not only get the limiting for brute-force from a single IP, but also for
             // multiple small tries from different IPs for the same user / email.
             let combined = max(counter, user_failed_logins.unwrap_or(0));
-            let failed_logins = min(combined, u32::MAX as i64) as u32;
+            let failed_logins = min(combined, i64::from(u32::MAX)) as u32;
             warn!("Failed Logins from {peer_ip}: {failed_logins}");
 
             RauthyConfig::get()
@@ -75,20 +74,14 @@ pub async fn handle_login_delay<T>(
                 .await
                 .unwrap();
 
-            let sleep_time_median = {
-                let time_taken = end.sub(start).as_millis() as u64;
-                let mut sleep_time_median = 0;
-                let su64 = success_time as u64;
-                if time_taken < su64 {
-                    sleep_time_median = su64 - time_taken;
-                }
-                sleep_time_median
-            };
+            let time_taken = delta.as_millis() as u64;
+            let sleep_time_median = (success_time as u64).saturating_sub(time_taken);
 
-            let sleep_time = match sleep_time(failed_logins as u64, sleep_time_median, ip_checks) {
-                Ok(ms) => ms,
-                Err(nbf_seconds) => return build_send_event(&peer_ip, nbf_seconds).await,
-            };
+            let sleep_time =
+                match sleep_time(u64::from(failed_logins), sleep_time_median, ip_checks) {
+                    Ok(ms) => ms,
+                    Err(nbf_seconds) => return build_send_event(&peer_ip, nbf_seconds).await,
+                };
 
             debug!("Failed login - sleeping for {sleep_time} ms now");
             tokio::time::sleep(Duration::from_millis(sleep_time)).await;
@@ -163,7 +156,7 @@ mod tests {
         assert_eq!(sleep_time(7, 0, false), Ok(21_000));
         assert_eq!(sleep_time(15, 0, false), Ok(150_000));
         assert_eq!(sleep_time(25, 0, false), Ok(480_000));
-        assert_eq!(sleep_time(u32::MAX as u64, 0, false), Ok(480_000));
+        assert_eq!(sleep_time(u64::from(u32::MAX), 0, false), Ok(480_000));
         for failed in 0..100 {
             assert!(sleep_time(failed, 0, false).is_ok());
         }

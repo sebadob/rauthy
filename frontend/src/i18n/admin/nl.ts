@@ -40,13 +40,27 @@ export let I18nAdminNl: I18nAdmin = {
         size: 'Grootte',
     },
     clients: {
+        settings: { general: 'Algemeen', tokens: 'Tokens', integrations: 'Integraties' },
         allowedResources: 'Toegestane resources',
         defaultAud: 'Standaard audiences',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Optionele RFC 8707 resource-indicatoren die deze client mag opvragen. Een lege lijst weigert elke 'resource'-parameter met 'invalid_target'.`,
         descDefaultAud: `Audiences die altijd aan de tokens van deze client worden toegevoegd, onafhankelijk van een 'resource'-parameter.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout:
             'Als deze client {{ OIDC_BCL }} ondersteunt, kunt u de URI hier opgeven.',
         branding: {
+            title: 'Vormgeving',
+            theme: 'Thema',
+            light: 'Licht thema',
+            dark: 'Donker thema',
+            preview: 'Voorbeeld',
+            assets: 'Logo en favicon',
+            logo: 'Logo',
+            advanced: 'Geavanceerde CSS',
+            resetTheme: 'Thema herstellen',
+            resetThemeConfirm: 'Standaardkleuren en hoekradius herstellen?',
+            assetsImmediate: 'Bestandswijzigingen worden direct toegepast.',
             descHsl: `De volgende waarden moeten worden opgegeven als HSL-waarden. U geeft alleen de basiskleuren op.
             Alfakanalen en andere waarden worden dynamisch gemanipuleerd door het thema.`,
             descFullCss: `De volgende waarden moeten volledig geldige CSS <code>color</code>-waarden zijn.
@@ -67,6 +81,11 @@ export let I18nAdminNl: I18nAdmin = {
         confidential: 'Vertrouwelijk',
         confidentialNoSecret: 'Dit is een niet-vertrouwelijke client en heeft daarom geen geheim.',
         config: 'Clientconfiguratie',
+        consent: {
+            builtIn: 'Ingebouwd',
+            desc: `Waar de inhoud van het toestemmingsscherm vandaan komt, wanneer 'consent.enable' is ingesteld. Ingebouwd toont de gevraagde scopes. Een URL moet de toestemmingsinhoud als JSON leveren. Een '[[consent.sources]]'-vermelding voor de gevraagde resource heeft voorrang.`,
+            source: 'Toestemmingsbron',
+        },
         delete1: 'Weet u zeker dat u deze client wilt verwijderen?',
         descAuthCode: `De geldigheid van auth-codes kan worden aangepast voor extra beveiliging. Auth-codes
             kunnen slechts eenmaal worden gebruikt en zijn standaard 60 seconden geldig. Hoe korter de geldigheid, hoe
@@ -139,6 +158,20 @@ export let I18nAdminNl: I18nAdmin = {
         },
     },
     common: {
+        about: 'Over Rauthy',
+        date: 'Datum',
+        time: 'Tijd',
+        preferences: 'Voorkeuren',
+        profile: 'Profiel',
+        contactDetails: 'Contactgegevens',
+        access: 'Toegang',
+        activity: 'Activiteit',
+
+        compactNavigation: 'Compacte navigatie',
+        administration: 'Beheer',
+        selectEntry: 'Selecteer een item',
+        selectEntryHint: 'Kies een item uit de lijst om de details te bekijken en te beheren.',
+
         account: 'Account',
         addNew: 'Nieuw toevoegen',
         back: 'Terug',
@@ -147,6 +180,7 @@ export let I18nAdminNl: I18nAdmin = {
         copiedToClip: 'Waarde is gekopieerd naar klembord',
         details: 'Details',
         edit: 'Bewerken',
+        discard: 'Verwerpen',
         enabled: 'Ingeschakeld',
         filter: 'Filter',
         from: 'Van',
@@ -160,6 +194,8 @@ export let I18nAdminNl: I18nAdmin = {
         noEntries: 'Geen vermeldingen',
         preview: 'Voorvertoning',
         reset: 'Resetten',
+        unsavedChanges: 'Niet-opgeslagen wijzigingen',
+        unsavedChangesDesc: 'Je hebt niet-opgeslagen wijzigingen. Doorgaan en deze verwerpen?',
         searchOptions: 'Zoekopties',
         until: 'Tot',
     },
@@ -247,8 +283,10 @@ export let I18nAdminNl: I18nAdmin = {
         },
         openapi:
             "Als u een externe applicatie wilt integreren en Rauthy's API wilt gebruiken, kijk dan naar het",
-        openapiNote: `In de standaardconfiguratie is de Swagger UI niet actief via de bovenstaande link. Het kan worden 
-            geactiveerd via configuratie 'server.swagger_ui_enable' en mogelijk 'server.swagger_ui_public'.`,
+        openapiNote:
+            'In de standaardconfiguratie is de Swagger UI niet actief via de bovenstaande link.',
+        openapiEnable:
+            "Het kan worden geactiveerd via configuratie 'server.swagger_ui_enable' en mogelijk 'server.swagger_ui_public'.",
         source: 'De broncode is hier te vinden',
     },
     editor: {
@@ -288,12 +326,22 @@ export let I18nAdminNl: I18nAdmin = {
             Daarna moet u uitloggen en opnieuw inloggen.`,
     },
     events: {
+        searchContent: 'Inhoud',
+        timestamp: 'Tijdstempel',
+        level: 'Niveau',
+        type: 'Type',
+        allLevels: 'Alle niveaus',
+        sendTest: 'Testgebeurtenis sturen',
         eventLevel: 'Gebeurtenisniveau',
         eventType: 'Gebeurtenistype',
     },
     groups: {
         delete1: 'Weet u zeker dat u deze groep wilt verwijderen?',
         name: 'Groepsnaam',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritme',
@@ -308,6 +356,7 @@ export let I18nAdminNl: I18nAdmin = {
         rotateKeys: 'Sleutels roteren',
     },
     kv: {
+        limit: 'Limiet',
         accessTestDesc: `De toegangssleutel moet worden opgegeven in de <code>Authorization</code>-header als
             <code>Bearer</code>-token. De volgende <code>curl</code>-opdracht kan worden gebruikt voor testen.`,
         addNewKey: 'Nieuwe toegangssleutel',
@@ -344,6 +393,7 @@ export let I18nAdminNl: I18nAdmin = {
         value: 'JSON-waarde',
     },
     nav: {
+        kvStore: 'KV-opslag',
         apiKeys: 'API-sleutels',
         attributes: 'Attributen',
         blacklist: 'Zwarte lijst',
@@ -418,6 +468,10 @@ export let I18nAdminNl: I18nAdmin = {
             autoLinkDesc2: `LET OP: Deze optie kan zeer gevaarlijk zijn en leiden tot accountovername als de provider
                 e-mailadressen niet volledig valideert voor gebruikers en het daardoor mogelijk maakt een vreemd
                 adres voor een gebruiker toe te voegen! MAG NOOIT in zo'n geval worden gebruikt!`,
+            hideLogin: 'Login-knop verbergen',
+            hideLoginDesc: `De login-knop van deze provider is verborgen op de login- en registratiepagina. Inloggen
+                is nog steeds mogelijk via de query-parameter "idp_hint", waarmee een eigen login-knop ervoor kan
+                worden toegevoegd.`,
             clientName: 'Clientnaam',
             custRootCa: 'Aangepaste root CA PEM',
             descAuthMethod: `De authenticatiemethode voor het <code>/token</code>-eindpunt.<br>
@@ -441,7 +495,26 @@ export let I18nAdminNl: I18nAdmin = {
                 p5: '<code>$.roles</code> zou <code>&#123;"roles": "value"&#125;</code> targeten',
                 p6: `<code>$.roles.*</code> kan een waarde targeten in een object of array zoals<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Een <code>value</code> komt exact overeen, behalve als hij begint met <code>^</code> (prefix), <code>~</code> (regex) of <code>^^</code> (een letterlijke <code>^</code>)',
+                p8: "Sleutels met tekens buiten <code>a-z A-Z 0-9 _ -</code> hebben quotes nodig: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Waarden uit het ID-token van de upstream-provider worden toegewezen aan bestaande lokale rollen en groepen. Een regel voegt zijn doel toe wanneer de claim op <code>path</code> overeenkomt met <code>value</code>, en verwijdert het wanneer geen van zijn regels overeenkomt. Alleen de hier geconfigureerde doelen worden verwijderd, en een hier geconfigureerd doel behoort tot de provider: een rol of groep die een admin handmatig aan die gebruiker heeft toegewezen, wordt bij een login zonder treffende regel ook verwijderd.',
+            addMapping: 'Toewijzing toevoegen',
+            removeMapping: 'Toewijzing verwijderen',
+            mappingTyp: 'Type',
+            typRole: 'Rol',
+            typGroup: 'Groep',
+            pathClaim: 'Claim-pad',
+            valueClaim: 'Claim-waarde',
+            targetClaim: 'Rol / Groep',
+            noTargetSelected: '— Geen rol / groep —',
+            targetMissing:
+                'De opgeslagen doelwaarde {{ target }} is geen rol of groep meer. Selecteer een bestaande, of verwijder deze mapping.',
+            groupAdminTarget: '(groepsbeheerder)',
+            maxMappings: 'Een auth-provider ondersteunt maximaal 32 claim-toewijzingen.',
+            regexCost:
+                'Een <code>value</code> die begint met <code>~</code> is een regex en wordt bij elke login tegen elke claim-node geëvalueerd: veranker hem en houd hem zo goedkoop mogelijk.',
             lookup: 'Opzoeken',
             pathAdminClaim: 'Beheerdersclaimpad',
             pathMfaClaim: 'MFA-claimpad',
@@ -465,6 +538,10 @@ export let I18nAdminNl: I18nAdmin = {
         adminNoMod: 'De <code>rauthy_admin</code>-rol is onveranderlijk.',
         delete1: 'Weet u zeker dat u deze rol wilt verwijderen?',
         name: 'Rolnaam',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Claims op tokenroot plaatsen',
@@ -519,6 +596,17 @@ export let I18nAdminNl: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin-rol kan niet worden verwijderd',
         },
         attributes: 'Attributen',
+        consents: {
+            title: 'Toestemmingen',
+            desc: 'Toestemmingen die deze gebruiker aan applicaties heeft gegeven. Tijden worden in uw lokale tijdzone getoond; beweeg over een tijd om deze in UTC te zien.',
+            none: 'Deze gebruiker heeft nog aan geen enkele applicatie toestemming gegeven.',
+            revokeDesc:
+                'Intrekken verwijdert de toestemming en de applicatie kan haar toegang voor deze gebruiker niet meer vernieuwen. De applicatie moet de gebruiker opnieuw om toestemming vragen.',
+            revokeAllDesc:
+                'Trekt alle toestemmingen van deze gebruiker in. Elke applicatie moet de gebruiker opnieuw om toestemming vragen.',
+            sessionsWarning:
+                'Alle sessies van de gebruiker worden ook verwijderd, de gebruiker wordt overal afgemeld.',
+        },
         deleteUser: 'Weet u zeker dat u deze gebruiker wilt verwijderen?',
         descAttr: `Stel aangepaste gebruikersattributen in. Alle sleutel/waarde-paren worden verwerkt als tekenreeks/JSON-waarde.`,
         forceLogout: `Weet u zeker dat u alle bestaande sessies wilt ongeldig maken en alle vernieuwingstokens

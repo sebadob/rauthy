@@ -55,7 +55,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
         magic_link.id,
         magic_link.usage,
     );
-    let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);
+    let exp = email_ts_prettify(magic_link.exp, user.language, user_tz);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
         .await
         .unwrap_or_default();
@@ -141,7 +141,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
     let req = EMail {
         typ: EmailType::PasswordReset,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {subject}"),
         text: Some(text.render().expect("Template rendering: EmailResetTxt")),
         html: Some(html.render().expect("Template rendering: EmailResetHtml")),
@@ -152,7 +152,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 user.email, error = ?e,

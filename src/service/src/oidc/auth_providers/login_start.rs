@@ -1,3 +1,4 @@
+use crate::oidc::consent_grant::{ConsentRequest, consented_docs};
 use actix_web::cookie::Cookie;
 use actix_web::http::header::HeaderValue;
 use atrium_oauth::{AuthorizeOptions, KnownScope, Scope as ScopeAtproto};
@@ -10,14 +11,30 @@ use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::atproto;
 use rauthy_data::entity::auth_providers::{AuthProvider, AuthProviderCallback};
 use rauthy_data::entity::clients::Client;
+use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::fmt::Write;
 use tracing::error;
 
+/// What an upstream provider login is started for.
+pub enum ProviderLoginStart {
+    /// A login to the client of the request, with the consent content in this language.
+    Login(Language),
+    /// Linking the account of the logged-in user to the provider, which issues no auth code.
+    Link,
+}
+
 /// returns (encrypted cookie, xsrf token, location header, optional allowed origins)
+///
+/// # Errors
+///
+/// For a [`ProviderLoginStart::Login`], besides the provider and client checks, the consent
+/// errors of [`consented_docs`]: the consent is checked again after the upstream login, but
+/// checked here first, because a refused consent would spend the single-use upstream callback.
 pub async fn login_start<'a>(
     payload: ProviderLoginRequest,
+    start: ProviderLoginStart,
 ) -> Result<(Cookie<'a>, String, HeaderValue), ErrorResponse> {
     let provider = AuthProvider::find(&payload.provider_id).await?;
 
@@ -29,6 +46,31 @@ pub async fn login_start<'a>(
     }
 
     let client = Client::find(payload.client_id).await?;
+    if let ProviderLoginStart::Login(lang) = start {
+        client.validate_enabled()?;
+        client.validate_redirect_uri(&payload.redirect_uri)?;
+        let resource = payload.resource.as_deref();
+        if let Some(resource) = resource {
+            client.validate_resource_request(resource)?;
+        }
+        if RauthyConfig::get()
+            .vars
+            .consent
+            .missing_required_resource(&client, resource)
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "a `resource` is required",
+            ));
+        }
+        let consent_req = ConsentRequest {
+            client: &client,
+            resource,
+            scopes: &client.sanitize_login_scopes(payload.scopes.as_deref()),
+            lang,
+        };
+        consented_docs(&consent_req, payload.consent.as_ref(), None).await?;
+    }
 
     let slf = AuthProviderCallback {
         callback_id: secure_random_alnum(32),
@@ -43,6 +85,7 @@ pub async fn login_start<'a>(
         req_code_challenge: payload.code_challenge,
         req_code_challenge_method: payload.code_challenge_method,
         req_resource: payload.resource,
+        req_consent: payload.consent,
 
         provider_id: provider.id,
 
@@ -109,7 +152,7 @@ pub async fn login_start<'a>(
     let cookie = ApiCookie::build(
         COOKIE_UPSTREAM_CALLBACK,
         &slf.callback_id,
-        UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64,
+        i64::from(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS),
     );
 
     slf.save().await?;

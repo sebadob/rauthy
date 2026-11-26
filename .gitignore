@@ -5,12 +5,14 @@ rauthy-client/target
 rauthy-client/examples/*/target
 rauthy-client/.idea
 rauthy-client/examples/*/.idea
+rauthy.log.*
 .vscode
 .helix
 .lapce
 .DS_store
 .env
 .test_pid
+.tmp
 /data
 /data_old
 frontend/.next
@@ -27,3 +29,4 @@ static
 templates/html
 gen-config.toml
 /assets/fido_mds/dataset.bin
+.direnv

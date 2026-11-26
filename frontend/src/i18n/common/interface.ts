@@ -42,6 +42,9 @@ export interface I18n {
         year: string;
     };
     account: {
+        noEditableAttributes?: string;
+        attributes?: string;
+        stringOrJson?: string;
         account: string;
         accType: string;
         accTypePasskeyText1: string;
@@ -65,6 +68,7 @@ export interface I18n {
         deviceName: string;
         devices: string;
         devicesDesc: string;
+        devicesEmpty?: string;
         emailUpdateConfirm: string;
         emailVerified: string;
         familyName: string;
@@ -124,10 +128,13 @@ export interface I18n {
             connectedApps: string;
             connectedAppsDesc: string;
             granted: string;
+            logoutWarning: string;
             noConnectedApps: string;
             privacy: string;
             resource: string;
             revoke: string;
+            revokeAll: string;
+            revokeAllDesc: string;
             revokeDesc: string;
             scopes: string;
             updated: string;
@@ -154,8 +161,31 @@ export interface I18n {
         zip: string;
     };
     authorize: {
+        busy: string;
         clientForceMfa: string;
         clientGroupPrefixForbidden: string;
+        consent: {
+            // the part in [brackets] opens the full consent content
+            agree: string;
+            changed: string;
+            continue: string;
+            details: string;
+            intro: string;
+            introResource: string;
+            required: string;
+            scopes: {
+                address: string;
+                email: string;
+                groups: string;
+                openid: string;
+                phone: string;
+                profile: string;
+                webid: string;
+            };
+            terms: string;
+            title: string;
+            warning: string;
+        };
         email: string;
         emailBadFormat: string;
         emailRequired: string;
@@ -166,6 +196,10 @@ export interface I18n {
         login: string;
         mfaAck: string;
         mfaOpenApp: string;
+        mfaSelectionDesc: string;
+        usePasskey: string;
+        useEmailCode: string;
+        emailCodeDesc: string;
         navigateToAccount: string;
         needsUserUpdate: string;
         orLoginWith: string;
@@ -220,6 +254,7 @@ export interface I18n {
     };
     mfa: {
         webauthn: {
+            empty?: string;
             title: string;
             p1: string;
             p2: string;
@@ -230,6 +265,9 @@ export interface I18n {
         };
 
         otp: {
+            empty?: string;
+            active?: string;
+            inactive?: string;
             title: string;
             titleEmail: string;
             activationCode: string;
@@ -254,6 +292,7 @@ export interface I18n {
         passkeyName: string;
         passkeyNameErr: string;
         passwordInvalid: string;
+        testPasskey?: string;
         test: string;
         testError: string;
         testSuccess: string;

@@ -45,10 +45,10 @@ pub async fn fido_mds_updater() {
 
         if let Err(err) = exec().await {
             error!("Error running fido_mds_updater: {err:?}");
-        };
+        }
 
         // Avoid busy loop in error cases. We want to retry without hammering the servers.
-        time::sleep(Duration::from_secs(600)).await;
+        time::sleep(Duration::from_mins(10)).await;
     }
 }
 
@@ -99,7 +99,7 @@ async fn exec() -> Result<(), ErrorResponse> {
         // the server has a pretty strong rate-limit
         if status.as_u16() == 429 {
             info!("Fido MDS update server rate-limit hit. Retrying in 1 hour.");
-            time::sleep(Duration::from_secs(3660)).await;
+            time::sleep(Duration::from_mins(61)).await;
             continue;
         }
 

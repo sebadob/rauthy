@@ -136,10 +136,9 @@ pub_url = "localhost:8080"
 proxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests with a
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -167,8 +166,7 @@ rp_id = "localhost"
 rp_origin = "http://localhost:5173"
 ```
 
-```admonish hint
-TL;DR for generating a `encryption.keys`:
-
-<pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>
-```
+> [!TIP]
+> TL;DR for generating a `encryption.keys`:
+>
+> <pre><code>echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"</code></pre>

@@ -3,6 +3,8 @@ import type { UserValuesRequest } from '#api/types/user.ts';
 export interface NewUserRegistrationRequest {
     /// Validation: `email`
     email: string;
+    // Only sent when `[user_registration].danger_reg_acc_init_immediate` is set
+    password?: string;
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     preferred_username?: string;
     /// Validation: PATTERN_USER_NAME

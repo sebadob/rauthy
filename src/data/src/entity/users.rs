@@ -24,6 +24,7 @@ use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
+use crate::{MfaMethod, MfaMethods};
 use actix_web::HttpRequest;
 use argon2::PasswordHash;
 use chrono::Utc;
@@ -162,15 +163,24 @@ impl PgDelete {
     }
 }
 
-static SQL_SAVE: &str = r#"
+static SQL_SAVE: &str = r"
 UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#;
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18";
 
-#[derive(Debug, Clone, PartialEq)]
+/// Drops the sessions and refresh tokens of the disabled user `id`.
+async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
+    Session::invalidate_for_user(id).await?;
+    RefreshToken::invalidate_for_user(id).await?;
+    // TODO trigger backchannel logout and SCIM updates as well?
+    //  -> compare with old value beforehand somehow, probably in calling fn before updates
+    Ok(())
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum AccountType {
     // New -> neither password nor a passkey has been set yet
     New,
@@ -218,6 +228,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    /// Updated only by [`Self::set_picture_id`]: [`Self::save`] does not write it.
     pub picture_id: Option<String>,
 }
 
@@ -256,13 +267,13 @@ impl Debug for User {
 // CRUD
 // Keyset cursors over a composite key: `created_at` alone (seconds) is not unique, so a
 // plain comparison on it skips users at batch boundaries (same reasoning as `find_paginated`).
-const SQL_FIND_BATCH: &str = r#"
+const SQL_FIND_BATCH: &str = r"
 SELECT * FROM users
 WHERE (created_at, email) > ($1, $2)
 ORDER BY created_at ASC, email ASC
-LIMIT $3"#;
+LIMIT $3";
 
-const SQL_FIND_FOR_SCIM_SYNC: &str = r#"
+const SQL_FIND_FOR_SCIM_SYNC: &str = r"
 SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
     created_at, language, picture_id, birthdate, phone, street, zip, city, country,
     preferred_username, tz
@@ -270,19 +281,15 @@ FROM users u
 LEFT JOIN users_values uv ON u.id = uv.id
 WHERE (u.created_at, u.id) > ($1, $2)
 ORDER BY u.created_at ASC, u.id ASC
-LIMIT $3"#;
+LIMIT $3";
 
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
-
-        let idx = format!("{IDX_USERS}_{user_id}");
-        client.delete(Cache::User, idx).await?;
-
-        let idx = format!("{IDX_USERS}_{email}");
-        client.delete(Cache::User, idx).await?;
-
-        Ok(())
+        DB::cache_delete_delayed([
+            (Cache::User, Some(format!("{IDX_USERS}_{user_id}"))),
+            (Cache::User, Some(format!("{IDX_USERS}_{email}"))),
+        ])
+        .await
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
@@ -339,6 +346,12 @@ impl User {
         user_tz: Option<&str>,
     ) -> Result<Self, ErrorResponse> {
         let slf = Self::insert(new_user).await?;
+
+        // The Magic Link is the only mechanism that grants control over an E-Mail address, so it is
+        // only created for an account which has no password yet and is not initialized.
+        if slf.password.is_some() {
+            return Ok(slf);
+        }
 
         let magic_link = MagicLink::create(
             slf.id.clone(),
@@ -401,9 +414,16 @@ impl User {
     }
 
     /// Inserts a user from the open registration endpoint into the database.
+    ///
+    /// `init_pwd` is the decision of the `[user_registration]` config, made in the handler, never
+    /// the request. With it set, the account is created directly from that password:
+    /// `email_verified` is minted and no Magic Link is created, which means no delivery to that
+    /// address ever proves control over it. Without it, the Magic Link is the only mechanism that
+    /// activates the account.
     pub async fn create_from_reg(
         req_data: NewUserRegistrationRequest,
-        lang: Language,
+        language: Language,
+        init_pwd: Option<String>,
     ) -> Result<User, ErrorResponse> {
         // pre-uniqueness checks for better UX and error handling
         User::validate_email_free(req_data.email.clone()).await?;
@@ -415,10 +435,28 @@ impl User {
             email: req_data.email.to_lowercase(),
             given_name: req_data.given_name.unwrap_or_default(),
             family_name: req_data.family_name,
+            language,
             ..Default::default()
         };
-        new_user.language = lang;
-        let new_user = User::create(
+
+        // Will be the case if `danger_reg_acc_init_immediate = true` -> immediate acc init
+        if let Some(pwd) = init_pwd {
+            let rules = PasswordPolicy::find().await?;
+            Self::validate_password_policy(&pwd, &rules)?;
+
+            let hash = HashPassword::hash_password(pwd).await?;
+            let password_expires = rules.valid_days.map(|d| {
+                OffsetDateTime::now_utc()
+                    .add(::time::Duration::days(i64::from(d)))
+                    .unix_timestamp()
+            });
+
+            new_user.email_verified = true;
+            new_user.password = Some(hash);
+            new_user.password_expires = password_expires;
+        }
+
+        let user = User::create(
             new_user,
             req_data.redirect_uri,
             req_data
@@ -428,11 +466,15 @@ impl User {
         )
         .await?;
 
-        if let Some(uv) = req_data.user_values {
-            UserValues::insert(new_user.id.clone(), uv, req_data.preferred_username).await?;
+        if let Some(pwd) = &user.password {
+            RecentPasswordsEntity::create(&user.id, pwd.clone()).await?;
         }
 
-        Ok(new_user)
+        if let Some(uv) = req_data.user_values {
+            UserValues::insert(user.id.clone(), uv, req_data.preferred_username).await?;
+        }
+
+        Ok(user)
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
@@ -465,14 +507,14 @@ impl User {
             let res = DB::hql()
                 .txn([
                     (
-                        r#"
+                        r"
 UPDATE issued_tokens SET revoked = true
 WHERE user_id = $1
    OR jti IN (
        SELECT access_token_jti FROM refresh_tokens WHERE user_id = $1
        UNION
        SELECT access_token_jti FROM refresh_tokens_devices WHERE user_id = $1
-   )"#,
+   )",
                         params!(&self.id),
                     ),
                     ("DELETE FROM users WHERE id = $1", params!(&self.id)),
@@ -679,10 +721,10 @@ WHERE user_id = $1
     }
 
     pub async fn find_all_simple() -> Result<Vec<UserResponseSimple>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at ASC"#;
+ORDER BY created_at ASC";
 
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
@@ -701,7 +743,7 @@ ORDER BY created_at ASC"#;
         from_created_at: i64,
         batch_size: u16,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let batch_size = batch_size as i64;
+        let batch_size = i64::from(batch_size);
         let res = if is_hiqlite() {
             DB::hql()
                 .query_as(
@@ -807,13 +849,13 @@ ORDER BY created_at ASC"#;
             // not unique, so without the `id` tie-breaker, rows with an equal `created_at`
             // would be duplicated or skipped across pages.
             if backwards {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE (created_at, id) < ($1, $2)
 ORDER BY created_at DESC, id DESC
 LIMIT $3
-OFFSET $4"#;
+OFFSET $4";
 
                 let mut res: Vec<UserResponseSimple> = if is_hiqlite() {
                     DB::hql()
@@ -826,13 +868,13 @@ OFFSET $4"#;
                 res.reverse();
                 res
             } else {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE (created_at, id) > ($1, $2)
 ORDER BY created_at ASC, id ASC
 LIMIT $3
-OFFSET $4"#;
+OFFSET $4";
 
                 if is_hiqlite() {
                     DB::hql()
@@ -846,12 +888,12 @@ OFFSET $4"#;
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let sql = r#"
+            let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC, id DESC
 LIMIT $1
-OFFSET $2"#;
+OFFSET $2";
 
             let mut res = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
@@ -861,12 +903,12 @@ OFFSET $2"#;
             res.reverse();
             res
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC, id ASC
 LIMIT $1
-OFFSET $2"#;
+OFFSET $2";
 
             if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
@@ -884,11 +926,12 @@ OFFSET $2"#;
 
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO users
-(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
+(id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
+password_expires, created_at, last_login, language, user_expires, auth_provider_id,
+federation_uid, picture_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)";
 
         if is_hiqlite() {
             DB::hql()
@@ -899,10 +942,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         &new_user.email,
                         &new_user.given_name,
                         &new_user.family_name,
+                        &new_user.password,
                         &new_user.roles,
                         &new_user.groups,
                         new_user.enabled,
                         new_user.email_verified,
+                        new_user.password_expires,
                         new_user.created_at,
                         new_user.last_login,
                         lang,
@@ -932,10 +977,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &new_user.email,
                     &new_user.given_name,
                     &new_user.family_name,
+                    &new_user.password,
                     &new_user.roles,
                     &new_user.groups,
                     &new_user.enabled,
                     &new_user.email_verified,
+                    &new_user.password_expires,
                     &new_user.created_at,
                     &new_user.last_login,
                     &lang,
@@ -1017,7 +1064,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         } else {
             let rows = DB::pg_query_rows(
                 SQL_FIND_FOR_SCIM_SYNC,
-                &[&last_created_ts, &last_user_id, &(limit as i32)],
+                &[&last_created_ts, &last_user_id, &i32::from(limit)],
                 limit as usize,
             )
             .await?;
@@ -1111,7 +1158,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
-                self.picture_id,
                 self.id
             ),
         ));
@@ -1150,7 +1196,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 &self.user_expires,
                 &self.auth_provider_id,
                 &self.federation_uid,
-                &self.picture_id,
                 &self.id,
             ],
         )
@@ -1159,6 +1204,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Ok(())
     }
 
+    /// Writes every column of this copy but `id`, `created_at` and `picture_id`, which only
+    /// [`Self::set_picture_id`] updates, then drops the cached user, also under `old_email`.
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(self.email.clone()).await?;
@@ -1189,7 +1236,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
-                        &self.picture_id,
                         &self.id
                     ),
                 )
@@ -1215,7 +1261,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &self.user_expires,
                     &self.auth_provider_id,
                     &self.federation_uid,
-                    &self.picture_id,
                     &self.id,
                 ],
             )
@@ -1223,24 +1268,246 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         }
 
         if !self.enabled {
-            Session::invalidate_for_user(&self.id).await?;
-            RefreshToken::invalidate_for_user(&self.id).await?;
-            // TODO trigger backchannel logout and SCIM updates as well?
-            //  -> compare with old value beforehand somehow, probably in calling fn before updates
+            drop_tokens_of_disabled(&self.id).await?;
         }
 
-        if let Some(email) = old_email {
-            let idx = format!("{IDX_USERS}_{email}");
-            client.delete(Cache::User, idx).await?;
+        // `self` may be a copy read before a concurrent change of a column this save does not
+        // write, like `picture_id`: drop the cached user instead of caching this copy
+        self.invalidate_cache_also(old_email.as_deref()).await
+    }
+
+    /// Sets the `picture_id` of this user alone, in the database and in this copy, then drops
+    /// the cached user, under the email of this copy and under the stored one, if a concurrent
+    /// update changed it. A full-row [`Self::save`] never writes `picture_id`: it works on a copy
+    /// that may predate a concurrent picture change.
+    pub async fn set_picture_id(&mut self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE users SET picture_id = $1 WHERE id = $2 RETURNING email";
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(picture_id.map(String::from), &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&picture_id, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.picture_id = picture_id.map(String::from);
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
+    /// in this copy and in the database. It writes no other column.
+    /// Unlike [`Self::save`], it does not write back the other columns of this copy, which a
+    /// login may have read long before, e.g. before it spent its time on the password hash, so
+    /// a concurrent change of the user (a picture upload, an admin update) is kept. The cached
+    /// user is dropped under the email of this copy, and under the stored one, if a concurrent
+    /// update changed it.
+    pub async fn save_login_success(&mut self) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        let sql = r"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL
+WHERE id = $2
+RETURNING email";
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// [`Self::save_login_success`] for a login that rehashed the password with upgraded
+    /// Argon2ID params: in the same single update, it also replaces the stored password with
+    /// `new_hash`, in the database only, and only while the stored hash is still the one this
+    /// copy holds, the one the login validated: a password changed meanwhile is kept. This copy
+    /// keeps the validated hash.
+    pub async fn save_login_success_with_rehash(
+        &mut self,
+        new_hash: &str,
+    ) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        // SQLite numbers `$n` in the order of first appearance, so they appear in order
+        let sql = r"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL,
+password = CASE WHEN password = $2 THEN $3 ELSE password END
+WHERE id = $4
+RETURNING email";
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    sql,
+                    params!(self.last_login, &self.password, new_hash, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(
+                sql,
+                &[&self.last_login, &self.password, &new_hash, &self.id],
+                1,
+            )
+            .await?
+            .first()
+            .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a failed login: sets `last_failed_login` to now and increments
+    /// `failed_login_attempts` in the database, then sets both in this copy, the counter to the
+    /// stored one. Like [`Self::save_login_success`], it writes no other column, and the counter
+    /// counts every failed login, also those that run at the same time. For a user deleted
+    /// meanwhile, the counter of this copy is incremented instead.
+    pub async fn save_login_failure(&mut self) -> Result<(), ErrorResponse> {
+        self.last_failed_login = Some(Utc::now().timestamp());
+
+        let sql = r"
+UPDATE users SET last_failed_login = $1,
+failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
+WHERE id = $2
+RETURNING email, failed_login_attempts";
+
+        let stored: Option<(String, i64)> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_failed_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| (row.get("email"), row.get("failed_login_attempts")))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_failed_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| (row.get("email"), row.get("failed_login_attempts")))
+        };
+
+        let (stored_email, attempts) = match stored {
+            Some((email, attempts)) => (Some(email), attempts),
+            None => (None, self.failed_login_attempts.unwrap_or_default() + 1),
+        };
+        self.failed_login_attempts = Some(attempts);
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a password reset: writes the `password` and `password_expires` that
+    /// [`Self::apply_password_rules`] set in this copy, and sets `email_verified` while the
+    /// stored email is still the one of this copy, the one the reset was sent to; this copy
+    /// takes the stored `email_verified`. Unlike [`Self::save`], it does not write back the
+    /// other columns of this copy, which the reset read before it spent its time on the password
+    /// hash, so a concurrent change of the user (an admin update, a failed login) is kept. The
+    /// cached user is dropped under the email of this copy, and under the stored one, if a
+    /// concurrent update changed it. Like [`Self::save`], it drops the sessions and refresh
+    /// tokens of a user the stored row has disabled.
+    pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
+        // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
+        // the stored email is still that one
+        let sql = r"
+UPDATE users SET password = $1, password_expires = $2,
+email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
+WHERE id = $4
+RETURNING email, email_verified, enabled";
+
+        /// The columns the reset returns from the stored row.
+        struct StoredReset {
+            email: String,
+            email_verified: bool,
+            enabled: bool,
         }
 
-        let idx = format!("{IDX_USERS}_{}", self.id);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
+        let stored: Option<StoredReset> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    sql,
+                    params!(&self.password, self.password_expires, &self.email, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| StoredReset {
+                    email: row.get("email"),
+                    email_verified: row.get("email_verified"),
+                    enabled: row.get("enabled"),
+                })
+        } else {
+            DB::pg_query_rows(
+                sql,
+                &[
+                    &self.password,
+                    &self.password_expires,
+                    &self.email,
+                    &self.id,
+                ],
+                1,
+            )
+            .await?
+            .first()
+            .map(|row| StoredReset {
+                email: row.get("email"),
+                email_verified: row.get("email_verified"),
+                enabled: row.get("enabled"),
+            })
+        };
 
-        let idx = format!("{IDX_USERS}_{}", self.email);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
+        let stored_email = match stored {
+            Some(stored) => {
+                self.email_verified = stored.email_verified;
+                if !stored.enabled {
+                    // like `save` does for a disabled user, judged by the stored row, which a
+                    // concurrent update may have disabled
+                    drop_tokens_of_disabled(&self.id).await?;
+                }
+                Some(stored.email)
+            }
+            None => None,
+        };
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
 
-        Ok(())
+    /// Drops the cached user under its id and the email of this copy, and under `other_email`
+    /// too, if it differs: the email before a change, or the stored one a write returned, which
+    /// a concurrent update may have changed.
+    async fn invalidate_cache_also(&self, other_email: Option<&str>) -> Result<(), ErrorResponse> {
+        let id = self.id.as_str();
+        let email = self.email.as_str();
+        let mut keys: Vec<String> =
+            vec![format!("{IDX_USERS}_{id}"), format!("{IDX_USERS}_{email}")];
+        if let Some(other) = other_email.filter(|other| *other != email) {
+            keys.push(format!("{IDX_USERS}_{other}"));
+        }
+
+        DB::cache_delete_delayed(keys.into_iter().map(|key| (Cache::User, Some(key)))).await
     }
 
     /// Caution: Uses regex / LIKE on the database -> very costly query
@@ -1251,40 +1518,80 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{q}%");
         let size_hint = max(limit, 1) as usize;
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
-                let sql = r#"
+                let sql = format!(
+                    r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE id LIKE $1
+WHERE id {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2"
+                );
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
                 }
             }
             SearchParamsIdx::Email => {
-                let sql = r#"
+                let sql = format!(
+                    r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE email LIKE $1
+WHERE email {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2"
+                );
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
+                }
+            }
+            SearchParamsIdx::Name => {
+                let sql = format!(
+                    r"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+WHERE given_name {like} $1 OR family_name {like} $1
+ORDER BY created_at ASC
+LIMIT $2"
+                );
+
+                if is_hiqlite() {
+                    DB::hql().query_as(sql, params!(q, limit)).await?
+                } else {
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
+                }
+            }
+            SearchParamsIdx::Username => {
+                // `preferred_username` lives in the `users_values` table
+                let sql = format!(
+                    r"
+SELECT u.id, u.email, u.given_name, u.family_name, u.created_at, u.last_login, u.picture_id
+FROM users u
+INNER JOIN users_values uv ON u.id = uv.id
+WHERE uv.preferred_username {like} $1
+ORDER BY u.created_at ASC
+LIMIT $2"
+                );
+
+                if is_hiqlite() {
+                    DB::hql().query_as(sql, params!(q, limit)).await?
+                } else {
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
                 }
             }
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "supported search idx for users: id / user_id, email",
+                    "supported search idx for users: id / user_id, email, name, username",
                 ));
             }
         };
@@ -1375,7 +1682,7 @@ LIMIT $2"#;
             match put.key.as_str() {
                 "email" => upd_req.email = put.value.as_str().unwrap_or_default().to_string(),
                 "password" => {
-                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string())
+                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string());
                 }
                 "given_name" => upd_req.given_name = put.value.as_str().map(String::from),
                 "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
@@ -1383,7 +1690,7 @@ LIMIT $2"#;
                     let lang = rauthy_api_types::generic::Language::from(Language::from(
                         put.value.as_str().unwrap_or_default(),
                     ));
-                    upd_req.language = Some(lang)
+                    upd_req.language = Some(lang);
                 }
                 "roles" => {
                     upd_req.roles = put
@@ -1394,7 +1701,7 @@ LIMIT $2"#;
                                 .map(|v| v.as_str().unwrap_or_default().to_string())
                                 .collect()
                         })
-                        .unwrap_or_default()
+                        .unwrap_or_default();
                 }
                 "groups" => {
                     upd_req.groups = Some(
@@ -1406,7 +1713,7 @@ LIMIT $2"#;
                                     .collect()
                             })
                             .unwrap_or_default(),
-                    )
+                    );
                 }
                 "enabled" => upd_req.enabled = put.value.as_bool().unwrap_or(true),
                 "email_verified" => upd_req.email_verified = put.value.as_bool().unwrap_or(true),
@@ -1600,6 +1907,54 @@ LIMIT $2"#;
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let user = User::find(id.clone()).await?;
 
+        let email_updated = if let Some(email) = upd_user.email.map(|email| email.to_lowercase()) {
+            // if the email should be updated, we do not do it directly -> send out confirmation
+            // email to old AND new address
+            if email != user.email {
+                // the gate for a self-service change, and `confirm_email_address` refuses to apply
+                // such a link, so a config change mid-flight stays without effect
+                if RauthyConfig::get()
+                    .vars
+                    .user_values
+                    .self_service_email_change_deny
+                {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "Self-service E-Mail change is denied by the configuration",
+                    ));
+                }
+
+                // the registration domain and name rules must not be left through the account page
+                let reg = &RauthyConfig::get().vars.user_registration;
+                reg.validate_email_domain(&email)?;
+                reg.validate_email_name(&email)?;
+
+                // invalidate possibly other existing MagicLinks of the same type
+                MagicLink::invalidate_all_email_change(&user.id).await?;
+
+                let ml = MagicLink::create(
+                    user.id.clone(),
+                    Duration::from_hours(1),
+                    MagicLinkUsage::EmailChange(email.clone()),
+                )
+                .await?;
+
+                send_email_change_info_new(
+                    &ml,
+                    &user,
+                    upd_user.user_values.as_ref().and_then(|v| v.tz.as_deref()),
+                    email,
+                )
+                .await;
+
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         let mut password = None;
         if let Some(pwd_new) = upd_user.password_new {
             if let Some(pwd_curr) = upd_user.password_current {
@@ -1621,36 +1976,6 @@ LIMIT $2"#;
             }
             password = Some(pwd_new);
         }
-
-        let email_updated = if let Some(email) = upd_user.email.map(|email| email.to_lowercase()) {
-            // if the email should be updated, we do not do it directly -> send out confirmation
-            // email to old AND new address
-            if email != user.email {
-                // invalidate possibly other existing MagicLinks of the same type
-                MagicLink::invalidate_all_email_change(&user.id).await?;
-
-                let ml = MagicLink::create(
-                    user.id.clone(),
-                    Duration::from_secs(3600),
-                    MagicLinkUsage::EmailChange(email.clone()),
-                )
-                .await?;
-
-                send_email_change_info_new(
-                    &ml,
-                    &user,
-                    upd_user.user_values.as_ref().and_then(|v| v.tz.as_deref()),
-                    email,
-                )
-                .await;
-
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        };
 
         let groups = if user.groups.is_some() {
             Some(user.get_groups())
@@ -1761,7 +2086,67 @@ impl User {
 
     pub async fn apply_password_rules(&mut self, plain_pwd: &str) -> Result<(), ErrorResponse> {
         let rules = PasswordPolicy::find().await?;
+        Self::validate_password_policy(plain_pwd, &rules)?;
 
+        let new_hash = HashPassword::hash_password(plain_pwd.to_string()).await?;
+        let mut new_recent = Vec::new();
+
+        if let Some(recent_req) = rules.not_recently_used {
+            match RecentPasswordsEntity::find(&self.id).await {
+                Ok(mut most_recent) => {
+                    let mut iteration = 1;
+                    for old_hash in most_recent.passwords.split('\n') {
+                        if ComparePasswords::is_match(plain_pwd.to_string(), old_hash.to_string())
+                            .await?
+                        {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                format!(
+                                    "The new password must not be one of the last {recent_req} used \
+                                    passwords"
+                                ),
+                            ));
+                        }
+
+                        new_recent.push(old_hash);
+
+                        // check if we have more recent passwords than needed
+                        iteration += 1;
+                        if iteration == recent_req {
+                            break;
+                        }
+                    }
+
+                    most_recent.passwords = format!("{new_hash}\n{}", new_recent.join("\n"));
+                    most_recent.save().await?;
+                }
+
+                Err(_) => {
+                    RecentPasswordsEntity::create(&self.id, new_hash.clone()).await?;
+                }
+            }
+        }
+
+        if RauthyConfig::get().vars.webauthn.no_password_exp && self.has_webauthn_enabled() {
+            self.password_expires = None;
+        } else {
+            let password_expires = rules.valid_days.map(|d| {
+                OffsetDateTime::now_utc()
+                    .add(::time::Duration::days(i64::from(d)))
+                    .unix_timestamp()
+            });
+            self.password_expires = password_expires;
+        }
+
+        self.password = Some(new_hash);
+
+        Ok(())
+    }
+
+    fn validate_password_policy(
+        plain_pwd: &str,
+        rules: &PasswordPolicy,
+    ) -> Result<(), ErrorResponse> {
         if plain_pwd.len() < rules.length_min as usize {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1830,58 +2215,6 @@ impl User {
             ));
         }
 
-        let new_hash = HashPassword::hash_password(plain_pwd.to_string()).await?;
-        let mut new_recent = Vec::new();
-
-        if let Some(recent_req) = rules.not_recently_used {
-            match RecentPasswordsEntity::find(&self.id).await {
-                Ok(mut most_recent) => {
-                    let mut iteration = 1;
-                    for old_hash in most_recent.passwords.split('\n') {
-                        if ComparePasswords::is_match(plain_pwd.to_string(), old_hash.to_string())
-                            .await?
-                        {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                format!(
-                                    "The new password must not be one of the last {recent_req} used \
-                                    passwords"
-                                ),
-                            ));
-                        }
-
-                        new_recent.push(old_hash);
-
-                        // check if we have more recent passwords than needed
-                        iteration += 1;
-                        if iteration == recent_req {
-                            break;
-                        }
-                    }
-
-                    most_recent.passwords = format!("{new_hash}\n{}", new_recent.join("\n"));
-                    most_recent.save().await?;
-                }
-
-                Err(_) => {
-                    RecentPasswordsEntity::create(&self.id, new_hash.clone()).await?;
-                }
-            }
-        }
-
-        if RauthyConfig::get().vars.webauthn.no_password_exp && self.has_webauthn_enabled() {
-            self.password_expires = None;
-        } else {
-            let password_expires = rules.valid_days.map(|d| {
-                OffsetDateTime::now_utc()
-                    .add(::time::Duration::days(d as i64))
-                    .unix_timestamp()
-            });
-            self.password_expires = password_expires;
-        }
-
-        self.password = Some(new_hash);
-
         Ok(())
     }
 
@@ -1929,6 +2262,16 @@ impl User {
             }
             MagicLinkUsage::EmailChange(email) => email,
         };
+
+        let vars = &RauthyConfig::get().vars;
+        if vars.user_values.self_service_email_change_deny {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Self-service E-Mail change is denied by the configuration",
+            ));
+        }
+        vars.user_registration.validate_email_domain(&new_email)?;
+        vars.user_registration.validate_email_name(&new_email)?;
 
         let mut user = Self::find(user_id).await?;
 
@@ -1990,7 +2333,7 @@ impl User {
         if let Some(n) = &self.family_name {
             format!("{} {n}", self.given_name)
         } else {
-            self.given_name.to_string()
+            self.given_name.clone()
         }
     }
 
@@ -2089,6 +2432,23 @@ impl User {
         self.webauthn_user_id.is_some()
     }
 
+    /// The second factors this user may complete a login with. Webauthn overrides OTP, unless the
+    /// user is allowed to select the MFA method.
+    pub async fn allowed_mfa_methods(&self) -> MfaMethods {
+        let config = RauthyConfig::get();
+        let allow_select_mfa = !(self.is_admin() && config.vars.mfa.admin_passkey_only)
+            && config.vars.mfa.optional_select_mfa;
+
+        let mut mfa_methods = MfaMethods::empty();
+        if self.has_webauthn_enabled() {
+            mfa_methods |= MfaMethod::Webauthn;
+        }
+        if (allow_select_mfa || mfa_methods.is_empty()) && self.has_otp_enabled().await {
+            mfa_methods |= MfaMethod::Otp;
+        }
+        mfa_methods
+    }
+
     pub fn into_response(self, user_values: Option<UserValues>) -> UserResponse {
         let roles = self.get_roles();
         let groups = if self.groups.is_some() {
@@ -2145,13 +2505,9 @@ impl User {
         let curr_params =
             argon2::Params::try_from(&hash).expect("Could not extract params from hash");
 
-        if curr_params.m_cost() == params.m_cost()
+        Ok(curr_params.m_cost() == params.m_cost()
             && curr_params.t_cost() == params.t_cost()
-            && curr_params.p_cost() == params.p_cost()
-        {
-            return Ok(true);
-        }
-        Ok(false)
+            && curr_params.p_cost() == params.p_cost())
     }
 
     #[inline]
@@ -2658,14 +3014,8 @@ mod tests {
         stale.delete().await.unwrap();
 
         let pictures = hql_picture_ids().await;
-        assert!(
-            pictures.contains(&"del_pic_old".to_string()),
-            "{pictures:?}"
-        );
-        assert!(
-            !pictures.contains(&"del_pic_new".to_string()),
-            "{pictures:?}"
-        );
+        assert!(pictures.iter().any(|i| i == "del_pic_old"), "{pictures:?}");
+        assert!(!pictures.iter().any(|i| i == "del_pic_new"), "{pictures:?}");
     }
 
     /// Inserts for the user `{user_id}` an access token `{user_id}_at`, a refresh token
@@ -2822,7 +3172,7 @@ mod tests {
     fn test_batch_cursors_reach_every_user() {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            r#"
+            r"
 CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, email_verified INT,
     given_name TEXT, family_name TEXT, roles TEXT, groups TEXT, enabled INT,
     created_at INT NOT NULL, language TEXT, picture_id TEXT);
@@ -2831,7 +3181,7 @@ CREATE TABLE users_values (id TEXT PRIMARY KEY, birthdate TEXT, phone TEXT, stre
 INSERT INTO users (id, email, created_at) VALUES
     ('a', 'anna@x', 100), ('b', 'zoe@x', 200), ('c', 'bob@x', 300),
     ('d', 'carl@x', 400), ('e', 'zack@x', 500);
-"#,
+",
         )
         .unwrap();
 

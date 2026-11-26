@@ -13,11 +13,13 @@
         openTop = true,
         updateBackend,
         borderless = true,
+        uppercase = false,
     }: {
         absolute?: boolean;
         openTop?: boolean;
         updateBackend?: boolean;
         borderless?: boolean;
+        uppercase?: boolean;
     } = $props();
 
     const cookieAttrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
@@ -67,6 +69,8 @@
             ariaLabel={t.common.selectI18n}
             options={languages}
             {borderless}
+            {uppercase}
+            hideScrollbar
             bind:value={selected}
             anchored={openTop}
         />

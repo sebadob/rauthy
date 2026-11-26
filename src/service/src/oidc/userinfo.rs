@@ -150,7 +150,7 @@ pub async fn get_userinfo(
         && let Some(values) = UserValues::find(&user.id).await?
     {
         if has_addr {
-            userinfo.address = AddressClaim::try_build(&user, &values).map(|claim| claim.into());
+            userinfo.address = AddressClaim::try_build(&user, &values).map(Into::into);
         }
 
         if has_profile {

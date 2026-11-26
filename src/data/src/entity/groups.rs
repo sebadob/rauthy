@@ -58,7 +58,7 @@ impl Group {
             DB::pg_execute(sql, &[&new_group.id, &new_group.name, &new_group.meta]).await?;
         }
 
-        DB::hql().delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS))]).await?;
 
         Ok(new_group)
     }
@@ -82,7 +82,7 @@ impl Group {
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -97,9 +97,7 @@ impl Group {
             txn.commit().await?;
         }
 
-        let client = DB::hql();
-        client.clear_cache(Cache::User).await?;
-        client.delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS)), (Cache::User, None)]).await?;
 
         Ok(())
     }
@@ -165,7 +163,7 @@ impl Group {
                 DB::pg_execute(sql, &[&new_group.meta, &new_group.id]).await?;
             }
 
-            client.delete(Cache::App, IDX_GROUPS).await?;
+            DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS))]).await?;
             return Ok(new_group);
         }
 
@@ -189,7 +187,7 @@ impl Group {
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -209,8 +207,7 @@ impl Group {
             txn.commit().await?;
         }
 
-        client.clear_cache(Cache::User).await?;
-        client.delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS)), (Cache::User, None)]).await?;
 
         Ok(new_group)
     }

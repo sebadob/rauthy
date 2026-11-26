@@ -1,32 +1,42 @@
 use crate::database::DB;
+use crate::entity::clients::Client;
+use crate::entity::consent_sources::{ConsentContent, ConsentDocs};
 use crate::entity::refresh_tokens::{SQL_PG_IT_REVOKE_JTIS, SQL_RTD_DELETE_BY_USER_CLIENT};
+use crate::entity::users::User;
+use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
+use actix_web::HttpRequest;
+use actix_web::http::header;
 use chrono::Utc;
 use hiqlite::macros::params;
 use rauthy_api_types::users::UserConsentResponse;
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_derive::FromPgRow;
-use rauthy_error::ErrorResponse;
-use serde::Deserialize;
-use std::net::IpAddr;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
+use reqwest::Url;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use tokio_postgres::IsolationLevel;
+use tracing::{error, warn};
+use utoipa::ToSchema;
 
-const SQL_FIND: &str = r#"
+const SQL_FIND: &str = r"
 SELECT * FROM user_consents
-WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
+WHERE user_id = $1 AND client_id = $2 AND resource = $3";
 const SQL_FIND_FOR_USER: &str =
     "SELECT * FROM user_consents WHERE user_id = $1 ORDER BY updated DESC";
 const SQL_FIND_FOR_USER_RESOURCE: &str =
     "SELECT * FROM user_consents WHERE user_id = $1 AND resource = $2 ORDER BY updated DESC";
-const SQL_UPSERT: &str = r#"
+const SQL_UPSERT: &str = r"
 INSERT INTO user_consents
 (user_id, client_id, resource, scopes, content_hash, created, updated, ip, user_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
 ON CONFLICT(user_id, client_id, resource) DO UPDATE
-SET scopes = $4, content_hash = $5, updated = $6, ip = $7, user_agent = $8"#;
-const SQL_DELETE: &str = r#"
+SET scopes = $4, content_hash = $5, updated = $6, ip = $7, user_agent = $8";
+const SQL_DELETE: &str = r"
 DELETE FROM user_consents
-WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
+WHERE user_id = $1 AND client_id = $2 AND resource = $3";
 pub(crate) const SQL_CONSENT_DELETE_BY_CLIENT: &str =
     "DELETE FROM user_consents WHERE client_id = $1";
 
@@ -39,7 +49,8 @@ pub struct UserConsent {
     pub resource: String,
     /// comma separated
     pub scopes: String,
-    /// `None` for the built-in local consent
+    /// The `content_hash` of the consent content the grant was given for. `None` never matches
+    /// any content, see [`Self::is_content_current`].
     pub content_hash: Option<String>,
     pub created: i64,
     pub updated: i64,
@@ -51,8 +62,9 @@ impl UserConsent {
     pub async fn find(
         user_id: &str,
         client_id: &str,
-        resource: &str,
+        resource: Option<&str>,
     ) -> Result<Option<Self>, ErrorResponse> {
+        let resource = resource_key(resource);
         let slf = if is_hiqlite() {
             DB::hql()
                 .query_as_optional(SQL_FIND, params!(user_id, client_id, resource))
@@ -83,54 +95,6 @@ impl UserConsent {
             DB::pg_query(SQL_FIND_FOR_USER, &[&user_id], 0).await?
         };
         Ok(res)
-    }
-
-    pub async fn upsert(
-        user_id: &str,
-        client_id: &str,
-        resource: &str,
-        scopes: &[String],
-        content_hash: Option<&str>,
-        ip: IpAddr,
-        user_agent: Option<&str>,
-    ) -> Result<(), ErrorResponse> {
-        let scopes = scopes.join(",");
-        let now = Utc::now().timestamp();
-        let ip = ip.to_string();
-
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    SQL_UPSERT,
-                    params!(
-                        user_id,
-                        client_id,
-                        resource,
-                        scopes,
-                        content_hash,
-                        now,
-                        ip,
-                        user_agent
-                    ),
-                )
-                .await?;
-        } else {
-            DB::pg_execute(
-                SQL_UPSERT,
-                &[
-                    &user_id,
-                    &client_id,
-                    &resource,
-                    &scopes,
-                    &content_hash,
-                    &now,
-                    &ip,
-                    &user_agent,
-                ],
-            )
-            .await?;
-        }
-        Ok(())
     }
 
     /// Revokes the consent together with all refresh tokens of the user for the client in a
@@ -175,9 +139,9 @@ impl UserConsent {
 }
 
 /// The `resource` column of a consent: `''` stands for "no resource", because the column is part
-/// of the primary key. It never leaves this module: [`UserConsent::into_response`] maps it back
+/// of the primary key. It never leaves the database: [`UserConsent::into_response`] maps it back
 /// to `None`.
-fn resource_key(resource: Option<&str>) -> &str {
+pub(crate) fn resource_key(resource: Option<&str>) -> &str {
     resource.unwrap_or_default()
 }
 
@@ -326,9 +290,9 @@ impl PgRevoke {
             }
             PgRevokeStep::LockTokens => {
                 txn.query(
-                    r#"
+                    r"
 SELECT 1 FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
-FOR UPDATE"#,
+FOR UPDATE",
                     &[&user_id, &client_id],
                 )
                 .await?;
@@ -336,29 +300,29 @@ FOR UPDATE"#,
             }
             PgRevokeStep::DeviceTokens => {
                 txn.query(
-                    r#"
+                    r"
 DELETE FROM refresh_tokens_devices
 WHERE user_id = $1
   AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
                     &[&user_id, &client_id],
                 )
                 .await?
             }
             PgRevokeStep::RefreshTokens => {
                 txn.query(
-                    r#"
+                    r"
 DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
                     &[&user_id, &client_id],
                 )
                 .await?
             }
             PgRevokeStep::LegacyTokens => {
                 txn.query(
-                    r#"
+                    r"
 DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id IS NULL
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
                     &[&user_id],
                 )
                 .await?
@@ -415,7 +379,7 @@ fn hql_revoke() -> [(&'static str, RevokeParams); 4] {
     [
         (SQL_DELETE, RevokeParams::Resource),
         (
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
 WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens
@@ -424,14 +388,14 @@ WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens_devices
     WHERE user_id = $1
       AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-)"#,
+)",
             RevokeParams::Legacy,
         ),
         (SQL_RTD_DELETE_BY_USER_CLIENT, RevokeParams::Ids),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens
-WHERE user_id = $1 AND (client_id = $2 OR ($3 AND client_id IS NULL))"#,
+WHERE user_id = $1 AND (client_id = $2 OR ($3 AND client_id IS NULL))",
             RevokeParams::Legacy,
         ),
     ]
@@ -458,18 +422,140 @@ impl UserConsent {
 }
 
 impl UserConsent {
+    pub fn scopes(&self) -> impl Iterator<Item = &str> {
+        self.scopes.split(',').filter(|s| !s.is_empty())
+    }
+
     pub fn scopes_vec(&self) -> Vec<String> {
-        self.scopes
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(String::from)
-            .collect()
+        self.scopes().map(String::from).collect()
+    }
+
+    /// `true` if the grant contains all `scopes` and [`Self::is_content_current`].
+    pub fn covers(&self, docs: &ConsentDocs, scopes: &[String]) -> bool {
+        scopes.iter().all(|s| self.scopes().any(|g| g == s)) && self.is_content_current(docs)
+    }
+
+    /// `true` if the consent content of all granted scopes in `docs` is still the one the grant
+    /// was given for: the same language, intro, terms and every scope. Never for a grant without
+    /// a `content_hash`.
+    pub fn is_content_current(&self, docs: &ConsentDocs) -> bool {
+        let Some(hash) = self.content_hash.as_deref() else {
+            return false;
+        };
+        ConsentContent::build(docs, &self.scopes_vec()).content_hash == hash
     }
 }
 
+/// A consent given on the login page, written as the user's [`UserConsent`] for the client and
+/// `resource` once the last required factor of the login is verified: the password, or the
+/// WebAuthn or OTP ceremony that follows it or replaces it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct PendingConsent {
+    pub client_id: String,
+    /// The `created_micros` of the client the consent was given to, see
+    /// [`Self::upsert_for_unchanged_client`].
+    pub client_created_micros: Option<i64>,
+    pub resource: Option<String>,
+    /// The accepted scopes, with the scopes of the user's grant that the login did not request
+    pub scopes: Vec<String>,
+    /// The `content_hash` of the consent content of all `scopes`, which a later login compares,
+    /// see [`UserConsent::is_content_current`].
+    pub content_hash: String,
+}
+
+impl PendingConsent {
+    /// [`Self::upsert`] after a ceremony, unless the client was deleted, or deleted and created
+    /// again, since the consent was given: its grants were deleted with it. An ephemeral client
+    /// has no row to delete, so it is not looked up again, which could fetch its document.
+    pub async fn upsert_for_unchanged_client(
+        &self,
+        user: &User,
+        req: &HttpRequest,
+    ) -> Result<(), ErrorResponse> {
+        if Url::from_str(&self.client_id).is_ok() {
+            return self.upsert(user, req).await;
+        }
+        match Client::find_maybe_ephemeral(self.client_id.clone()).await {
+            Ok(client) if client.created_micros == self.client_created_micros => {
+                self.upsert(user, req).await
+            }
+            Ok(_)
+            | Err(ErrorResponse {
+                error: ErrorResponseType::NotFound,
+                ..
+            }) => {
+                warn!(
+                    client_id = self.client_id,
+                    "the client changed during the login ceremony, its consent is dropped"
+                );
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Inserts or replaces the user's grant with the IP and `User-Agent` of `req`, and sends the
+    /// `ConsentGranted` event. A failed event is logged, the grant is written.
+    pub async fn upsert(&self, user: &User, req: &HttpRequest) -> Result<(), ErrorResponse> {
+        let resource = resource_key(self.resource.as_deref());
+        let scopes = self.scopes.join(",");
+        let now = Utc::now().timestamp();
+        let ip = real_ip_from_req(req)?;
+        let ip_str = ip.to_string();
+        let user_agent = req
+            .headers()
+            .get(header::USER_AGENT)
+            .and_then(|v| v.to_str().ok());
+
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    SQL_UPSERT,
+                    params!(
+                        &user.id,
+                        &self.client_id,
+                        resource,
+                        &scopes,
+                        &self.content_hash,
+                        now,
+                        &ip_str,
+                        user_agent
+                    ),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(
+                SQL_UPSERT,
+                &[
+                    &user.id,
+                    &self.client_id,
+                    &resource,
+                    &scopes,
+                    &self.content_hash,
+                    &now,
+                    &ip_str,
+                    &user_agent,
+                ],
+            )
+            .await?;
+        }
+
+        if let Err(err) = Event::consent_granted(&user.email, self, ip).send().await {
+            error!(?err, "sending the ConsentGranted event");
+        }
+        Ok(())
+    }
+}
+
+// NOT a template for new tests. These `#[ignore]` tests open a real Postgres schema from
+// `RAUTHY_TEST_PG_URL` inside a `#[cfg(test)]` module. Anything that touches a DB is an integration
+// test in `src/bin/tests/` against a running backend: via the public API, or via dev handlers when
+// the public API cannot reach the case. Never inside a `#[cfg(test)]` module, and never with a
+// fake DB.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database::pg_test_conn;
     use pretty_assertions::assert_eq;
     use tokio_postgres::types::ToSql;
 
@@ -493,7 +579,7 @@ mod tests {
             content_hash: Some(format!("hash_{ts}")),
             created,
             updated: ts,
-            ip: "127.0.0.1".to_string(),
+            ip: format!("127.0.0.{ts}"),
             user_agent: Some(format!("ua_{ts}")),
         }
     }
@@ -571,16 +657,9 @@ mod tests {
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
-                let params = rusqlite::params![
-                    user_id,
-                    client_id,
-                    resource,
-                    scopes,
-                    hash,
-                    ts,
-                    "127.0.0.1",
-                    ua
-                ];
+                let ip = format!("127.0.0.{ts}");
+                let params =
+                    rusqlite::params![user_id, client_id, resource, scopes, hash, ts, ip, ua];
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
         }
@@ -626,7 +705,7 @@ mod tests {
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash, and a user agent may be missing
+        // a grant without a content hash, which a login never writes, and without a user agent
         let none = None::<String>;
         let params = rusqlite::params!["u1", "c3", "", "openid", none, 5, "127.0.0.1", none];
         conn.execute(SQL_UPSERT, params).unwrap();
@@ -695,7 +774,7 @@ mod tests {
     ) {
         let mut conn = sqlite_full_schema();
         conn.execute_batch(
-            r#"
+            r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -725,7 +804,7 @@ INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
        ('j_u2_legacy', 'u2', 2), ('j_u2_c1', 'u2', 2), ('j_d1', 'u1', 2),
        ('j_d2', 'u1', 2), ('j_other', 'u1', 2), ('j_u2_d3', 'u2', 2);
-"#,
+",
         )
         .unwrap();
         let params = rusqlite::params!["u1", "c1", "", "openid", "hash", 1, "127.0.0.1", "ua"];
@@ -804,7 +883,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         for drop_legacy in [false, true] {
             let mut conn = sqlite_full_schema();
             conn.execute_batch(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -812,7 +891,7 @@ UPDATE tu SET id = 'u2', email = 'u2@example.com';
 INSERT INTO users SELECT * FROM tu;
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
-"#,
+",
             )
             .unwrap();
             for (user_id, client_id, resource, ts) in [
@@ -914,12 +993,12 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
         let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
         let cl = pool.get().await.unwrap();
         cl.batch_execute(&format!(
-            r#"
+            r"
 CREATE SCHEMA {schema};
 SET search_path TO {schema};
 CREATE TABLE users (id VARCHAR NOT NULL PRIMARY KEY);
 INSERT INTO users (id) VALUES ('u1'), ('u2');
-{MIGRATION_PG}"#
+{MIGRATION_PG}"
         ))
         .await
         .unwrap();
@@ -928,15 +1007,9 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
+                let ip = format!("127.0.0.{ts}");
                 let params: [&(dyn ToSql + Sync); 8] = [
-                    &user_id,
-                    &client_id,
-                    &resource,
-                    &scopes,
-                    &hash,
-                    &ts,
-                    &"127.0.0.1",
-                    &ua,
+                    &user_id, &client_id, &resource, &scopes, &hash, &ts, &ip, &ua,
                 ];
                 cl.execute(SQL_UPSERT, &params).await.unwrap();
             }
@@ -987,7 +1060,7 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash, and a user agent may be missing
+        // a grant without a content hash, which a login never writes, and without a user agent
         let none: Option<&str> = None;
         let params: [&(dyn ToSql + Sync); 8] = [
             &"u1",
@@ -1018,47 +1091,10 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
     /// the device refresh token `rtd_src`, and a legacy refresh token of u1. u2 has the device d3
     /// of c1 with the device refresh token `rtd_u2_d3`.
     async fn pg_race_setup() -> (deadpool_postgres::Pool, String) {
-        use deadpool_postgres::{Config, Runtime};
-        use tokio_postgres::NoTls;
-
-        let url = std::env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let schema = format!("uc_race_{}_{nanos}", std::process::id());
-        let cfg = Config {
-            url: Some(url),
-            ..Default::default()
-        };
-        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
-
-        let dir =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
-        let mut files = std::fs::read_dir(dir)
-            .unwrap()
-            .map(|e| e.unwrap().path())
-            .map(|p| {
-                let name = p.file_name().unwrap().to_str().unwrap();
-                let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
-                (nr, p)
-            })
-            .collect::<Vec<_>>();
-        files.sort();
-
-        let cl = pool.get().await.unwrap();
-        cl.batch_execute(&format!(
-            "CREATE SCHEMA {schema}; SET search_path TO {schema};"
-        ))
-        .await
-        .unwrap();
-        for (_, path) in files {
-            cl.batch_execute(&std::fs::read_to_string(path).unwrap())
-                .await
-                .unwrap();
-        }
+        let (pool, schema) = crate::database::pg_test_pool("uc_race").await;
+        let cl = pg_test_conn(&pool, &schema).await;
         cl.batch_execute(
-            r#"
+            r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -1080,19 +1116,11 @@ VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_legacy', 'u1', 2), ('j_u2_d3'
 INSERT INTO user_consents
 (user_id, client_id, resource, scopes, content_hash, created, updated, ip)
 VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
-"#,
+",
         )
         .await
         .unwrap();
         (pool, schema)
-    }
-
-    async fn pg_conn(pool: &deadpool_postgres::Pool, schema: &str) -> deadpool_postgres::Object {
-        let cl = pool.get().await.unwrap();
-        cl.batch_execute(&format!("SET search_path TO {schema}"))
-            .await
-            .unwrap();
-        cl
     }
 
     /// Waits until `task` finished, or the backend `pid` waits for a lock.
@@ -1124,12 +1152,7 @@ VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
     /// `RefreshToken::discard` on `cl`: the row deleted and its access token revoked in one
     /// transaction
     async fn pg_discard(cl: &mut deadpool_postgres::Object, id: &str) -> Result<(), ErrorResponse> {
-        crate::entity::refresh_tokens::pg_discard_txn(
-            cl,
-            &crate::entity::refresh_tokens::SQL_RT_DISCARD,
-            id,
-        )
-        .await
+        crate::entity::refresh_tokens::pg_discard_txn(cl, id).await
     }
 
     /// Runs the revoke of u1 for c1 in `txn` up to and including the `refresh_tokens` delete of
@@ -1169,9 +1192,9 @@ VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
             .collect()
     }
 
-    const INSERT_RT_NEW: &str = r#"
+    const INSERT_RT_NEW: &str = r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
-VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
+VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')";
 
     /// A device refresh of c1 runs while the consent is revoked: after the revoke deleted the
     /// `refresh_tokens` of c1, the refresh inserts its replacement there and deletes its source
@@ -1199,9 +1222,9 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
     /// of c1, and before it commits.
     async fn pg_rotation_race(source_delete: &'static str) {
         let (pool, schema) = pg_race_setup().await;
-        let mut revoker = pg_conn(&pool, &schema).await;
-        let refresher = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut revoker = pg_test_conn(&pool, &schema).await;
+        let refresher = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         let pid: i32 = refresher
             .query_one("SELECT pg_backend_pid()", &[])
             .await
@@ -1277,20 +1300,20 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_revoke_same_client_refresh_race_postgres() {
         let (pool, schema) = pg_race_setup().await;
-        let mut revoker = pg_conn(&pool, &schema).await;
-        let mut holder = pg_conn(&pool, &schema).await;
-        let refresher = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut revoker = pg_test_conn(&pool, &schema).await;
+        let mut holder = pg_test_conn(&pool, &schema).await;
+        let refresher = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         // `rt_block` first, so that the revoke reaches it before `rt_src`
         monitor
             .batch_execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_block', 'u1', 1, 2, 'j_block', 'c1');
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_src', 'u1', 1, 2, 'j_rt_src', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_block', 'u1', 2), ('j_rt_src', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -1376,9 +1399,9 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_block', 'u1', 2), ('j_r
     async fn test_revoke_list_postgres() {
         for drop_legacy in [false, true] {
             let (pool, schema) = pg_race_setup().await;
-            let mut cl = pg_conn(&pool, &schema).await;
+            let mut cl = pg_test_conn(&pool, &schema).await;
             cl.batch_execute(&format!(
-                r#"
+                r"
 DELETE FROM user_consents;
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
@@ -1389,7 +1412,7 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
        ('u1', 'c1', '{RES}', 'openid', 'h', 2, 2, '127.0.0.1'),
        ('u1', 'c2', '', 'openid', 'h', 3, 3, '127.0.0.1'),
        ('u2', 'c1', '', 'openid', 'h', 4, 4, '127.0.0.1');
-"#
+"
             ))
             .await
             .unwrap();
@@ -1419,10 +1442,11 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
             );
 
             // rt_c1 and rtd_src, and rt_legacy with `drop_legacy`
+            let res = pg_revoke(&mut cl, drop_legacy, "u1", "c1", RES)
+                .await
+                .unwrap();
             assert_eq!(
-                pg_revoke(&mut cl, drop_legacy, "u1", "c1", RES)
-                    .await
-                    .unwrap(),
+                res,
                 ConsentRevoked {
                     consent_deleted: true,
                     refresh_tokens_deleted: if drop_legacy { 3 } else { 2 },
@@ -1430,8 +1454,9 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
             );
             // without refresh tokens
             for (c, r) in [("c1", ""), ("c2", "")] {
+                let res = pg_revoke(&mut cl, drop_legacy, "u1", c, r).await.unwrap();
                 assert_eq!(
-                    pg_revoke(&mut cl, drop_legacy, "u1", c, r).await.unwrap(),
+                    res,
                     ConsentRevoked {
                         consent_deleted: true,
                         refresh_tokens_deleted: 0,
@@ -1571,21 +1596,21 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
         let case =
             format!("first: {first:?}, second: {second:?}, dropped: {dropped}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first_cl = pg_conn(&pool, &schema).await;
-        let mut second_cl = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first_cl = pg_test_conn(&pool, &schema).await;
+        let mut second_cl = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         // `rt_legacy` after `rt_c1`, so that a single delete of all refresh tokens of u1 takes
         // `rt_c1` first, in the opposite order of the revoke and `Client::delete`
         monitor
             .batch_execute(
-                r#"
+                r"
 DELETE FROM refresh_tokens WHERE id = 'rt_legacy';
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_legacy', 'u1', 1, 2, 'j_legacy', NULL);
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -1712,16 +1737,16 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             delete_first: {delete_first}, split: {split}"
         );
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         first
             .batch_execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -1819,63 +1844,45 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             .unwrap();
     }
 
-    /// The refresh tokens `RefreshToken::discard` and `RefreshTokenDevice::discard` drop in
-    /// [`test_discard_revoke_race_postgres`]: the replacement `rt_new` for c1, and the device
-    /// refresh token `rtd_src` of c1.
-    const DISCARD_RACE_TOKENS: [(bool, &str); 2] = [(false, "rt_new"), (true, "rtd_src")];
-
-    /// Runs the statements `range` of the discard of `id`, a device refresh token if `device`.
+    /// Runs the statements `range` of the discard of `id`.
     async fn pg_discard_run(
         txn: &deadpool_postgres::Transaction<'_>,
-        device: bool,
         id: &str,
         range: std::ops::Range<usize>,
         discard: &mut crate::entity::refresh_tokens::PgDiscard,
     ) -> Result<(), ErrorResponse> {
-        let sql = if device {
-            &crate::entity::refresh_tokens_devices::SQL_RTD_DISCARD
-        } else {
-            &crate::entity::refresh_tokens::SQL_RT_DISCARD
-        };
         for step in &crate::entity::refresh_tokens::PG_DISCARD_STEPS[range] {
-            discard.step(txn, sql, *step, id).await?;
+            discard.step(txn, *step, id).await?;
         }
         Ok(())
     }
 
     const PG_DISCARD_LEN: usize = crate::entity::refresh_tokens::PG_DISCARD_STEPS.len();
 
-    /// A discard of a refresh token of u1 for c1 (the replacement of a failed rotation, or a
-    /// device refresh token) runs at the same time as a consent revoke of u1 for c1 (with
-    /// `consent.enable`): one of them runs its first statements, the other one all of its
-    /// statements, then the first one the rest. Both take `refresh_tokens` (or
-    /// `refresh_tokens_devices`) before `issued_tokens`, so they are serialized and Postgres
-    /// aborts neither as a deadlock, at every split.
+    /// A discard of the replacement `rt_new` of a failed rotation of u1 for c1 runs at the same
+    /// time as a consent revoke of u1 for c1 (with `consent.enable`): one of them runs its first
+    /// statements, the other one all of its statements, then the first one the rest. Both take
+    /// `refresh_tokens` before `issued_tokens`, so they are serialized and Postgres aborts
+    /// neither as a deadlock, at every split.
     /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_discard_revoke_race_postgres() {
-        for (device, id) in DISCARD_RACE_TOKENS {
-            for split in 1..=PG_DISCARD_LEN {
-                pg_discard_revoke_race(device, id, true, split).await;
-            }
-            for split in 1..=PgTxnSide::Revoke.len() {
-                pg_discard_revoke_race(device, id, false, split).await;
-            }
+        for split in 1..=PG_DISCARD_LEN {
+            pg_discard_revoke_race(true, split).await;
+        }
+        for split in 1..=PgTxnSide::Revoke.len() {
+            pg_discard_revoke_race(false, split).await;
         }
     }
 
-    async fn pg_discard_revoke_race(
-        device: bool,
-        id: &'static str,
-        discard_first: bool,
-        split: usize,
-    ) {
-        let case = format!("id: {id}, discard_first: {discard_first}, split: {split}");
+    async fn pg_discard_revoke_race(discard_first: bool, split: usize) {
+        let id = "rt_new";
+        let case = format!("discard_first: {discard_first}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         monitor.execute(INSERT_RT_NEW, &[]).await.unwrap();
         let pid: i32 = second
             .query_one("SELECT pg_backend_pid()", &[])
@@ -1892,7 +1899,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let mut revoke = PgSideState::default();
         let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
         let (first_len, second_side) = if discard_first {
-            pg_discard_run(&txn, device, id, 0..split, &mut discard)
+            pg_discard_run(&txn, id, 0..split, &mut discard)
                 .await
                 .unwrap();
             (PG_DISCARD_LEN, false)
@@ -1911,7 +1918,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
                 .await?;
             if second_side {
                 let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
-                pg_discard_run(&txn, device, id, 0..PG_DISCARD_LEN, &mut discard).await?;
+                pg_discard_run(&txn, id, 0..PG_DISCARD_LEN, &mut discard).await?;
             } else {
                 let mut revoke = PgSideState::default();
                 PgTxnSide::Revoke
@@ -1922,7 +1929,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         });
         pg_wait_blocked_or_done(&monitor, pid, &task).await;
         let res = if discard_first {
-            pg_discard_run(&txn, device, id, split..first_len, &mut discard).await
+            pg_discard_run(&txn, id, split..first_len, &mut discard).await
         } else {
             PgTxnSide::Revoke
                 .run(&txn, split..first_len, &mut revoke)
@@ -1966,48 +1973,39 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             .unwrap();
     }
 
-    /// A discard of a refresh token of u1 for c1 (`rt_c1`, or the device refresh token
-    /// `rtd_src`) runs at the same time as a `Client::delete` of c1 or a `User::delete` of u1:
-    /// one of them runs its first statements, the other one all of its statements, then the
-    /// first one the rest. Whichever of them deletes a refresh token revokes its access token, so
-    /// no access token of the deleted refresh tokens stays live, at every split, and Postgres
-    /// aborts neither as a deadlock.
+    /// A discard of the refresh token `rt_c1` of u1 for c1 runs at the same time as a
+    /// `Client::delete` of c1 or a `User::delete` of u1: one of them runs its first statements,
+    /// the other one all of its statements, then the first one the rest. Whichever of them deletes
+    /// a refresh token revokes its access token, so no access token of the deleted refresh tokens
+    /// stays live, at every split, and Postgres aborts neither as a deadlock.
     /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_discard_delete_race_postgres() {
         for side in [PgTxnSide::ClientDelete, PgTxnSide::UserDelete] {
-            for (device, id) in [(false, "rt_c1"), (true, "rtd_src")] {
-                for split in 1..=PG_DISCARD_LEN {
-                    pg_discard_delete_race(side, device, id, true, split).await;
-                }
-                for split in 1..=side.len() {
-                    pg_discard_delete_race(side, device, id, false, split).await;
-                }
+            for split in 1..=PG_DISCARD_LEN {
+                pg_discard_delete_race(side, true, split).await;
+            }
+            for split in 1..=side.len() {
+                pg_discard_delete_race(side, false, split).await;
             }
         }
     }
 
-    async fn pg_discard_delete_race(
-        side: PgTxnSide,
-        device: bool,
-        id: &'static str,
-        discard_first: bool,
-        split: usize,
-    ) {
-        let case =
-            format!("side: {side:?}, id: {id}, discard_first: {discard_first}, split: {split}");
+    async fn pg_discard_delete_race(side: PgTxnSide, discard_first: bool, split: usize) {
+        let id = "rt_c1";
+        let case = format!("side: {side:?}, discard_first: {discard_first}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         monitor
             .batch_execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -2026,7 +2024,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let mut state = PgSideState::default();
         let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
         if discard_first {
-            pg_discard_run(&txn, device, id, 0..split, &mut discard)
+            pg_discard_run(&txn, id, 0..split, &mut discard)
                 .await
                 .unwrap();
         } else {
@@ -2043,13 +2041,13 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
                 side.run(&txn, 0..side.len(), &mut state).await?;
             } else {
                 let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
-                pg_discard_run(&txn, device, id, 0..PG_DISCARD_LEN, &mut discard).await?;
+                pg_discard_run(&txn, id, 0..PG_DISCARD_LEN, &mut discard).await?;
             }
             txn.commit().await.map_err(ErrorResponse::from)
         });
         pg_wait_blocked_or_done(&monitor, pid, &task).await;
         let res = if discard_first {
-            pg_discard_run(&txn, device, id, split..PG_DISCARD_LEN, &mut discard).await
+            pg_discard_run(&txn, id, split..PG_DISCARD_LEN, &mut discard).await
         } else {
             side.run(&txn, split..side.len(), &mut state).await
         };
@@ -2124,9 +2122,9 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
 
         let case = format!("device: {device}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         let pid: i32 = second
             .query_one("SELECT pg_backend_pid()", &[])
             .await
@@ -2148,13 +2146,13 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             delete.step(&txn, *step, "u1").await.unwrap();
         }
         let insert_replacement = if device {
-            r#"
+            r"
 INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_token_jti)
-VALUES ('rtd_r', 'd1', 'u1', 1, 2, 'j_r')"#
+VALUES ('rtd_r', 'd1', 'u1', 1, 2, 'j_r')"
         } else {
-            r#"
+            r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
-VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"#
+VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"
         };
         // the access token is issued before its refresh token is inserted
         second
@@ -2179,7 +2177,8 @@ VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"#
             Ok(()) => assert!(
                 pg_ids(&monitor, "SELECT jti FROM issued_tokens WHERE revoked")
                     .await
-                    .contains(&"j_r".to_string()),
+                    .iter()
+                    .any(|i| i == "j_r"),
                 "{case}: the replacement was removed with its access token live"
             ),
         }
@@ -2219,9 +2218,9 @@ VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"#
 
         let case = format!("split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         monitor
             .batch_execute("UPDATE users SET picture_id = 'p1' WHERE id = 'u1'")
             .await

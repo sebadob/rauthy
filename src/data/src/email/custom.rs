@@ -13,7 +13,7 @@ pub static HTML_EMAIL_HEAD_LEFT: &str = r#"
     <style>
 "#;
 
-pub static HTML_EMAIL_HEAD_RIGHT: &str = r#"
+pub static HTML_EMAIL_HEAD_RIGHT: &str = r"
         *, *::before, *::after { box-sizing: border-box; }
         * { margin: 0; padding: 0; }
         input, button, textarea, select { font: inherit; }
@@ -59,7 +59,7 @@ pub static HTML_EMAIL_HEAD_RIGHT: &str = r#"
         ::selection { color: hsl(var(--bg)); background: hsl(var(--action)); }
     </style>
 </head>
-"#;
+";
 
 #[inline]
 pub async fn build_custom_email_head() -> Result<String, ErrorResponse> {
@@ -72,12 +72,12 @@ pub async fn build_custom_email_head() -> Result<String, ErrorResponse> {
 pub async fn build_custom_html_email(body: &str) -> Result<String, ErrorResponse> {
     let head = build_custom_email_head().await?;
     Ok(format!(
-        r#"<!DOCTYPE html>
+        r"<!DOCTYPE html>
 <html>
 {head}
 <body>{body}</body>
 </html>
-"#
+"
     ))
 }
 
@@ -91,7 +91,7 @@ pub async fn send_custom(
     let req = EMail {
         typ: EmailType::Custom,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {subject}"),
         text,
         html,

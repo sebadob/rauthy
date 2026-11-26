@@ -11,7 +11,7 @@
     } from '#api/types/password_hashing.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import type { Argon2ParamsResponse } from '#api/types/login_times.ts';
-    import { untrack } from 'svelte';
+    import { tick, untrack } from 'svelte';
 
     let {
         params,
@@ -19,14 +19,12 @@
         params: Argon2ParamsResponse;
     } = $props();
 
-    const inputWidth = '10rem';
-
     let ta = useI18nAdmin();
 
     let isLoading = $state(false);
     let err = $state('');
     let hashTimes: PasswordHashTime[] = $state([]);
-    let scrollY: undefined | number = $state();
+    let result: HTMLDivElement | undefined = $state();
 
     let values = $state({
         targetTime: '1000',
@@ -48,9 +46,8 @@
         if (res.body) {
             hashTimes = res.body.results;
             err = '';
-            setTimeout(() => {
-                scrollY = window.innerHeight;
-            }, 50);
+            await tick();
+            result?.scrollIntoView({ block: 'nearest' });
         } else {
             err = res.error?.message || 'Error';
         }
@@ -59,11 +56,9 @@
     }
 </script>
 
-<svelte:window bind:scrollY />
-
-<div class="wrapper">
-    <div class="container">
-        <Form action="/auth/v1/password_hash_times" {onSubmit}>
+<div class="calculator">
+    <Form action="/auth/v1/password_hash_times" {onSubmit}>
+        <div class="parameters">
             <Input
                 typ="number"
                 bind:value={values.targetTime}
@@ -73,7 +68,7 @@
                 min="500"
                 max="99999"
                 required
-                width={inputWidth}
+                width="100%"
             />
             <Input
                 typ="number"
@@ -82,7 +77,7 @@
                 label="m_cost (kB)"
                 placeholder="m_cost (kB)"
                 min="32768"
-                width={inputWidth}
+                width="100%"
             />
             <Input
                 typ="number"
@@ -92,46 +87,42 @@
                 placeholder="p_cost"
                 min="2"
                 max="256"
-                width={inputWidth}
+                width="100%"
             />
             <Button type="submit" {isLoading}>
                 {ta.docs.hashing.calculate}
             </Button>
-        </Form>
-    </div>
+        </div>
+    </Form>
 
     {#if hashTimes.length > 0}
-        <div class="result">
+        <div bind:this={result}>
             <Argon2Results res={hashTimes} />
         </div>
     {/if}
-
-    {#if err}
-        <div class="err">
-            {err}
-        </div>
-    {/if}
+    {#if err}<p class="err" role="alert">{err}</p>{/if}
 </div>
 
 <style>
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-start;
+    .calculator {
+        display: grid;
+        gap: var(--ui-space);
     }
 
-    .result {
-        margin-top: 5px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-start;
+    .parameters {
+        --ui-field-margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+        align-items: end;
+        gap: 0.75rem;
     }
 
-    .wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
+    .parameters :global(button) {
+        justify-self: start;
+        min-height: var(--ui-field-height);
+    }
+
+    .err {
+        margin: 0;
     }
 </style>

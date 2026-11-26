@@ -65,10 +65,10 @@ impl IssuedToken {
 
     #[inline]
     async fn insert(&self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO issued_tokens (jti, user_id, did, sid, exp)
 VALUES ($1, $2, $3, $4, $5)
-"#;
+";
         if is_hiqlite() {
             DB::hql()
                 .execute(
@@ -162,7 +162,7 @@ VALUES ($1, $2, $3, $4, $5)
     }
 
     #[inline]
-    pub async fn validate_not_revoked(jti: &str) -> Result<(), ErrorResponse> {
+    pub async fn validate_not_revoked(jti: &str) -> Result<Self, ErrorResponse> {
         let sql = "SELECT * FROM issued_tokens WHERE jti = $1";
 
         let opt: Option<Self> = if is_hiqlite() {
@@ -173,7 +173,7 @@ VALUES ($1, $2, $3, $4, $5)
 
         if let Some(slf) = opt {
             if slf.revoked != Some(true) {
-                Ok(())
+                Ok(slf)
             } else {
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,

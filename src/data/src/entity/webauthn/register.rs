@@ -66,7 +66,8 @@ pub async fn reg_start(
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
-            ccr.public_key.timeout = Some(min(cfg.req_exp.as_millis(), u32::MAX as u128) as u32);
+            ccr.public_key.timeout =
+                Some(min(cfg.req_exp.as_millis(), u128::from(u32::MAX)) as u32);
 
             let cache_idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
             let reg_data = WebauthnReg {
@@ -105,17 +106,14 @@ pub async fn reg_finish(
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
-    let reg_data = match DB::hql()
+    let Some(reg_data) = DB::hql()
         .get_remove::<_, _, WebauthnReg>(Cache::Webauthn, idx)
         .await?
-    {
-        None => {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Webauthn Registration Request not found",
-            ));
-        }
-        Some(data) => data,
+    else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Webauthn Registration Request not found",
+        ));
     };
 
     let cfg = &RauthyConfig::get().vars.webauthn;
@@ -180,7 +178,7 @@ pub async fn reg_finish(
                     )
                     .await
                     {
-                        Ok(_) => Some(aaguid),
+                        Ok(()) => Some(aaguid),
                         Err(err) => {
                             warn!("Cannot verify FIDO device attestation: {}", err.message);
                             None
@@ -237,17 +235,15 @@ pub async fn reg_finish(
                     ExtnState::Unsigned(props) => props.rk,
                     ExtnState::NotRequested | ExtnState::Ignored => None,
                 };
-                match props {
-                    Some(v) => Some(v),
-                    None => {
-                        // If the authenticator did not send any cred props, we fall back to other
-                        // possibly known values. This improves compatibility for e.g. MacOS.
-                        let fallback = payload.allow_rk_hint.unwrap_or(
-                            RauthyConfig::get().vars.webauthn.passkey_reg_type_str()
-                                == "resident_key",
-                        );
-                        Some(fallback)
-                    }
+                if let Some(v) = props {
+                    Some(v)
+                } else {
+                    // If the authenticator did not send any cred props, we fall back to other
+                    // possibly known values. This improves compatibility for e.g. MacOS.
+                    let fallback = payload.allow_rk_hint.unwrap_or(
+                        RauthyConfig::get().vars.webauthn.passkey_reg_type_str() == "resident_key",
+                    );
+                    Some(fallback)
                 }
             };
 
@@ -272,7 +268,7 @@ pub async fn reg_finish(
                 format!("{err}"),
             ));
         }
-    };
+    }
 
     Ok(())
 }
@@ -316,6 +312,9 @@ fn is_attestation_error(err: &WebauthnError) -> bool {
             | WebauthnError::AttestationFormatMissingAaguid
             | WebauthnError::AttestationChainNotTrusted(_)
             | WebauthnError::AttestationCredentialSubjectKeyMismatch
+            | WebauthnError::CertificatePublicKeyInvalid
+            | WebauthnError::CertificatePublicKeyAlgorthimMismatch
             | WebauthnError::MissingAttestationCaList
+            | WebauthnError::X509DerInvalid
     )
 }

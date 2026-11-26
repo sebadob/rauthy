@@ -2,6 +2,7 @@ use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
 use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use hiqlite::macros::FromRow;
+use rauthy_common::constants::PASSWORD_MAX_LEN;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_ID,
     RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_RESOURCE,
@@ -82,7 +83,7 @@ pub struct NewUserRequest {
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub user_expires: Option<i64>,
     /// Validation: Valid Timezone in the format of `Europe/Berlin`
     #[validate(length(max = 48))]
@@ -94,6 +95,9 @@ pub struct NewUserRequest {
 pub struct NewUserRegistrationRequest {
     #[validate(email)]
     pub email: String,
+    /// Only read when `[user_registration].danger_reg_acc_init_immediate` is set, it is validated
+    /// against the `[passwords]` policy in `User::apply_password_rules`.
+    pub password: Option<String>,
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
@@ -127,8 +131,8 @@ pub struct PasswordResetRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: String,
-    /// Validation: Applies password policy - max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: String,
     /// Validation: `[a-zA-Z0-9]{48}`
     #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
@@ -172,8 +176,8 @@ pub struct UpdateUserRequest {
     #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
-    /// Validation: Applies password policy - max 256 characters
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
     #[validate(custom(function = "validate_vec_roles"))]
@@ -186,7 +190,7 @@ pub struct UpdateUserRequest {
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
     // #[validate(range(min = 1719784800, max = 4070905200))]
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub user_expires: Option<i64>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
@@ -205,11 +209,12 @@ pub struct UpdateUserSelfRequest {
     #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password_current: Option<String>,
     pub mfa_code: Option<String>,
-    /// Validation: Applies password policy
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password_new: Option<String>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
@@ -241,7 +246,10 @@ pub struct UserValuesRequest {
     pub tz: Option<String>,
 }
 
+// serde's variant name would be `Email`, which is not the DB column form, nor `as_str`, nor
+// what the frontend declares.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum UserAttrConfigTyp {
     Email,
 }
@@ -350,7 +358,8 @@ pub struct UserRevokeParams {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct MfaModTokenRequest {
-    #[validate(length(max = 256))]
+    /// Validation: Applies password policy - max 1024 characters
+    #[validate(length(max = PASSWORD_MAX_LEN))]
     pub password: Option<String>,
     #[validate(length(min = 48, max = 48))]
     pub mfa_code: Option<String>,
@@ -634,6 +643,14 @@ pub struct UserConsentDeleteResponse {
 
 #[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct UserConsentsDeleteResponse {
+    pub consents_deleted: usize,
+    /// From all clients of the deleted consents together
+    pub refresh_tokens_deleted: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserConsentResponse {
     pub client_id: String,
     /// `None` if the client does not exist (anymore), is ephemeral, or has no name
@@ -845,9 +862,48 @@ pub struct WebauthnLoginResponse {
     pub exp: u64,
 }
 
+/// One entry of the list a login that needs MFA responds with, one per method the user may
+/// complete the login with. All entries carry the same `code`. Untagged: each entry serializes
+/// exactly like the inner response, and an `OtpLoginResponse` is the one with `active_otps`.
+#[derive(Serialize, ToSchema)]
+#[serde(untagged)]
+pub enum LoginResponse {
+    Webauthn(WebauthnLoginResponse),
+    Otp(OtpLoginResponse),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attr_config_typ_wire_form_is_lowercase() {
+        // The stored column, `as_str`, `FromStr`, and the frontend type all use "email", so the
+        // JSON form must be that too, not serde's variant name.
+        assert_eq!(
+            serde_json::json!("email"),
+            serde_json::to_value(UserAttrConfigTyp::Email).unwrap()
+        );
+        assert_eq!("email", UserAttrConfigTyp::Email.as_str());
+        assert!(
+            serde_json::from_str::<UserAttrConfigTyp>("\"email\"").is_ok(),
+            "the lowercase form must deserialize"
+        );
+        assert!(
+            "email".parse::<UserAttrConfigTyp>().is_ok(),
+            "FromStr is the DB column form"
+        );
+
+        let req = r#"{"name":"attr-1","desc":null,"default_value":null,"typ":"email","user_editable":null}"#;
+        assert!(
+            serde_json::from_str::<UserAttrConfigRequest>(req).is_ok(),
+            "a request with the lowercase typ must deserialize"
+        );
+
+        use utoipa::PartialSchema;
+        let schema = serde_json::to_value(UserAttrConfigTyp::schema()).unwrap();
+        assert_eq!(serde_json::json!(["email"]), schema["enum"], "{schema}");
+    }
 
     #[test]
     fn consent_delete_params_resource() {
@@ -915,6 +971,55 @@ mod tests {
             params(Some("https://api.example.com/ä".to_string()))
                 .validate()
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn password_max_length_is_the_hard_request_limit() {
+        let upd = |len: usize| UpdateUserSelfRequest {
+            email: None,
+            given_name: None,
+            family_name: None,
+            language: None,
+            password_current: Some("a".repeat(len)),
+            mfa_code: None,
+            password_new: Some("a".repeat(len)),
+            user_values: None,
+        };
+        assert!(
+            upd(256).validate().is_ok(),
+            "passwords from imports with more than the old 256 chars limit are accepted"
+        );
+        assert!(upd(PASSWORD_MAX_LEN as usize).validate().is_ok());
+        assert!(upd(PASSWORD_MAX_LEN as usize + 1).validate().is_err());
+    }
+
+    /// Each entry of the MFA login list serializes exactly like the response it wraps.
+    #[test]
+    fn login_response_serializes_untagged() {
+        let reqs = vec![
+            LoginResponse::Webauthn(WebauthnLoginResponse {
+                code: "c0de".to_string(),
+                exp: 60,
+            }),
+            LoginResponse::Otp(OtpLoginResponse {
+                code: "c0de".to_string(),
+                active_otps: vec![ActiveOtp {
+                    otp_id: "otp1".to_string(),
+                    otp_kind: OtpKind::Time,
+                }],
+            }),
+        ];
+        let json = serde_json::to_value(&reqs).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!([
+                { "code": "c0de", "exp": 60 },
+                {
+                    "code": "c0de",
+                    "active_otps": [{ "otp_id": "otp1", "otp_kind": "time" }],
+                },
+            ])
         );
     }
 }

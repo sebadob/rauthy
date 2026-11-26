@@ -1,4 +1,5 @@
 use crate::database::{Cache, DB};
+use crate::entity::user_consents::PendingConsent;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -13,6 +14,10 @@ pub struct WebauthnLoginReq {
     pub header_origin: Option<String>,
     pub tos_await_data: Option<WebauthnToSAwaitData>,
     pub needs_user_update: bool,
+    pub session_id: String,
+    /// The consent sent with the login request (`POST /authorize`, `/authorize/refresh` or a
+    /// provider login), written as the user's grant once the ceremony verified the user.
+    pub pending_consent: Option<PendingConsent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -28,7 +33,14 @@ impl WebauthnLoginReq {
         Ok(())
     }
 
+    /// Removes the whole login. If `optional_select_mfa` is enabled, this also removes the
+    /// `OtpLoginReq` offered with the same `code`.
     pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
+        if RauthyConfig::get().vars.mfa.optional_select_mfa {
+            DB::hql()
+                .delete(Cache::OneTimePassword, code.clone())
+                .await?;
+        }
         let res: Option<Self> = DB::hql().get_remove(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(

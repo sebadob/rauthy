@@ -44,10 +44,9 @@ Just make sure you always append the ` -- ` after `cargo run`.
 cargo run -- --help
 ```
 
-```admonish hint
-To make sure it's working simply execute `rauthy --help` or `./rauthy --help` in case you have the
-binary.
-```
+> [!TIP]
+> To make sure it's working simply execute `rauthy --help` or `./rauthy --help` in case you have the
+> binary.
 
 ## What it can do
 

@@ -157,10 +157,15 @@ export const I18nFr: I18n = {
             connectedApps: 'Applications connectées',
             connectedAppsDesc: 'Applications auxquelles vous avez autorisé l’accès à votre compte.',
             granted: 'Accordé',
+            logoutWarning:
+                'Cela vous déconnecte également de toutes vos sessions sur tous vos appareils. Vous devrez vous reconnecter.',
             noConnectedApps: 'Aucune application n’a encore reçu d’accès.',
             privacy: 'Confidentialité',
             resource: 'Ressource',
             revoke: 'Révoquer l’accès',
+            revokeAll: 'Révoquer tous les accès',
+            revokeAllDesc:
+                'Révoque votre consentement pour toutes les applications listées ici. Chaque application devra de nouveau demander votre consentement.',
             revokeDesc:
                 'La révocation supprime le consentement et l’application ne peut plus renouveler son accès. Les jetons d’accès émis avec les jetons de rafraîchissement supprimés sont révoqués pour userinfo et l’introspection. Les applications qui valident elles-mêmes leurs jetons peuvent encore les accepter jusqu’à leur expiration. L’application devra de nouveau demander votre consentement.',
             scopes: 'Scopes',
@@ -195,9 +200,32 @@ export const I18nFr: I18n = {
         zip: 'Code postal',
     },
     authorize: {
+        busy: 'Le serveur est actuellement occupé. Veuillez réessayer dans un instant.',
         clientForceMfa: `Cette connexion nécessite la double authentification (MFA) pour une sécurité renforcée.\nPour y accéder, vous devez
             vous connecter à votre compte et ajouter au moins une clé d'accès supplémentaire`,
         clientGroupPrefixForbidden: 'Attribution de groupe manquante pour cette connexion',
+        consent: {
+            agree: 'Je consens à la [transmission de mes données]',
+            changed: 'Le contenu du consentement a changé, veuillez le vérifier à nouveau.',
+            continue: 'Continuer',
+            details: 'Détails',
+            intro: "{{ CLIENT }} demande l'accès à :",
+            introResource: "{{ CLIENT }} demande l'accès à {{ RESOURCE }} :",
+            required: 'toujours',
+            scopes: {
+                address: 'Votre adresse postale',
+                email: 'Votre adresse e-mail',
+                groups: 'Vos groupes',
+                openid: 'Votre identifiant et vos rôles pour vous connecter',
+                phone: 'Votre numéro de téléphone',
+                profile:
+                    "Votre nom, nom d'utilisateur (peut être votre adresse e-mail), photo, langue, date de naissance et fuseau horaire",
+                webid: 'Votre WebID',
+            },
+            terms: 'Conditions',
+            title: 'Consentement',
+            warning: 'Veuillez lire attentivement',
+        },
         email: 'E-mail',
         emailBadFormat: `Mauvais format d'e-mail`,
         emailRequired: `L'e-mail est requis`,
@@ -210,6 +238,10 @@ export const I18nFr: I18n = {
         login: 'Connexion',
         mfaAck: 'Confirmé',
         mfaOpenApp: "Ouvrez l'application pour continuer",
+        mfaSelectionDesc: 'Choisissez votre méthode de vérification :',
+        usePasskey: 'Utiliser une clé d’accès',
+        useEmailCode: 'Utiliser un code par e-mail',
+        emailCodeDesc: 'Recevez un code à usage unique par e-mail',
         navigateToAccount: 'Tableau de bord du compte',
         needsUserUpdate: `Certaines informations pour ce compte sont manquantes. Vous devez mettre à jour ces
             valeurs avant de pouvoir poursuivre la connexion.`,

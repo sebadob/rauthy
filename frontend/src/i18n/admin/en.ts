@@ -2,6 +2,10 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminEn: I18nAdmin = {
     api_key: {
+        validity: 'Validity',
+        permissions: 'Permissions',
+        secret: 'Secret',
+        examples: 'Usage examples',
         delete1: 'Are you sure, that you want to delete this API Key?',
         expires: 'Expiry',
         generate1: 'Here you can generate a new secret for this API Key.',
@@ -29,6 +33,7 @@ export let I18nAdminEn: I18nAdmin = {
         userEditable: 'User Editable',
     },
     backup: {
+        title: 'Backups',
         createBackup: 'Create Backup',
         disabledDesc: 'This functionality only exists, if Hiqlite is configured as the database.',
         lastModified: 'Last Modified',
@@ -37,12 +42,26 @@ export let I18nAdminEn: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        settings: { general: 'General', tokens: 'Tokens', integrations: 'Integrations' },
         allowedResources: 'Allowed Resources',
         defaultAud: 'Default Audiences',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Optional RFC 8707 resource indicators this client may request. An empty list rejects any 'resource' request parameter with 'invalid_target'.`,
         descDefaultAud: `Audiences that are always added to this client's tokens, independent of any 'resource' request parameter.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: 'Branding',
+            theme: 'Theme',
+            light: 'Light Theme',
+            dark: 'Dark Theme',
+            preview: 'Preview',
+            assets: 'Logo and favicon',
+            logo: 'Logo',
+            advanced: 'Advanced CSS',
+            resetTheme: 'Reset theme',
+            resetThemeConfirm: 'Restore the default colors and corner radius?',
+            assetsImmediate: 'File changes take effect immediately.',
             descHsl: `The following values must be given as HSL values. You only provide the base colors.
             Alpha channels and other values are manipulated dynamically by the theme.`,
             descFullCss: `The following values must be fully valid CSS <code>color</code> values.
@@ -63,6 +82,11 @@ export let I18nAdminEn: I18nAdmin = {
         confidential: 'Confidential',
         confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
         config: 'Client Configuration',
+        consent: {
+            builtIn: 'Built-in',
+            desc: `Where the content of the consent screen comes from, when 'consent.enable' is set. Built-in shows the requested scopes. A URL must serve the consent content as JSON. A '[[consent.sources]]' entry for the requested resource takes precedence.`,
+            source: 'Consent Source',
+        },
         delete1: 'Are you sure you want to delete this client?',
         descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
             can be used only once and are valid for 60 seconds by default. The shorter the validity, the
@@ -133,6 +157,20 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     common: {
+        about: 'About',
+        date: 'Date',
+        time: 'Time',
+        preferences: 'Preferences',
+        profile: 'Profile',
+        contactDetails: 'Contact details',
+        access: 'Access',
+        activity: 'Activity',
+
+        compactNavigation: 'Compact navigation',
+        administration: 'Administration',
+        selectEntry: 'Select an entry',
+        selectEntryHint: 'Choose an item from the list to view and manage its details.',
+
         account: 'Account',
         addNew: 'Add New',
         back: 'Back',
@@ -141,6 +179,7 @@ export let I18nAdminEn: I18nAdmin = {
         copiedToClip: 'Value has been copied to clipboard',
         details: 'Details',
         edit: 'Edit',
+        discard: 'Discard',
         enabled: 'Enabled',
         filter: 'Filter',
         from: 'From',
@@ -154,6 +193,8 @@ export let I18nAdminEn: I18nAdmin = {
         noEntries: 'No Entries',
         preview: 'Preview',
         reset: 'Reset',
+        unsavedChanges: 'Unsaved changes',
+        unsavedChangesDesc: 'You have unsaved changes. Do you want to continue and discard them?',
         searchOptions: 'Search Options',
         until: 'Until',
     },
@@ -235,11 +276,15 @@ export let I18nAdminEn: I18nAdmin = {
         },
         openapi:
             "If you want to integrate an external application and use Rauthy's API, take a look at the",
-        openapiNote: `In the default configuration, the Swagger UI is not active via the link above. It can be activated
-            via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.`,
+        openapiNote:
+            'In the default configuration, the Swagger UI is not active via the link above.',
+        openapiEnable:
+            "It can be activated via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.",
         source: 'The source code can be found here',
     },
     editor: {
+        format: 'Format',
+        plainText: 'Plain text',
         bold: 'Bold',
         code: 'Code',
         heading1: 'Heading 1',
@@ -257,11 +302,14 @@ export let I18nAdminEn: I18nAdmin = {
         textArea: 'Edit Text',
     },
     email: {
+        delivery: 'Delivery',
         cancelJob: 'Cancel Job',
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
         immediate: 'Immediate',
         jobs: 'E-Mail Jobs',
+        recipients: 'Recipients',
         scheduled: 'Scheduled Dispatch',
+        scheduledDelivery: 'Scheduled',
         sendAllUsers: 'This E-Mail will be sent to all users.',
         sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
         sendMail: 'Send E-Mail',
@@ -276,12 +324,22 @@ export let I18nAdminEn: I18nAdmin = {
             Afterward, you need to do a logout and log back in.`,
     },
     events: {
+        searchContent: 'Content',
+        timestamp: 'Timestamp',
+        level: 'Level',
+        type: 'Type',
+        allLevels: 'All levels',
+        sendTest: 'Send test event',
         eventLevel: 'Event Level',
         eventType: 'Event Type',
     },
     groups: {
         delete1: 'Are you sure you want to delete this group?',
         name: 'Group Name',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algorithm',
@@ -296,6 +354,7 @@ export let I18nAdminEn: I18nAdmin = {
         rotateKeys: 'Rotate Keys',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -333,6 +392,7 @@ export let I18nAdminEn: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV Store',
         apiKeys: 'API Keys',
         attributes: 'Attributes',
         blacklist: 'Blacklist',
@@ -390,6 +450,9 @@ export let I18nAdminEn: I18nAdmin = {
             for security reasons.`,
     },
     passwordPolicy: {
+        lengthRules: 'Password length',
+        characterRules: 'Character requirements',
+        expiryRules: 'Expiry and reuse',
         configDesc: 'Policy for new passwords.',
         resetSet0: 'The value 0 deactivates the requirement.',
         validForDays: 'Valid For Days',
@@ -397,6 +460,17 @@ export let I18nAdminEn: I18nAdmin = {
     },
     providers: {
         config: {
+            sections: {
+                roleGroupMapping: 'Roles and Groups',
+                tokenAuth: 'Token authentication',
+                adminMapping: 'Admin access',
+                mfaMapping: 'Multi-factor authentication',
+                claimHelp: 'JSONPath syntax and examples',
+                access: 'Access and linking',
+                endpoints: 'Endpoints',
+                client: 'Client credentials',
+                claims: 'Claim mapping',
+            },
             allowInsecureTls: 'Allow insecure TLS',
             autoLink: 'Auto-Link User',
             autoLinkDesc1: `If Auto-Link User is activated, the login via this provider will automatically link a
@@ -404,6 +478,10 @@ export let I18nAdminEn: I18nAdmin = {
             autoLinkDesc2: `CAUTION: This option can be very dangerous and lead to account takeover if the provider
                 does not fully validate E-Mail addresses for users and therefore makes it possible to add a foreign
                 address for a user! MUST NEVER be used in such a case!`,
+            hideLogin: 'Hide Login Button',
+            hideLoginDesc: `The login button of this provider is hidden on the login and registration pages. A login
+                is still possible via the "idp_hint" query parameter, with which a dedicated login button for this
+                provider can be added.`,
             clientName: 'Client Name',
             custRootCa: 'Custom Root CA PEM',
             descAuthMethod: `The authentication method to use on the <code>/token</code> endpoint.<br>
@@ -426,7 +504,26 @@ export let I18nAdminEn: I18nAdmin = {
                 p5: '<code>$.roles</code> would target <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> can target a value inside an object or array like<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'A <code>value</code> matches exactly, unless it starts with <code>^</code> (prefix match), <code>~</code> (regex), or <code>^^</code> (a literal <code>^</code>)',
+                p8: "Keys with characters outside <code>a-z A-Z 0-9 _ -</code> need quotes: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Map values from the upstream ID token to existing local roles and groups. A rule adds its target when the claim at <code>path</code> matches <code>value</code>, and removes it when none of its rules match. Only targets configured here are ever removed, and a target configured here belongs to the provider: a role or group an admin assigned to that user by hand is removed as well on a login where no rule matches.',
+            addMapping: 'Add mapping',
+            removeMapping: 'Remove mapping',
+            mappingTyp: 'Type',
+            typRole: 'Role',
+            typGroup: 'Group',
+            pathClaim: 'Claim Path',
+            valueClaim: 'Claim Value',
+            targetClaim: 'Role / Group',
+            noTargetSelected: '— No role / group —',
+            targetMissing:
+                'The saved target {{ target }} is not a role / group anymore. Select an existing one, or remove this mapping.',
+            groupAdminTarget: '(group admin)',
+            maxMappings: 'An auth provider supports at most 32 claim mappings.',
+            regexCost:
+                'A <code>value</code> that starts with <code>~</code> is a regex and is evaluated against every claim node of every login: keep it anchored and as cheap as possible.',
             lookup: 'Lookup',
             pathAdminClaim: 'Admin Claim Path',
             pathMfaClaim: 'MFA Claim Path',
@@ -450,8 +547,13 @@ export let I18nAdminEn: I18nAdmin = {
         adminNoMod: 'The <code>rauthy_admin</code> role is immutable.',
         delete1: 'Are you sure you want to delete this role?',
         name: 'Role Name',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
+        defaultBadge: 'default',
         claimsAtRoot: 'Emit claims at token root',
         claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
@@ -502,6 +604,17 @@ export let I18nAdminEn: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin rule cannot be removed',
         },
         attributes: 'Attributes',
+        consents: {
+            title: 'Consents',
+            desc: 'Consents this user has given to applications. Times are shown in your local time zone; hover a time to see it in UTC.',
+            none: 'This user has not given consent to any application.',
+            revokeDesc:
+                'Revoking removes the consent and the application can no longer renew its access for this user. The application has to ask the user for consent again.',
+            revokeAllDesc:
+                'Revokes all consents of this user. Each application has to ask the user for consent again.',
+            sessionsWarning:
+                'All sessions of the user are deleted as well, the user is logged out everywhere.',
+        },
         deleteUser: 'Are you sure you want to delete this user?',
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens

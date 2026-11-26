@@ -19,22 +19,25 @@ configuration:
 swagger_ui_enable = true
 ```
 
-```admonish info 
-The UI is not meant to be used for testing out endpoints. Rauthy has way to many options and details regarding to the
-authentication and it's not that simple, that the default Swagger UI can handle it, at least to my knowledge.
+> [!NOTE]
+> The UI is not meant to be used for testing out endpoints. Rauthy has way to many options and
+> details regarding to the
+> authentication and it's not that simple, that the default Swagger UI can handle it, at least to my
+> knowledge.
+>
+> If you want to test certain endpoints, I suggest you <b>create an API Key</b> for that case, which
+> you can use with any tool
+> you like.
 
-If you want to test certain endpoints, I suggest you <b>create an API Key</b> for that case, which you can use with any tool
-you like.
-```
-
-```admonish hint
-If you just want to take a look at the SwaggerUI when you have no running Rauthy instance yet, I have a test / dev 
-instance running which exposes the API docs: 
-<a href="https://iam.sebadob.dev/auth/v1/docs/" target="_blank">Swagger UI</a>
-
-Please note that this is a testing instance and it might not be online all the time or be running the latest nightly
-build, but everything should be fine most of the time.
-```
+> [!TIP]
+> If you just want to take a look at the SwaggerUI when you have no running Rauthy instance yet, I
+> have a test / dev 
+> instance running which exposes the API docs: 
+> <a href="https://iam.sebadob.dev/auth/v1/docs/" target="_blank">Swagger UI</a>
+>
+> Please note that this is a testing instance and it might not be online all the time or be running
+> the latest nightly
+> build, but everything should be fine most of the time.
 
 ## External Access
 

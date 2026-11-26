@@ -1,6 +1,6 @@
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{MfaAssurance, Session};
 use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
 use crate::entity::webauthn::passkey::PasskeyEntity;
@@ -28,7 +28,7 @@ pub async fn auth_start_discover() -> Result<WebauthnAuthStartResponse, ErrorRes
         Ok((mut rcr, auth_state)) => {
             let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
-            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u32::MAX as u128) as u32);
+            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u128::from(u32::MAX)) as u32);
             rcr.public_key.user_verification = UserVerificationPolicy::Required;
 
             // cannot be serialized with bincode -> no deserialize from any
@@ -95,6 +95,12 @@ pub async fn auth_finish_discover(
     };
 
     let mut pk_entity = PasskeyEntity::find_rk_by_cred_id(pubkey_cred.get_credential_id()).await?;
+    // The only login that has no prior `POST /authorize` with its `enabled` and `expired`
+    // validation, because the user is only known through the discovered Resident Key. Validate
+    // them before anything is done with the credential.
+    let mut user = User::find(pk_entity.user_id.clone()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
     let cred = Credential::from(pk_entity.get_pk());
 
     // This step is a bit tricky. We need to allow the credential we just discovered in the
@@ -155,7 +161,6 @@ pub async fn auth_finish_discover(
                 ));
             }
 
-            let mut user = User::find(pk_entity.user_id.clone()).await?;
             if let Some(suid) = &session.user_id
                 && suid != &user.id
             {
@@ -165,12 +170,10 @@ pub async fn auth_finish_discover(
                 ));
             }
 
-            session.is_mfa = true;
-            session.set_authenticated(&user).await?;
-            user.last_login = Some(Utc::now().timestamp());
-            user.last_failed_login = None;
-            user.failed_login_attempts = None;
-            user.save(None).await?;
+            session
+                .set_authenticated(&user, MfaAssurance::Ceremony)
+                .await?;
+            user.save_login_success().await?;
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id.clone())?;
 
@@ -196,5 +199,27 @@ pub async fn auth_finish_discover(
                 err.to_string(),
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use webauthn_rs::prelude::{PasskeyAuthentication, Url, WebauthnBuilder};
+
+    #[test]
+    fn rk_auth_state_local_roundtrip() {
+        let origin = Url::parse("https://localhost:8080").unwrap();
+        let webauthn = WebauthnBuilder::new("localhost", &origin)
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let (_rcr, auth_state) = webauthn.start_passkey_authentication(&[]).unwrap();
+        let json = serde_json::to_string(&auth_state).unwrap();
+
+        let state_local = serde_json::from_str::<PasskeyAuthenticationLocal>(&json).unwrap();
+        let reserialized = serde_json::to_string(&state_local).unwrap();
+        let _restored = serde_json::from_str::<PasskeyAuthentication>(&reserialized).unwrap();
     }
 }

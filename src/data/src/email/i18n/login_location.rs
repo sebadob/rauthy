@@ -13,14 +13,17 @@ pub struct I18nEmailLoginLocation<'a> {
 impl I18nEmailLoginLocation<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -30,12 +33,23 @@ impl I18nEmailLoginLocation<'_> {
 }
 
 impl I18nEmailLoginLocation<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Bezpečnostní upozornění",
+            unknown_location: "Přihlášení z neznámého místa",
+            if_invalid: "Pokud jste se nepřihlašovali vy, ihned přístup zrušte a změňte své \
+                přihlašovací údaje!",
+            revoke_link: "Zrušit přístup",
+            account_link: "Přehled účtu",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "Sicherheitswarnung",
             unknown_location: "Login von unbekannter Adresse",
-            if_invalid: "Sollte es sicher hierbei um einen ungültigen Login handeln, sollte dieser\
-                sofort widerrufen werden und Login-Daten erneuert werden!",
+            if_invalid: "Sollte es sich um einen ungültigen Login handeln, sollte dieser\
+                sofort widerrufen und Login-Daten erneuert werden!",
             revoke_link: "Zugriff Entziehen",
             account_link: "Account Dashboard",
         }
@@ -70,6 +84,16 @@ impl I18nEmailLoginLocation<'_> {
                 vos identifiants !",
             revoke_link: "Révoquer l’accès",
             account_link: "Tableau de bord du compte",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "Avviso di sicurezza",
+            unknown_location: "Accesso da una posizione sconosciuta",
+            if_invalid: "Se non riconosci questo accesso, revocalo subito e cambia le tue credenziali.",
+            revoke_link: "Revoca accesso",
+            account_link: "Il tuo account",
         }
     }
 
@@ -113,6 +137,17 @@ impl I18nEmailLoginLocation<'_> {
                 uw inloggegevens bijwerken!",
             revoke_link: "Toegang intrekken",
             account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            subject: "Ostrzeżenie bezpieczeństwa",
+            unknown_location: "Logowanie z nieznanej lokalizacji",
+            if_invalid: "Jeśli to logowanie nie było Twoje, natychmiast cofnij dostęp i zmień \
+                swoje dane logowania!",
+            revoke_link: "Cofnij dostęp",
+            account_link: "Panel konta",
         }
     }
 

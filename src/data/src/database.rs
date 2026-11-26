@@ -3,13 +3,16 @@ use crate::fido_mds::dataset::MdsDataset;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
+use crate::shutdown;
 use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
+use rauthy_common::constants::CACHE_INVALIDATION_DELAY;
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
 use semver::Version;
+use std::borrow::Cow;
 use std::env;
 use std::ops::DerefMut;
 use std::sync::{Arc, OnceLock};
@@ -38,7 +41,7 @@ struct MigrationsHiqlite;
 /// CAUTION: DO NOT change the order when adding new entries to now have false-positive
 /// during updates for already existing environments. Caches are not indexed via String / Name,
 /// but via u32 internally.
-#[derive(Debug, CacheVariants)]
+#[derive(Debug, Clone, Copy, CacheVariants)]
 pub enum Cache {
     Atproto,
     App,
@@ -63,6 +66,7 @@ pub enum Cache {
     EmailRateLimit,
     CredStuffDetect,
     OneTimePassword,
+    ConsentContent,
 }
 
 pub struct DB;
@@ -80,6 +84,9 @@ impl DB {
         // This means, even if Postgres is configured, this will still create and start the Hiqlite
         // DB, but it simply won't do anything else than heartbeats between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
+        // From here on, a fatal error must go through `shutdown::fatal()` or be returned to
+        // `main()`, so the node is shut down cleanly before the process exits.
+        shutdown::init(client.clone());
 
         if is_postgres() {
             Self::init_connect_postgres().await?;
@@ -104,6 +111,33 @@ impl DB {
         HIQLITE_CLIENT
             .get()
             .expect("cache::start_cache() must be called at startup")
+    }
+
+    /// Deletes cache entries after a database write.
+    ///
+    /// Sleeps [`CACHE_INVALIDATION_DELAY`] before it deletes: a concurrent fill reads the
+    /// database and only then puts its snapshot, and that put can land after this write has
+    /// invalidated. The delay orders these deletes after the put of any fill that read before
+    /// the write, which is what removes that stale snapshot.
+    ///
+    /// `(Cache, None)` wipes that entire cache, for writes that cannot name every affected
+    /// key. One call sleeps once, which keeps the delay at one [`CACHE_INVALIDATION_DELAY`]
+    /// per request.
+    pub async fn cache_delete_delayed<K, E>(entries: E) -> Result<(), ErrorResponse>
+    where
+        K: Into<Cow<'static, str>>,
+        E: IntoIterator<Item = (Cache, Option<K>)>,
+    {
+        sleep(CACHE_INVALIDATION_DELAY).await;
+
+        let client = Self::hql();
+        for (cache, key) in entries {
+            match key {
+                Some(key) => client.delete(cache, key).await?,
+                None => client.clear_cache(cache).await?,
+            }
+        }
+        Ok(())
     }
 
     /// Returns a client from the Postgres connection pool
@@ -166,12 +200,18 @@ impl DB {
                 for res in CertificateDer::pem_slice_iter(root_ca.as_bytes()) {
                     match res {
                         Ok(cert) => {
-                            root_store
-                                .add(cert)
-                                .expect("Invalid `database.pg_tls_root_ca`");
+                            if let Err(err) = root_store.add(cert) {
+                                shutdown::fatal(format!(
+                                    "Invalid `database.pg_tls_root_ca`: {err}"
+                                ))
+                                .await;
+                            }
                         }
                         Err(err) => {
-                            panic!("Cannot parse `database.pg_tls_root_ca`: {err:?}")
+                            shutdown::fatal(format!(
+                                "Cannot parse `database.pg_tls_root_ca`: {err:?}"
+                            ))
+                            .await;
                         }
                     }
                 }
@@ -195,7 +235,7 @@ impl DB {
         let pool: deadpool_postgres::Pool = deadpool_postgres::Pool::builder(mgr)
             .max_size(db_max_conn as usize)
             .create_timeout(Some(Duration::from_secs(10)))
-            .recycle_timeout(Some(Duration::from_secs(3600)))
+            .recycle_timeout(Some(Duration::from_hours(1)))
             .runtime(deadpool::Runtime::Tokio1)
             .build()?;
 
@@ -258,16 +298,16 @@ impl DB {
             if config.is_ha_cluster {
                 // TODO does this error make sense or might we be able to do it anyway?
                 error!(
-                    r#"
+                    r"
     You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
     You need to change your config to only have a single node in `HQL_NODES`, before you can then
     activate 'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
     After the migration has been done, you remove the 'MIGRATE_DB_FROM' and add more nodes again.
-                "#
+                "
                 );
             } else {
                 warn!(
-                    r#"
+                    r"
 
     Migrating data from 'MIGRATE_DB_FROM'
     This will overwrite possibly existing data in the current database!
@@ -275,7 +315,7 @@ impl DB {
 
     Proceeding in 10 seconds...
 
-                "#
+                "
                 );
 
                 sleep(Duration::from_secs(10)).await;
@@ -292,7 +332,7 @@ impl DB {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
                     );
-                };
+                }
             }
         } else if config.vars.dev.dev_mode && config.is_primary_node {
             migrate_dev_data().await.expect("Migrating DEV DATA");
@@ -485,6 +525,74 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
             rustls::SignatureScheme::ML_DSA_87,
         ]
     }
+}
+
+/// A fresh schema `<prefix>_..` on `RAUTHY_TEST_PG_URL` with all Postgres migrations, set as the
+/// `search_path` of the returned connection. Drop the returned schema at the end of the test.
+///
+/// Not for new tests, [`pg_test_pool`] and [`pg_test_conn`] included: a test that touches a DB is
+/// an integration test in `src/bin/tests/` against a running backend, via the public API, or via
+/// dev handlers when the public API cannot reach the case. These helpers only serve the existing
+/// unit tests that open Postgres from a `#[cfg(test)]` module, which are to be removed in the long
+/// run.
+#[cfg(test)]
+pub(crate) async fn pg_test_schema(prefix: &str) -> (PgClient, String) {
+    let (pool, schema) = pg_test_pool(prefix).await;
+    (pg_test_conn(&pool, &schema).await, schema)
+}
+
+/// [`pg_test_schema`] for tests that need more than one connection, see [`pg_test_conn`].
+#[cfg(test)]
+pub(crate) async fn pg_test_pool(prefix: &str) -> (deadpool_postgres::Pool, String) {
+    use deadpool_postgres::{Config, Runtime};
+    use tokio_postgres::NoTls;
+
+    let url = env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let schema = format!("{prefix}_{}_{nanos}", std::process::id());
+    let cfg = Config {
+        url: Some(url),
+        ..Default::default()
+    };
+    let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
+    let mut files = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .map(|p| {
+            let name = p.file_name().unwrap().to_str().unwrap();
+            let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
+            (nr, p)
+        })
+        .collect::<Vec<_>>();
+    files.sort();
+
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!(
+        "CREATE SCHEMA {schema}; SET search_path TO {schema};"
+    ))
+    .await
+    .unwrap();
+    for (_, path) in files {
+        cl.batch_execute(&std::fs::read_to_string(path).unwrap())
+            .await
+            .unwrap();
+    }
+    (pool, schema)
+}
+
+/// A connection of `pool` with `schema` as its `search_path`.
+#[cfg(test)]
+pub(crate) async fn pg_test_conn(pool: &deadpool_postgres::Pool, schema: &str) -> PgClient {
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!("SET search_path TO {schema}"))
+        .await
+        .unwrap();
+    cl
 }
 
 /// Starts a single hiqlite node with all migrations for the tests of this crate, once per test

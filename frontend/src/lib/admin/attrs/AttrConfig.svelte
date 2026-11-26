@@ -15,14 +15,21 @@
     import { slide } from 'svelte/transition';
     import { untrack } from 'svelte';
     import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
+    import { type UnsavedField } from '#utils/unsaved.ts';
 
     let {
         attr,
         attrs,
+        fields = $bindable([]),
+        reset = $bindable(() => {}),
         onSave,
     }: {
         attr: UserAttrConfigValueResponse;
         attrs: UserAttrConfigValueResponse[];
+        // the parent owns the `<UnsavedGuard>`, so it gets the watched values
+        fields?: UnsavedField[];
+        // the parent's guard calls this to drop local edits
+        reset?: () => void;
         onSave: () => void;
     } = $props();
 
@@ -43,15 +50,31 @@
 
     let showMakeEditable = $state(false);
 
+    function resetForm() {
+        name = attr.name;
+        desc = attr.desc;
+        defaultValue = stringifyJsonValue(attr.default_value, 1);
+        userEditable = attr.user_editable || false;
+        showMakeEditable = false;
+    }
+
     $effect(() => {
         if (attr.name) {
-            name = attr.name;
-            desc = attr.desc;
-            defaultValue = stringifyJsonValue(attr.default_value, 1);
-            userEditable = attr.user_editable || false;
-
-            showMakeEditable = false;
+            resetForm();
         }
+    });
+
+    let watched = $derived.by(() => [
+        { value: name, original: attr.name },
+        { value: desc, original: attr.desc },
+        { value: defaultValue, original: stringifyJsonValue(attr.default_value, 1) },
+        { value: userEditable, original: attr.user_editable || false },
+    ]);
+
+    // the parent owns navigation guards, so it needs to know about the form state
+    $effect(() => {
+        fields = watched;
+        reset = resetForm;
     });
 
     async function submitMakeEditable() {
@@ -107,6 +130,7 @@
     />
     <Input
         bind:value={defaultValue}
+        formatBadge={t.account.stringOrJson ?? 'String / JSON'}
         autocomplete="off"
         label={ta.attrs.defaultValue}
         placeholder={ta.attrs.defaultValue}

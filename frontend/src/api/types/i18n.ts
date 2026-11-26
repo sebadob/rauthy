@@ -1,5 +1,19 @@
 export type Language =
-    'en' | 'de' | 'es' | 'fr' | 'ja' | 'ko' | 'nb' | 'nl' | 'pt' | 'ru' | 'uk' | 'zh';
+    | 'en'
+    | 'cs'
+    | 'de'
+    | 'es'
+    | 'fr'
+    | 'it'
+    | 'ja'
+    | 'ko'
+    | 'nb'
+    | 'nl'
+    | 'pl'
+    | 'pt'
+    | 'ru'
+    | 'uk'
+    | 'zh';
 
 export interface I18nConfigResponse {
     common: Language[];

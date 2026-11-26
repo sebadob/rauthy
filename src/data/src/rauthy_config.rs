@@ -1,6 +1,8 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
+use crate::entity::clients::Client;
+use crate::entity::consent_sources::ConsentSource;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::fido_mds::masks::{AttachmentHintMask, KeyProtectionMask, MdsCertLevel};
@@ -9,15 +11,18 @@ use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::CookieMode;
+use rauthy_common::constants::{CookieMode, DEFAULT_CONFIG_PATH};
 use rauthy_common::logging::LogLevelAccess;
-use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME};
+use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME, RE_RESOURCE};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use regex::Regex;
 use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::collections::{BTreeMap, btree_map};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -33,6 +38,15 @@ use webauthn_rs::Webauthn;
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
 
 const FROM_SECRETS: &str = "$SECRETS";
+
+/// The difficulty range `spow` accepts. Outside of it, every `Pow::with_difficulty` call returns an `Err`,
+/// which would break the login PoW with a 500 at runtime instead of failing at startup.
+const POW_DIFFICULTY_MIN: u8 = 10;
+const POW_DIFFICULTY_MAX: u8 = 99;
+
+/// How long rolling log files are kept when `logging.log_file` is set. Changing this changes how
+/// much disk space the default log file cleanup will occupy.
+const DEFAULT_LOG_FILE_KEEP_FOR: Duration = Duration::from_hours(30 * 24);
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -64,6 +78,9 @@ impl RauthyConfig {
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {err}");
+        }
+        if vars.user_pictures.storage_type == "file" && node_config.nodes.len() > 1 {
+            panic!("You can only use local file storage for User Pictures for a single instance");
         }
 
         let listen_scheme = match vars.server.scheme.as_ref() {
@@ -228,6 +245,13 @@ impl RauthyConfig {
         if slf.vars.dev.dev_mode {
             warn!("You started with DEV Mode enabled. Do NOT use this in production!");
         }
+        if !slf.vars.consent.enable && !slf.vars.consent.sources.is_empty() {
+            warn!(
+                "{} `[[consent.sources]]` configured, but `consent.enable` is `false` - they \
+                are validated, but not used",
+                slf.vars.consent.sources.len()
+            );
+        }
     }
 
     pub fn init_static(self) {
@@ -236,8 +260,8 @@ impl RauthyConfig {
             self.vars.encryption.keys.clone(),
         ) else {
             panic!(
-                r#"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
-    https://sebadob.github.io/rauthy/config/encryption.html"#
+                r"The `ENC_KEYS`are not correctly set up. Please take a look at the documentation:
+    https://sebadob.github.io/rauthy/config/encryption.html"
             );
         };
 
@@ -347,7 +371,7 @@ impl Default for Vars {
                 danger_allow_insecure: false,
                 token_lifetime: Duration::from_secs(30),
                 allow_clock_skew: Duration::from_secs(5),
-                allowed_token_lifetime: Duration::from_secs(120),
+                allowed_token_lifetime: Duration::from_mins(2),
             },
             bootstrap: VarsBootstrap {
                 admin_email: "admin@localhost".to_string(),
@@ -357,14 +381,19 @@ impl Default for Vars {
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
                 generated_secrets_file: String::new().into(),
-                generated_secrets_ttl: Duration::from_secs(600),
+                generated_secrets_ttl: Duration::from_mins(10),
                 reconcile: false,
             },
-            consent: VarsConsent { enable: false },
+            consent: VarsConsent {
+                enable: false,
+                content_cache_ttl: Duration::from_hours(1),
+                sources: BTreeMap::default(),
+            },
             cred_stuff_detect: VarsCredStuff {
-                blacklist_duration: Duration::from_secs(24 * 3600),
+                enable: true,
+                blacklist_duration: Duration::from_hours(24),
                 blacklist_threshold: 15,
-                scan_window: Duration::from_secs(3 * 3600),
+                scan_window: Duration::from_hours(3),
             },
             database: VarsDatabase {
                 hiqlite: true,
@@ -383,19 +412,19 @@ impl Default for Vars {
                 migrate_pg_user: None,
                 migrate_pg_password: None,
                 migrate_pg_db_name: "rauthy".into(),
-                sched_user_exp: Duration::from_secs(3600),
+                sched_user_exp: Duration::from_hours(1),
                 sched_user_exp_delete: None,
             },
             device_grant: VarsDeviceGrant {
-                code_lifetime: Duration::from_secs(5 * 60),
+                code_lifetime: Duration::from_mins(5),
                 user_code_length: 8,
                 rate_limit: None,
                 poll_interval: Duration::from_secs(5),
-                refresh_token_lifetime: Duration::from_secs(3 * 24 * 3600),
+                refresh_token_lifetime: Duration::from_hours(3 * 24),
             },
             dpop: VarsDpop {
                 force_nonce: true,
-                nonce_exp: Duration::from_secs(15 * 60),
+                nonce_exp: Duration::from_mins(15),
             },
             dynamic_clients: VarsDynamicClients {
                 enable: false,
@@ -407,12 +436,12 @@ impl Default for Vars {
                 ],
                 default_scopes: vec!["openid".into()],
                 reg_token: None,
-                default_token_lifetime: Duration::from_secs(30 * 60),
+                default_token_lifetime: Duration::from_mins(30),
                 secret_auto_rotate: true,
-                cleanup_interval: Duration::from_secs(3600),
-                cleanup_threshold: Duration::from_secs(3600),
+                cleanup_interval: Duration::from_hours(1),
+                cleanup_threshold: Duration::from_hours(1),
                 cleanup_inactive_threshold: None,
-                rate_limit_reg: Duration::from_secs(3600),
+                rate_limit_reg: Duration::from_hours(1),
                 allowed_resources: Vec::default(),
             },
             email: VarsEmail {
@@ -426,8 +455,8 @@ impl Default for Vars {
                 smtp_tls_mode: EmailTlsMode::Tls,
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
-                    orphaned_pickup: Duration::from_secs(5 * 60),
-                    scheduler_interval: Duration::from_secs(5 * 60),
+                    orphaned_pickup: Duration::from_mins(5),
+                    scheduler_interval: Duration::from_mins(5),
                     batch_size: 3,
                     batch_delay: Duration::from_secs(2),
                 },
@@ -439,13 +468,16 @@ impl Default for Vars {
                 microsoft_graph_uri: None,
                 root_ca: None,
                 tz_fmt: VarsEmailTzFmt {
+                    cs: "%-d. %-m. %Y %T (%Z)".into(),
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
                     es: "%d/%m/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
+                    it: "%d/%m/%Y %T (%Z)".into(),
                     ja: "%Y/%m/%d %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     nl: "%d-%m-%Y %T (%Z)".into(),
+                    pl: "%d.%m.%Y %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
                     pt: "%d/%m/%Y %T (%Z)".into(),
                     ru: "%d.%m.%Y %T (%Z)".into(),
@@ -453,7 +485,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
-                password_exp: Duration::from_secs(10 * 24 * 3600),
+                password_exp: Duration::from_hours(10 * 24),
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -472,7 +504,7 @@ impl Default for Vars {
                     "webid".into(),
                 ],
                 default_scopes: None,
-                cache_lifetime: Duration::from_secs(3600),
+                cache_lifetime: Duration::from_hours(1),
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
                 allowed_resources: Vec::default(),
@@ -494,7 +526,7 @@ impl Default for Vars {
                 notify_level_matrix: EventLevel::Notice,
                 notify_level_slack: EventLevel::Notice,
                 persist_level: EventLevel::Info,
-                cleanup_threshold: Duration::from_secs(60 * 24 * 3600),
+                cleanup_threshold: Duration::from_hours(60 * 24),
                 generate_token_issued: true,
                 level_new_user: EventLevel::Info,
                 level_user_email_change: EventLevel::Notice,
@@ -511,6 +543,7 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
+                level_consent_granted: EventLevel::Notice,
                 level_consent_revoked: EventLevel::Notice,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
@@ -528,8 +561,8 @@ impl Default for Vars {
             },
             fedcm: ConfigVarsFedCM {
                 experimental_enable: false,
-                session_lifetime: 2592000,
-                session_timeout: 259200,
+                session_lifetime: 2_592_000,
+                session_timeout: 259_200,
             },
             geo: ConfigVarsGeo {
                 block_is_whitelist: None,
@@ -543,7 +576,7 @@ impl Default for Vars {
                 maxmind_update_cron: "0 0 5 * * * *".into(),
             },
             hashing: VarsHashing {
-                argon2_m_cost: 131072,
+                argon2_m_cost: 131_072,
                 argon2_t_cost: 4,
                 argon2_p_cost: 8,
                 max_hash_threads: 2,
@@ -553,31 +586,36 @@ impl Default for Vars {
                 connect_timeout: Duration::from_secs(10),
                 request_timeout: Duration::from_secs(10),
                 min_tls: "1.3".into(),
-                idle_timeout: Duration::from_secs(15 * 60),
+                idle_timeout: Duration::from_mins(15),
                 danger_unencrypted: false,
                 danger_insecure: false,
                 root_ca_bundle: None,
             },
             i18n: VarsI18n {
                 filter_lang_common: vec![
+                    "cs".into(),
                     "de".into(),
                     "en".into(),
                     "es".into(),
                     "fr".into(),
+                    "it".into(),
                     "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
+                    "pl".into(),
                     "pt".into(),
                     "ru".into(),
                     "uk".into(),
                     "zhhans".into(),
                 ],
                 filter_lang_admin: vec![
+                    "cs".into(),
                     "de".into(),
                     "en".into(),
                     "es".into(),
                     "fr".into(),
+                    "it".into(),
                     "ja".into(),
                     "ko".into(),
                     "nb".into(),
@@ -590,18 +628,22 @@ impl Default for Vars {
             },
             lifetimes: VarsLifetimes {
                 refresh_token_grace_time: Duration::from_secs(5),
-                refresh_token_lifetime: Duration::from_secs(48 * 3600),
-                session_lifetime: Duration::from_secs(10 * 3600),
+                refresh_token_lifetime: Duration::from_hours(48),
+                session_lifetime: Duration::from_hours(10),
                 session_renew_mfa: false,
-                session_timeout: Duration::from_secs(90 * 60),
-                magic_link_pwd_reset: Duration::from_secs(30 * 60),
-                magic_link_pwd_first: Duration::from_secs(3 * 24 * 3600),
+                session_timeout: Duration::from_mins(90),
+                magic_link_pwd_reset: Duration::from_mins(30),
+                magic_link_pwd_first: Duration::from_hours(3 * 24),
                 jwk_autorotate_cron: "0 30 3 1 * * *".into(),
             },
             logging: VarsLogging {
                 level: "info".into(),
                 level_database: "info".into(),
                 level_access: "modifying".into(),
+                log_file: None,
+                log_file_cleanup: "0 0 3 * * * *".into(),
+                log_file_keep_for: DEFAULT_LOG_FILE_KEEP_FOR,
+                log_file_archive_after: None,
                 log_fmt: "text".into(),
             },
             matrix: VarsMatrix {
@@ -609,12 +651,14 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+                optional_select_mfa: false,
+                admin_passkey_only: true,
             },
             otp: VarsOtp {
                 enable: false,
                 length: 6,
-                exp: Duration::from_secs(5 * 60),
-                renew_exp: Duration::from_secs(30 * 24 * 3600),
+                exp: Duration::from_mins(5),
+                renew_exp: Duration::from_hours(30 * 24),
                 digest_len_default: 512,
                 email: VarsOtpEmail {
                     enable: true,
@@ -633,14 +677,14 @@ impl Default for Vars {
             },
             pam: VarsPam {
                 remote_password_len: 24,
-                remote_password_ttl: Duration::from_secs(120),
+                remote_password_ttl: Duration::from_mins(2),
                 authorized_keys: VarsPamAuthorizedKeys {
                     authorized_keys_enable: true,
                     auth_required: true,
                     blacklist_used_keys: true,
-                    blacklist_cleanup_threshold: Duration::from_secs(730 * 24 * 3600),
+                    blacklist_cleanup_threshold: Duration::from_hours(730 * 24),
                     include_comments: true,
-                    forced_key_expiry: Duration::from_secs(365 * 24 * 3600),
+                    forced_key_expiry: Duration::from_hours(365 * 24),
                 },
             },
             pow: VarsPow {
@@ -669,23 +713,35 @@ impl Default for Vars {
                 swagger_ui_public: false,
                 see_keep_alive: Duration::from_secs(30),
                 ssp_threshold: 1000,
+                instance_label: None,
             },
             sponsor: VarsSponsor {
                 email_reminder_disable: false
             },
             suspicious_requests: VarsSuspiciousRequests {
-                blacklist: Duration::from_secs(24 * 3600),
+                blacklist: Duration::from_hours(24),
                 log: false,
             },
             templates: VarsTemplates {
                 password_new: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Nové heslo".into(),
+                        header: "Nové heslo –".into(),
+                        text: None,
+                        click_link: Some("Kliknutím na odkaz níže přejdete k nastavení hesla.".into()),
+                        validity: Some("Z bezpečnostních důvodů platí odkaz jen krátkou dobu.".into()),
+                        expires: Some("Odkaz platí do:".into()),
+                        button: Some("Nastavit heslo".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     de: VarsTemplate
                     {
                         subject: "Neues Passwort".into(),
                         header: "Neues Passwort für".into(),
                         text: None,
                         click_link:
-                        Some("Klicken Sie auf den unten stehenden Link um ein neues Passwort zu setzen."
+                        Some("Zum Setzen eines neuen Passwortes den unten stehenden Link nutzen."
                                 .into()),
                         validity: Some("Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
                                 .into()),
@@ -733,6 +789,17 @@ impl Default for Vars {
                                 .into()),
                         expires: Some("Le lien expire :".into()),
                         button: Some("Définir le mot de passe".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    it: VarsTemplate {
+                        subject: "Nuova password".into(),
+                        header: "Nuova password per".into(),
+                        text: None,
+                        click_link: Some("Apri il link qui sotto per impostare la password.".into()),
+                        validity: Some("Per motivi di sicurezza, il link è valido solo per un breve periodo.".into()),
+                        expires: Some("Il link scade il:".into()),
+                        button: Some("Imposta password".into()),
                         footer: None,
                         button_text_request_new: None,
                     },
@@ -784,6 +851,21 @@ impl Default for Vars {
                                 .into()),
                         expires: Some("Link geldig tot:".into()),
                         button: Some("Wachtwoord instellen".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    pl: VarsTemplate
+                    {
+                        subject: "Nowe hasło".into(),
+                        header: "Nowe hasło dla".into(),
+                        text: None,
+                        click_link: Some("Kliknij poniższy link, aby przejść do formularza ustawienia hasła."
+                                .into()),
+                        validity:
+                        Some("Ze względów bezpieczeństwa ten link jest ważny tylko przez krótki czas."
+                                .into()),
+                        expires: Some("Link wygasa:".into()),
+                        button: Some("Ustaw hasło".into()),
                         footer: None,
                         button_text_request_new: None,
                     },
@@ -845,11 +927,22 @@ impl Default for Vars {
                     },
                 },
                 password_reset: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Žádost o obnovení hesla".into(),
+                        header: "Žádost o obnovení hesla –".into(),
+                        text: None,
+                        click_link: Some("Kliknutím na odkaz níže přejdete k obnovení hesla.".into()),
+                        validity: Some("Z bezpečnostních důvodů platí odkaz jen krátkou dobu.".into()),
+                        expires: Some("Odkaz platí do:".into()),
+                        button: Some("Obnovit heslo".into()),
+                        footer: Some("Pokud odkaz vypršel, můžete si vyžádat nový.".into()),
+                        button_text_request_new: Some("Vyžádat nový odkaz".into()),
+                    },
                     de: VarsTemplate {
                         subject: "Passwort Reset angefordert".into(),
                         header: "Passwort Reset angefordert für".into(),
                         text: None,
-                        click_link: Some("Klicken Sie auf den unten stehenden Link für den Passwort Reset."
+                        click_link: Some("Für den Passwort Reset den unten stehenden Link nutzen."
                                 .into()),
                         validity: Some("Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig."
                                 .into()),
@@ -899,6 +992,17 @@ impl Default for Vars {
                         footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
                         button_text_request_new: Some("Demander un nouveau lien".into()),
                     },
+                    it: VarsTemplate {
+                        subject: "Richiesta di reimpostazione della password".into(),
+                        header: "Richiesta di reimpostazione della password per".into(),
+                        text: None,
+                        click_link: Some("Apri il link qui sotto per reimpostare la password.".into()),
+                        validity: Some("Per motivi di sicurezza, il link è valido solo per un breve periodo.".into()),
+                        expires: Some("Il link scade il:".into()),
+                        button: Some("Reimposta password".into()),
+                        footer: Some("Se il link è scaduto, puoi richiederne uno nuovo.".into()),
+                        button_text_request_new: Some("Richiedi un nuovo link".into()),
+                    },
                     ja: VarsTemplate {
                         subject: "パスワードリセットのご依頼".into(),
                         header: "パスワードリセットのご依頼 -".into(),
@@ -947,6 +1051,20 @@ impl Default for Vars {
                         button: Some("Wachtwoord resetten".into()),
                         footer: Some("Als deze link is verlopen, kunt u een nieuwe aanvragen.".into()),
                         button_text_request_new: Some("Nieuwe link aanvragen".into()),
+                    },
+                    pl: VarsTemplate {
+                        subject: "Prośba o reset hasła".into(),
+                        header: "Prośba o reset hasła dla".into(),
+                        text: None,
+                        click_link:
+                        Some("Kliknij poniższy link, aby przejść do formularza resetu hasła.".into()),
+                        validity:
+                        Some("Ze względów bezpieczeństwa ten link jest ważny tylko przez krótki czas."
+                                .into()),
+                        expires: Some("Link wygasa:".into()),
+                        button: Some("Zresetuj hasło".into()),
+                        footer: Some("Jeśli ten link wygasł, możesz poprosić o nowy.".into()),
+                        button_text_request_new: Some("Poproś o nowy link".into()),
                     },
                     pt: VarsTemplate {
                         subject: "Pedido de redefinição da palavra-passe".into(),
@@ -1004,15 +1122,31 @@ impl Default for Vars {
                     },
                 },
                 email_registered_already: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "E-mail je již registrován".into(),
+                        header: "E-mail je již registrován – ".into(),
+                        text: Some(r"Někdo se pokusil zaregistrovat nový účet s vaší e-mailovou adresou,
+ačkoli účet s touto adresou již existuje. Pokud jste to byli vy a šlo o omyl,
+můžete tuto zprávu ignorovat. Pokud jste zapomněli heslo, můžete si ho
+obnovit pomocí odkazu níže.
+Pokud jste se registrovat nepokoušeli, nemusíte se obávat.
+Váš účet nebyl napaden a žádná data neunikla.".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Vyžádat odkaz na obnovení hesla".into()),
+                    },
                     de: VarsTemplate {
                         subject: "E-Mail bereits registriert".into(),
                         header: "E-Mail bereits registriert - ".into(),
-                        text: Some(r#"Es wurde versucht einen neuen Account mit dieser E-Mail Adresse zu registrieren,
+                        text: Some(r"Es wurde versucht einen neuen Account mit dieser E-Mail Adresse zu registrieren,
 während diese Adresse bereits registriert war. Falls dies ein Fehler war, kann diese
 E-Mail ignoriert werden. Sollte jedoch das Passwort verloren gegangen sein und ein
 neues wird benötigt, so kann der unten stehende Link dafür genutzt werden.
 Falls diese Nachricht durch jemand Anderen ausgelöst wurde - keine Sorge, der Account
-is sicher und es gab keinerlei Datenlecks."#.into()),
+ist sicher und es gab keinerlei Datenlecks.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1023,12 +1157,12 @@ is sicher und es gab keinerlei Datenlecks."#.into()),
                     en: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1039,12 +1173,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     es: VarsTemplate {
                         subject: "Correo electrónico ya registrado".into(),
                         header: "Correo electrónico ya registrado - ".into(),
-                        text: Some(r#"Alguien ha intentado registrar una cuenta nueva con su dirección de correo electrónico,
+                        text: Some(r"Alguien ha intentado registrar una cuenta nueva con su dirección de correo electrónico,
 pero ya existe una cuenta con esa dirección. Si fue usted y se trató de un error,
 puede ignorar este mensaje. Sin embargo, si ha olvidado su contraseña, puede usar
 el enlace de abajo para restablecerla.
 Si no fue usted quien intentó registrar la nueva cuenta, no se preocupe.
-Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato."#.into()),
+Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1055,12 +1189,12 @@ Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato."#.into()
                     fr: VarsTemplate {
                         subject: "e-mail déjà enregistré".into(),
                         header: "e-mail déjà enregistré - ".into(),
-                        text: Some(r#"Quelqu'un a essayé d'enregistrer un nouveau compte avec votre adresse e-mail
+                        text: Some(r"Quelqu'un a essayé d'enregistrer un nouveau compte avec votre adresse e-mail
 alors qu'un compte existe déjà. Si c'était vous et que c'était une erreur, vous pouvez ignorer ce message.
 Cependant, si vous avez oublié votre mot de passe,
 vous pouvez utiliser le lien ci-dessous pour le réinitialiser.
 Si ce n'est pas vous qui essayez d'enregistrer le nouveau compte, ne vous inquiétez pas.
-Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.into()),
+Votre compte n'a pas été compromis et aucune donnée n'a été divulguée.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1068,14 +1202,30 @@ Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.i
                         footer: None,
                         button_text_request_new: Some("Demander un lien de réinitialisation du mot de passe".into()),
                     },
+                    it: VarsTemplate {
+                        subject: "Indirizzo email già registrato".into(),
+                        header: "Indirizzo email già registrato –".into(),
+                        text: Some(r"Qualcuno ha provato a registrare un nuovo account con il tuo indirizzo email,
+ma esiste già un account associato a questo indirizzo. Se sei stato tu e si è
+trattato di un errore, puoi ignorare questo messaggio. Se hai dimenticato la
+password, puoi reimpostarla usando il link qui sotto.
+Se non hai richiesto tu la registrazione, il tuo account è al sicuro e nessun
+dato è stato divulgato.".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Richiedi un link per reimpostare la password".into()),
+                    },
                     ja: VarsTemplate {
                         subject: "このメールアドレスは登録済みです".into(),
                         header: "このメールアドレスは登録済みです -".into(),
-                        text: Some(r#"すでにアカウントがあるメールアドレスで、新しいアカウントの登録が試みられました。
+                        text: Some(r"すでにアカウントがあるメールアドレスで、新しいアカウントの登録が試みられました。
 ご自身の操作ミスであれば、このメッセージは無視してかまいません。
 パスワードを忘れた場合は、下のリンクからリセットできます。
 ご自身による登録でない場合も、心配はいりません。
-アカウントは侵害されておらず、情報も漏れていません。"#.into()),
+アカウントは侵害されておらず、情報も漏れていません。".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1086,12 +1236,12 @@ Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.i
                     ko: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1102,12 +1252,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     nb: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1118,12 +1268,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     nl: VarsTemplate {
                         subject: "E-Mail al geregistreerd".into(),
                         header: "E-Mail al geregistreerd - ".into(),
-                        text: Some(r#"Iemand heeft geprobeerd een nieuw account te registreren met uw e-mailadres,
+                        text: Some(r"Iemand heeft geprobeerd een nieuw account te registreren met uw e-mailadres,
 terwijl er al een account bestaat. Als u dat zelf was en het een vergissing was, kunt u
 dit bericht negeren. Als u echter uw wachtwoord bent vergeten, kunt u
 de onderstaande link gebruiken om het te resetten.
 Als u zelf niet probeerde een nieuw account te registreren - geen zorgen.
-Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
+Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1131,15 +1281,31 @@ Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
                         footer: None,
                         button_text_request_new: Some("Wachtwoordreset link aanvragen".into()),
                     },
+                    pl: VarsTemplate {
+                        subject: "Adres e-mail jest już zarejestrowany".into(),
+                        header: "Adres e-mail jest już zarejestrowany - ".into(),
+                        text: Some(r"Ktoś próbował założyć nowe konto na Twój adres e-mail,
+chociaż konto już istnieje. Jeśli to Ty i zrobiłeś to przez pomyłkę, możesz
+zignorować tę wiadomość. Jeśli jednak nie pamiętasz hasła, możesz je zresetować
+za pomocą poniższego linku.
+Jeśli to nie Ty próbowałeś założyć nowe konto, nie musisz się martwić.
+Twoje konto nie zostało naruszone i żadne dane nie wyciekły.".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Poproś o link do resetu hasła".into()),
+                    },
                     pt: VarsTemplate {
                         subject: "E-mail já registado".into(),
                         header: "E-mail já registado - ".into(),
-                        text: Some(r#"Alguém tentou registar uma nova conta com o seu endereço de e-mail,
+                        text: Some(r"Alguém tentou registar uma nova conta com o seu endereço de e-mail,
 mas já existe uma conta com este endereço. Se a tentativa foi sua e se tratou de um engano,
 pode ignorar esta mensagem. No entanto, se se esqueceu da sua palavra-passe, pode usar
 a ligação abaixo para a redefinir.
 Se a tentativa de registo não foi sua, não precisa de se preocupar.
-A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
+A sua conta não foi comprometida e nenhum dado foi divulgado.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1150,12 +1316,12 @@ A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
                     ru: VarsTemplate {
                         subject: "E-Mail уже зарегистрирован".into(),
                         header: "E-Mail уже зарегистрирован - ".into(),
-                        text: Some(r#"Кто-то попытался зарегистрировать новый аккаунт с вашим адресом E-Mail,
+                        text: Some(r"Кто-то попытался зарегистрировать новый аккаунт с вашим адресом E-Mail,
 в то время как аккаунт уже существует. Если это были вы и произошла ошибка,
 можете проигнорировать это сообщение. Однако если вы забыли пароль, вы можете
 воспользоваться ссылкой ниже для его сброса.
 Если регистрацию пытался выполнить кто-то другой — не беспокойтесь.
-Ваш аккаунт не был скомпрометирован и утечки данных не произошло."#.into()),
+Ваш аккаунт не был скомпрометирован и утечки данных не произошло.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1166,12 +1332,12 @@ A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
                     uk: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1182,12 +1348,12 @@ Your account has not been compromised and no data was leaked."#.into()),
                     zhhans: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
-                        text: Some(r#"Someone tried to register a new account with your E-Mail address
+                        text: Some(r"Someone tried to register a new account with your E-Mail address
 while an account exists already. If that was you, and it was a mistake, you
 can ignore this message. However, if you forgot your password, you can use
 the link below to reset it.
 If it was not you trying to register the new account - no need to worry.
-Your account has not been compromised and no data was leaked."#.into()),
+Your account has not been compromised and no data was leaked.".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1197,10 +1363,21 @@ Your account has not been compromised and no data was leaked."#.into()),
                     },
                 },
                 email_otp: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Jednorázový kód".into(),
+                        header: "Jednorázový kód –".into(),
+                        text: Some("Váš jednorázový kód:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     de: VarsTemplate {
                         subject: "One Time Password".into(),
-                        header: "One Time Password for".into(),
-                        text: Some("Your OTP is the following:".into()),
+                        header: "One Time Password für".into(),
+                        text: Some("Das Einmalpasswort ist das Folgende:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1234,6 +1411,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
                         text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    it: VarsTemplate {
+                        subject: "Codice monouso".into(),
+                        header: "Codice monouso per".into(),
+                        text: Some("Il tuo codice monouso è:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1278,6 +1466,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
                         text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    pl: VarsTemplate {
+                        subject: "Hasło jednorazowe".into(),
+                        header: "Hasło jednorazowe dla".into(),
+                        text: Some("Twój kod OTP to:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1338,7 +1537,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 poll_watch_interval: None,
             },
             tos: VarsToS {
-                accept_timeout: Duration::from_secs(15 * 60),
+                accept_timeout: Duration::from_mins(15),
             },
             user_delete: VarsUserDelete {
                 enable_self_delete: false,
@@ -1360,6 +1559,10 @@ Your account has not been compromised and no data was leaked."#.into()),
                 domain_restriction: None,
                 domain_blacklist: Vec::default(),
                 allow_open_redirect: false,
+                post_reset_redirect_uri: None,
+                reject_plus_subaddressing: false,
+                reserved_names: default_reserved_names(),
+                danger_reg_acc_init_immediate: false,
             },
             user_values: VarsUserValuesConfig {
                 given_name: UserValueConfigValue::Required,
@@ -1374,6 +1577,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 revalidate_during_login: false,
                 name_order_reverse: false,
                 password_reset_redirect_timeout: 5,
+                self_service_email_change_deny: false,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -1387,9 +1591,9 @@ Your account has not been compromised and no data was leaked."#.into()),
                 rp_id: String::default(),
                 rp_origin: String::default(),
                 rp_name: "Rauthy IAM".into(),
-                req_exp: Duration::from_secs(60),
+                req_exp: Duration::from_mins(1),
                 data_exp: Duration::from_secs(90),
-                renew_exp: Duration::from_secs(90 * 24 * 3600),
+                renew_exp: Duration::from_hours(90 * 24),
                 force_uv: false,
                 no_password_exp: true,
                 optimistic_attestation: false,
@@ -1411,20 +1615,29 @@ impl Vars {
             .expect("Cannot parse USE_VAULT_CONFIG as bool");
         let slf = Self::default();
 
-        let config = match use_vault_config {
-            true => match VaultConfig::load_config().await {
+        let config = if use_vault_config {
+            match VaultConfig::load_config().await {
                 Ok(config) => config,
                 Err(err) => {
                     panic!("Cannot read config from Vault. {err}");
                 }
-            },
-            _ => match fs::read_to_string(path_config).await {
+            }
+        } else {
+            match fs::read_to_string(path_config).await {
                 Ok(s) => s,
-                Err(err) => {
+                // A config via env vars only is a valid setup, but only for the default path.
+                // A file that was given explicitly, or exists but cannot be read, is an error.
+                Err(err)
+                    if err.kind() == std::io::ErrorKind::NotFound
+                        && path_config == DEFAULT_CONFIG_PATH =>
+                {
                     warn!("Cannot read config from {}: {:?}", path_config, err);
                     String::default()
                 }
-            },
+                Err(err) => {
+                    panic!("Cannot read config from {path_config}: {err}");
+                }
+            }
         };
 
         Self::parse(slf, config, path_secrets).await
@@ -1492,7 +1705,7 @@ impl Vars {
         let node_config = slf.parse_hiqlite_config(&mut table, secrets).await;
         slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
-        check_table_empty(table, "<root>");
+        check_table_empty(&table, "<root>");
 
         (slf, node_config)
     }
@@ -1530,7 +1743,7 @@ impl Vars {
             self.dev.provider_callback_url = Some(v);
         }
 
-        check_table_empty(table, "dev");
+        check_table_empty(&table, "dev");
     }
 
     fn parse_atproto(&mut self, table: &mut toml::Table) {
@@ -1540,7 +1753,7 @@ impl Vars {
             self.atproto.enable = v;
         }
 
-        check_table_empty(table, "atproto");
+        check_table_empty(&table, "atproto");
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
@@ -1656,7 +1869,7 @@ impl Vars {
             self.access.redirect_root_to_account = v;
         }
 
-        check_table_empty(table, "access");
+        check_table_empty(&table, "access");
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
@@ -1731,7 +1944,7 @@ impl Vars {
             self.auth_headers.preferred_username = v.into();
         }
 
-        check_table_empty(table, "auth_headers");
+        check_table_empty(&table, "auth_headers");
     }
 
     fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
@@ -1786,7 +1999,7 @@ impl Vars {
             self.backchannel_logout.allowed_token_lifetime = v;
         }
 
-        check_table_empty(table, "backchannel_logout");
+        check_table_empty(&table, "backchannel_logout");
     }
 
     fn parse_bootstrap(&mut self, table: &mut toml::Table) {
@@ -1850,7 +2063,7 @@ impl Vars {
             self.bootstrap.reconcile = v;
         }
 
-        check_table_empty(table, "bootstrap");
+        check_table_empty(&table, "bootstrap");
     }
 
     fn resolve_bootstrap_generated_secrets_file(&mut self, node_config: &NodeConfig) {
@@ -1866,13 +2079,65 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "consent", "enable", "CONSENT_ENABLE") {
             self.consent.enable = v;
         }
+        if let Some(v) = t_duration(
+            &mut table,
+            "consent",
+            "content_cache_ttl",
+            "CONSENT_CONTENT_CACHE_TTL",
+        ) {
+            if v.is_zero() {
+                panic!("`consent.content_cache_ttl` must be at least 1s");
+            }
+            self.consent.content_cache_ttl = v;
+        }
 
-        check_table_empty(table, "consent");
+        if let Some(value) = table.remove("sources") {
+            let Value::Array(arr) = value else {
+                panic!("{}", err_t("sources", "consent", "Array"));
+            };
+            for entry in arr {
+                let Value::Table(mut table) = entry else {
+                    panic!("{}", err_t("<entry>", "consent.sources", "Table"));
+                };
+
+                let resource = t_str(&mut table, "consent.sources", "resource", "")
+                    .expect("`resource` is mandatory for `[[consent.sources]]`");
+                let source = t_str(&mut table, "consent.sources", "source", "")
+                    .expect("`source` is mandatory for `[[consent.sources]]`");
+                let name = t_str(&mut table, "consent.sources", "name", "")
+                    .expect("`name` is mandatory for `[[consent.sources]]`");
+                check_table_empty(&table, "consent.sources");
+
+                let entry = match VarsConsentSource::new(resource, &source, name) {
+                    Ok(entry) => entry,
+                    Err(err) => panic!("Invalid `[[consent.sources]]`: {err}"),
+                };
+                match self.consent.sources.entry(entry.resource.clone()) {
+                    btree_map::Entry::Vacant(slot) => {
+                        slot.insert(entry);
+                    }
+                    btree_map::Entry::Occupied(slot) => panic!(
+                        "Invalid `[[consent.sources]]`: duplicate `resource` '{}'",
+                        slot.key()
+                    ),
+                }
+            }
+        }
+
+        check_table_empty(&table, "consent");
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "cred_stuff_detection");
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "cred_stuff_detection",
+            "enable",
+            "CRED_STUFF_ENABLE",
+        ) {
+            self.cred_stuff_detect.enable = v;
+        }
         if let Some(v) = t_duration(
             &mut table,
             "cred_stuff_detection",
@@ -1898,7 +2163,7 @@ impl Vars {
             self.cred_stuff_detect.scan_window = v;
         }
 
-        check_table_empty(table, "cred_stuff_detection");
+        check_table_empty(&table, "cred_stuff_detection");
     }
 
     fn parse_database(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2009,7 +2274,7 @@ impl Vars {
             self.database.sched_user_exp_delete = Some(v);
         }
 
-        check_table_empty(table, "database");
+        check_table_empty(&table, "database");
     }
 
     fn parse_device_grant(&mut self, table: &mut toml::Table) {
@@ -2056,7 +2321,7 @@ impl Vars {
             self.device_grant.refresh_token_lifetime = v;
         }
 
-        check_table_empty(table, "device_grant");
+        check_table_empty(&table, "device_grant");
     }
 
     fn parse_dpop(&mut self, table: &mut toml::Table) {
@@ -2069,7 +2334,7 @@ impl Vars {
             self.dpop.nonce_exp = v;
         }
 
-        check_table_empty(table, "dpop");
+        check_table_empty(&table, "dpop");
     }
 
     fn parse_dynamic_clients(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2167,7 +2432,7 @@ impl Vars {
             self.dynamic_clients.allowed_resources = v;
         }
 
-        check_table_empty(table, "dynamic_clients");
+        check_table_empty(&table, "dynamic_clients");
     }
 
     fn parse_email(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2309,11 +2574,14 @@ impl Vars {
         ) {
             self.email.jobs.batch_delay = v;
         }
-        check_table_empty(jobs, "email.jobs");
+        check_table_empty(&jobs, "email.jobs");
 
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
 
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "cs", "TZ_FMT_CS") {
+            self.email.tz_fmt.cs = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "de", "TZ_FMT_DE") {
             self.email.tz_fmt.de = v.into();
         }
@@ -2326,6 +2594,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "fr", "TZ_FMT_FR") {
             self.email.tz_fmt.fr = v.into();
         }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "it", "TZ_FMT_IT") {
+            self.email.tz_fmt.it = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ja", "TZ_FMT_JA") {
             self.email.tz_fmt.ja = v.into();
         }
@@ -2337,6 +2608,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "pl", "TZ_FMT_PL") {
+            self.email.tz_fmt.pl = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "pt", "TZ_FMT_PT") {
             self.email.tz_fmt.pt = v.into();
@@ -2354,9 +2628,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
             self.email.tz_fmt.tz_fallback = v.into();
         }
-        check_table_empty(tz_fmt, "email.tz_fmt");
+        check_table_empty(&tz_fmt, "email.tz_fmt");
 
-        check_table_empty(table, "email");
+        check_table_empty(&table, "email");
     }
 
     fn parse_encryption(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2370,14 +2644,14 @@ impl Vars {
             }
         }
         if let Some(v) = t_str_vec(&mut table, "encryption", "keys", "ENC_KEYS") {
-            if v.first().map(|v| v.as_str()) == Some(FROM_SECRETS) {
+            if v.first().map(String::as_str) == Some(FROM_SECRETS) {
                 self.encryption.keys = mem::take(&mut secrets.encryption.keys);
             } else {
                 self.encryption.keys = v;
             }
         }
 
-        check_table_empty(table, "encryption");
+        check_table_empty(&table, "encryption");
     }
 
     fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
@@ -2498,7 +2772,7 @@ impl Vars {
             self.ephemeral_clients.danger_allow_private_addresses = v;
         }
 
-        check_table_empty(table, "ephemeral_clients");
+        check_table_empty(&table, "ephemeral_clients");
     }
 
     fn parse_events(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -2791,6 +3065,15 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_consent_granted",
+            "EVENT_LEVEL_CONSENT_GRANTED",
+        ) {
+            self.events.level_consent_granted =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for consent_granted");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_consent_revoked",
             "EVENT_LEVEL_CONSENT_REVOKED",
         ) {
@@ -2907,7 +3190,7 @@ impl Vars {
             self.events.disable_app_version_check = v;
         }
 
-        check_table_empty(table, "events");
+        check_table_empty(&table, "events");
     }
 
     fn parse_fedcm(&mut self, table: &mut toml::Table) {
@@ -2938,7 +3221,7 @@ impl Vars {
             self.fedcm.session_timeout = v;
         }
 
-        check_table_empty(table, "fedcm");
+        check_table_empty(&table, "fedcm");
     }
 
     fn parse_geo(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -3030,7 +3313,7 @@ impl Vars {
             self.geo.maxmind_update_cron = v.into();
         }
 
-        check_table_empty(table, "geolocation");
+        check_table_empty(&table, "geolocation");
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -3063,7 +3346,7 @@ impl Vars {
             self.hashing.hash_await_warn_time = v;
         }
 
-        check_table_empty(table, "hashing");
+        check_table_empty(&table, "hashing");
     }
 
     async fn parse_hiqlite_config(
@@ -3128,8 +3411,8 @@ impl Vars {
             self.otp.email.enable = v;
         }
 
-        check_table_empty(table, "otp");
-        check_table_empty(table_email, "otp.email");
+        check_table_empty(&table, "otp");
+        check_table_empty(&table_email, "otp.email");
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -3187,7 +3470,7 @@ impl Vars {
             self.http_client.root_ca_bundle = Some(v);
         }
 
-        check_table_empty(table, "http_client");
+        check_table_empty(&table, "http_client");
     }
 
     fn parse_i18n(&mut self, table: &mut toml::Table) {
@@ -3205,7 +3488,7 @@ impl Vars {
             self.i18n.filter_lang_admin = v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
 
-        check_table_empty(table, "i18n");
+        check_table_empty(&table, "i18n");
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
@@ -3276,7 +3559,7 @@ impl Vars {
             self.lifetimes.jwk_autorotate_cron = v.into();
         }
 
-        check_table_empty(table, "lifetimes");
+        check_table_empty(&table, "lifetimes");
     }
 
     fn parse_logging(&mut self, table: &mut toml::Table) {
@@ -3296,11 +3579,38 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "logging", "level_access", "LOG_LEVEL_ACCESS") {
             self.logging.level_access = v.into();
         }
+        if let Some(v) = t_str(&mut table, "logging", "log_file", "LOG_FILE") {
+            self.logging.log_file = Some(v.into());
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "logging",
+            "log_file_cleanup",
+            "LOG_FILE_CLEANUP",
+        ) {
+            self.logging.log_file_cleanup = v.into();
+        }
+        if let Some(v) = t_duration(
+            &mut table,
+            "logging",
+            "log_file_keep_for",
+            "LOG_FILE_KEEP_FOR",
+        ) {
+            self.logging.log_file_keep_for = v;
+        }
+        if let Some(v) = t_duration(
+            &mut table,
+            "logging",
+            "log_file_archive_after",
+            "LOG_FILE_ARCHIVE_AFTER",
+        ) {
+            self.logging.log_file_archive_after = Some(v);
+        }
         if let Some(v) = t_str(&mut table, "logging", "log_fmt", "LOG_FMT") {
             self.logging.log_fmt = v.into();
         }
 
-        check_table_empty(table, "logging");
+        check_table_empty(&table, "logging");
     }
 
     fn parse_matrix(&mut self, table: &mut toml::Table) {
@@ -3315,7 +3625,7 @@ impl Vars {
             self.matrix.msc3861_enable = v;
         }
 
-        check_table_empty(table, "matrix");
+        check_table_empty(&table, "matrix");
     }
 
     fn parse_mfa(&mut self, table: &mut toml::Table) {
@@ -3324,8 +3634,24 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "mfa", "admin_force_mfa", "ADMIN_FORCE_MFA") {
             self.mfa.admin_force_mfa = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "mfa",
+            "optional_select_mfa",
+            "OPTIONAL_SELECT_MFA",
+        ) {
+            self.mfa.optional_select_mfa = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "mfa",
+            "admin_passkey_only",
+            "ADMIN_PASSKEY_ONLY",
+        ) {
+            self.mfa.admin_passkey_only = v;
+        }
 
-        check_table_empty(table, "mfa");
+        check_table_empty(&table, "mfa");
     }
 
     fn parse_ldap(&mut self, table: &mut toml::Table) {
@@ -3380,7 +3706,7 @@ impl Vars {
             self.ldap.max_connections = v;
         }
 
-        check_table_empty(table, "ldap");
+        check_table_empty(&table, "ldap");
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
@@ -3454,9 +3780,9 @@ impl Vars {
         ) {
             self.pam.authorized_keys.forced_key_expiry = v;
         }
-        check_table_empty(auth_keys, "pam.authorized_keys");
+        check_table_empty(&auth_keys, "pam.authorized_keys");
 
-        check_table_empty(table, "pam");
+        check_table_empty(&table, "pam");
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
@@ -3469,7 +3795,7 @@ impl Vars {
             self.pow.exp = v;
         }
 
-        check_table_empty(table, "pow");
+        check_table_empty(&table, "pow");
     }
 
     fn parse_scim(&mut self, table: &mut toml::Table) {
@@ -3495,7 +3821,7 @@ impl Vars {
             self.scim.retry_count = v;
         }
 
-        check_table_empty(table, "scim");
+        check_table_empty(&table, "scim");
     }
 
     fn parse_server(&mut self, table: &mut toml::Table) {
@@ -3568,8 +3894,11 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "server", "ssp_threshold", "SSP_THRESHOLD") {
             self.server.ssp_threshold = v;
         }
+        if let Some(v) = t_str(&mut table, "server", "instance_label", "INSTANCE_LABEL") {
+            self.server.instance_label = Some(v);
+        }
 
-        check_table_empty(table, "server");
+        check_table_empty(&table, "server");
     }
 
     fn parse_sponsor(&mut self, table: &mut toml::Table) {
@@ -3584,7 +3913,7 @@ impl Vars {
             self.sponsor.email_reminder_disable = v;
         }
 
-        check_table_empty(table, "sponsor");
+        check_table_empty(&table, "sponsor");
     }
 
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
@@ -3607,7 +3936,7 @@ impl Vars {
             self.suspicious_requests.log = v;
         }
 
-        check_table_empty(table, "suspicious_requests");
+        check_table_empty(&table, "suspicious_requests");
     }
 
     fn parse_templates(&mut self, table: &mut toml::Table) {
@@ -3642,6 +3971,13 @@ impl Vars {
                         self.templates.password_reset.en.clone()
                     }
                 }
+                "cs" => {
+                    if is_password_new {
+                        self.templates.password_new.cs.clone()
+                    } else {
+                        self.templates.password_reset.cs.clone()
+                    }
+                }
                 "de" => {
                     if is_password_new {
                         self.templates.password_new.de.clone()
@@ -3661,6 +3997,13 @@ impl Vars {
                         self.templates.password_new.fr.clone()
                     } else {
                         self.templates.password_reset.fr.clone()
+                    }
+                }
+                "it" => {
+                    if is_password_new {
+                        self.templates.password_new.it.clone()
+                    } else {
+                        self.templates.password_reset.it.clone()
                     }
                 }
                 "ja" => {
@@ -3689,6 +4032,13 @@ impl Vars {
                         self.templates.password_new.nl.clone()
                     } else {
                         self.templates.password_reset.nl.clone()
+                    }
+                }
+                "pl" => {
+                    if is_password_new {
+                        self.templates.password_new.pl.clone()
+                    } else {
+                        self.templates.password_reset.pl.clone()
                     }
                 }
                 "pt" => {
@@ -3721,7 +4071,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de es fr ja ko nb nl pt ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans"
                     )
                 }
             };
@@ -3759,6 +4109,13 @@ impl Vars {
                         self.templates.password_reset.en = tpl;
                     }
                 }
+                "cs" => {
+                    if is_password_new {
+                        self.templates.password_new.cs = tpl;
+                    } else {
+                        self.templates.password_reset.cs = tpl;
+                    }
+                }
                 "de" => {
                     if is_password_new {
                         self.templates.password_new.de = tpl;
@@ -3778,6 +4135,13 @@ impl Vars {
                         self.templates.password_new.fr = tpl;
                     } else {
                         self.templates.password_reset.fr = tpl;
+                    }
+                }
+                "it" => {
+                    if is_password_new {
+                        self.templates.password_new.it = tpl;
+                    } else {
+                        self.templates.password_reset.it = tpl;
                     }
                 }
                 "ja" => {
@@ -3806,6 +4170,13 @@ impl Vars {
                         self.templates.password_new.nl = tpl;
                     } else {
                         self.templates.password_reset.nl = tpl;
+                    }
+                }
+                "pl" => {
+                    if is_password_new {
+                        self.templates.password_new.pl = tpl;
+                    } else {
+                        self.templates.password_reset.pl = tpl;
                     }
                 }
                 "pt" => {
@@ -3838,12 +4209,12 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de es fr ja ko nb nl pt ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans"
                     )
                 }
             }
 
-            check_table_empty(table, "[[templates]]");
+            check_table_empty(&table, "[[templates]]");
         }
     }
 
@@ -3872,7 +4243,7 @@ impl Vars {
             "TLS_POLL_WATCH_INTERVAL",
         );
 
-        check_table_empty(table, "tls");
+        check_table_empty(&table, "tls");
     }
 
     fn parse_tos(&mut self, table: &mut toml::Table) {
@@ -3882,7 +4253,7 @@ impl Vars {
             self.tos.accept_timeout = v;
         }
 
-        check_table_empty(table, "tos");
+        check_table_empty(&table, "tos");
     }
 
     fn parse_user_delete(&mut self, table: &mut toml::Table) {
@@ -3897,7 +4268,7 @@ impl Vars {
             self.user_delete.enable_self_delete = v;
         }
 
-        check_table_empty(table, "user_delete");
+        check_table_empty(&table, "user_delete");
     }
 
     fn parse_user_pictures(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
@@ -3962,7 +4333,7 @@ impl Vars {
             self.user_pictures.public = v;
         }
 
-        check_table_empty(table, "user_pictures");
+        check_table_empty(&table, "user_pictures");
     }
 
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
@@ -3977,7 +4348,7 @@ impl Vars {
             "domain_restriction",
             "USER_REG_DOMAIN_RESTRICTION",
         ) {
-            self.user_registration.domain_restriction = Some(v);
+            self.user_registration.domain_restriction = Some(v.to_lowercase());
         }
         if let Some(v) = t_str_vec(
             &mut table,
@@ -3985,7 +4356,8 @@ impl Vars {
             "domain_blacklist",
             "USER_REG_DOMAIN_BLACKLIST",
         ) {
-            self.user_registration.domain_blacklist = v;
+            self.user_registration.domain_blacklist =
+                v.into_iter().map(|v| v.to_lowercase()).collect();
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -3995,8 +4367,42 @@ impl Vars {
         ) {
             self.user_registration.allow_open_redirect = v;
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "user_registration",
+            "post_reset_redirect_uri",
+            "USER_REG_POST_RESET_REDIRECT_URI",
+        ) {
+            self.user_registration.post_reset_redirect_uri = Some(v);
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_registration",
+            "reject_plus_subaddressing",
+            "USER_REG_REJECT_PLUS_SUBADDRESSING",
+        ) {
+            self.user_registration.reject_plus_subaddressing = v;
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "user_registration",
+            "reserved_names",
+            "USER_REG_RESERVED_NAMES",
+        ) {
+            self.user_registration.reserved_names =
+                v.into_iter().map(|name| name.to_lowercase()).collect();
+        }
 
-        check_table_empty(table, "user_registration");
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_registration",
+            "danger_reg_acc_init_immediate",
+            "USER_REG_DANGER_REG_ACC_INIT_IMMEDIATE",
+        ) {
+            self.user_registration.danger_reg_acc_init_immediate = v;
+        }
+
+        check_table_empty(&table, "user_registration");
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
@@ -4053,6 +4459,14 @@ impl Vars {
             "PASSWORD_RESET_REDIRECT_TIMEOUT",
         ) {
             self.user_values.password_reset_redirect_timeout = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_values",
+            "self_service_email_change_deny",
+            "USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY",
+        ) {
+            self.user_values.self_service_email_change_deny = v;
         }
 
         let mut pref_username = t_table(&mut table, "preferred_username");
@@ -4122,8 +4536,8 @@ impl Vars {
         // linux username regex as fallback
         let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
 
-        check_table_empty(pref_username, "user_values.preferred_username");
-        check_table_empty(table, "user_values");
+        check_table_empty(&pref_username, "user_values.preferred_username");
+        check_table_empty(&table, "user_values");
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
@@ -4219,7 +4633,7 @@ impl Vars {
             self.webauthn.passkey_reg_type = parse_passkey_reg_type(&v);
         }
 
-        check_table_empty(table, "webauthn");
+        check_table_empty(&table, "webauthn");
     }
 
     pub fn validate(&self) {
@@ -4235,6 +4649,13 @@ impl Vars {
             panic!("device_grant.user_code_length must be <=255");
         }
 
+        if !(POW_DIFFICULTY_MIN..=POW_DIFFICULTY_MAX).contains(&self.pow.difficulty) {
+            panic!(
+                "`pow.difficulty` must be within {POW_DIFFICULTY_MIN}..={POW_DIFFICULTY_MAX}, it is: {}",
+                self.pow.difficulty
+            );
+        }
+
         if let Err(err) = validate_max_document_bytes(self.ephemeral_clients.max_document_bytes) {
             panic!("{err}");
         }
@@ -4244,8 +4665,11 @@ impl Vars {
             "lifetimes.jwk_autorotate_cron",
             &self.lifetimes.jwk_autorotate_cron,
         );
+        validate_cron("logging.log_file_cleanup", &self.logging.log_file_cleanup);
         self.validate_ephemeral_clients();
         self.validate_ldap();
+        self.validate_reg_acc_init_immediate();
+        self.validate_used_after_db_init();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
@@ -4319,9 +4743,166 @@ impl Vars {
 }
 
 impl Vars {
+    /// Settings that are only used after `DB::init()`. An invalid value would panic there with
+    /// the storage layer already running, or even later at runtime, like the time zone during an
+    /// E-Mail send. Rejecting them here makes them fail before anything was started.
+    fn validate_used_after_db_init(&self) {
+        if self.database.sched_user_exp.is_zero() {
+            panic!("`database.sched_user_exp` must be greater than 0");
+        }
+
+        if let Err(err) = self.email.smtp_from.parse::<lettre::message::Mailbox>() {
+            panic!(
+                "Invalid `email.smtp_from` '{}': {err}",
+                self.email.smtp_from
+            );
+        }
+
+        self.validate_smtp();
+
+        if let Err(err) = chrono_tz::Tz::from_str(&self.email.tz_fmt.tz_fallback) {
+            panic!(
+                "Invalid time zone for `email.tz_fmt.tz_fallback` '{}': {err}",
+                self.email.tz_fmt.tz_fallback
+            );
+        }
+
+        if self.events.matrix_user_id.is_some() {
+            if self.events.matrix_room_id.is_none() {
+                panic!("`events.matrix_user_id` is set but `events.matrix_room_id` is not");
+            }
+            if self.events.matrix_access_token.is_none()
+                && self.events.matrix_user_password.is_none()
+            {
+                panic!(
+                    "`events.matrix_user_id` is set, but neither `events.matrix_access_token` nor \
+                    `events.matrix_user_password`"
+                );
+            }
+        }
+
+        let pic = &self.user_pictures;
+        if pic.storage_type == "s3" {
+            for (key, value) in [
+                ("s3_url", &pic.s3_url),
+                ("bucket", &pic.bucket),
+                ("region", &pic.region),
+                ("s3_key", &pic.s3_key),
+                ("s3_secret", &pic.s3_secret),
+            ] {
+                if value.is_none() {
+                    panic!(
+                        "`user_pictures.storage_type` is `s3` but `user_pictures.{key}` is not set"
+                    );
+                }
+            }
+            if let Some(url) = &pic.s3_url
+                && let Err(err) = url.parse::<reqwest::Url>()
+            {
+                panic!("Invalid `user_pictures.s3_url` '{url}': {err}");
+            }
+        }
+
+        if env::var("MIGRATE_DB_FROM").is_ok_and(|from| from.starts_with("postgres")) {
+            for (key, value) in [
+                ("migrate_pg_host", &self.database.migrate_pg_host),
+                ("migrate_pg_user", &self.database.migrate_pg_user),
+                ("migrate_pg_password", &self.database.migrate_pg_password),
+            ] {
+                if value.is_none() {
+                    panic!("`MIGRATE_DB_FROM` is Postgres but `database.{key}` is not set");
+                }
+            }
+        }
+    }
+
+    /// The mailer reads these when it connects, after `DB::init()`.
+    fn validate_smtp(&self) {
+        use lettre::transport::smtp::client::{Certificate, TlsParameters};
+        use rustls::pki_types::CertificateDer;
+        use rustls::pki_types::pem::PemObject;
+
+        let email = &self.email;
+        let Some(smtp_url) = &email.smtp_url else {
+            return;
+        };
+        if !matches!(
+            email.smtp_conn_mode,
+            SmtpConnMode::Default | SmtpConnMode::XOauth2
+        ) || email.smtp_tls_mode == EmailTlsMode::DangerInsecure
+        {
+            return;
+        }
+
+        if email.smtp_username.is_none() {
+            panic!("`email.smtp_url` is set but `email.smtp_username` is not");
+        }
+        if email.smtp_conn_mode == SmtpConnMode::Default && email.smtp_password.is_none() {
+            panic!("`email.smtp_url` is set but `email.smtp_password` is not");
+        }
+
+        if let Some(root_ca) = &email.root_ca {
+            // `Certificate::from_pem()` accepts input without any certificate in it.
+            match CertificateDer::pem_slice_iter(root_ca.as_bytes()).collect::<Result<Vec<_>, _>>()
+            {
+                Ok(certs) if certs.is_empty() => {
+                    panic!("Invalid `email.root_ca`: no PEM certificate found")
+                }
+                Ok(_) => {}
+                Err(err) => panic!("Invalid `email.root_ca`: {err}"),
+            }
+            let cert = Certificate::from_pem(root_ca.as_bytes())
+                .unwrap_or_else(|err| panic!("Invalid `email.root_ca`: {err}"));
+            if let Err(err) = TlsParameters::builder(smtp_url.clone())
+                .add_root_certificate(cert)
+                .build_rustls()
+            {
+                panic!("Cannot use `email.root_ca` for `email.smtp_url` '{smtp_url}': {err}");
+            }
+        }
+    }
+
     fn validate_ldap(&self) {
         if self.ldap.plain_text && !self.server.proxy_mode {
             panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
+        }
+    }
+
+    /// `user_registration.danger_reg_acc_init_immediate` sets the password of a new account in the
+    /// registration form itself, so Rauthy hands out control over that mailbox address without ever
+    /// having proven control over it. The only defense is that the address space is fully controlled,
+    /// which is what these values provide, so this rejects anything that is not the hardened set.
+    /// `pow.difficulty` is validated in `validate()` for every configuration.
+    fn validate_reg_acc_init_immediate(&self) {
+        if !self.user_registration.danger_reg_acc_init_immediate {
+            return;
+        }
+
+        let mut missing = Vec::new();
+        if !self.user_registration.enable {
+            missing.push("`user_registration.enable = true`");
+        }
+        if self.user_registration.domain_restriction.is_none() {
+            missing.push("`user_registration.domain_restriction = '<your domain>'`");
+        }
+        if !self.user_registration.reject_plus_subaddressing {
+            missing.push("`user_registration.reject_plus_subaddressing = true`");
+        }
+        if self.user_registration.reserved_names.is_empty() {
+            missing.push("`user_registration.reserved_names` must not be empty");
+        }
+        if !self.user_values.self_service_email_change_deny {
+            missing.push("`user_values.self_service_email_change_deny = true`");
+        }
+        if self.user_registration.allow_open_redirect {
+            missing.push("`user_registration.allow_open_redirect = false`");
+        }
+
+        if !missing.is_empty() {
+            panic!(
+                "`user_registration.danger_reg_acc_init_immediate` is only allowed with all of these:\n{}",
+                missing.join("\n")
+            );
         }
     }
 
@@ -4422,10 +5003,65 @@ pub struct VarsBootstrap {
 #[derive(Debug)]
 pub struct VarsConsent {
     pub enable: bool,
+    /// At least 1s.
+    pub content_cache_ttl: Duration,
+    /// `[[consent.sources]]` registry, keyed by `resource`.
+    pub sources: BTreeMap<String, VarsConsentSource>,
+}
+
+impl VarsConsent {
+    /// The registry entry for `resource`, if any.
+    pub fn source_for(&self, resource: &str) -> Option<&VarsConsentSource> {
+        self.sources.get(resource)
+    }
+
+    /// `true` if `client` is ephemeral and must request a `resource` but `resource` is `None`:
+    /// `consent.enable` is set and `[[consent.sources]]` is not empty.
+    pub fn missing_required_resource(&self, client: &Client, resource: Option<&str>) -> bool {
+        self.enable && !self.sources.is_empty() && client.is_ephemeral() && resource.is_none()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VarsConsentSource {
+    pub resource: String,
+    pub source: ConsentSource,
+    pub name: String,
+}
+
+impl VarsConsentSource {
+    pub fn new(resource: String, source: &str, name: String) -> Result<Self, String> {
+        // RFC 8707 §2: absolute URI without a fragment. Matched verbatim against the request
+        // `resource`, so it must also pass the same `RE_RESOURCE` validation.
+        match reqwest::Url::parse(&resource) {
+            Ok(url) if url.fragment().is_none() && RE_RESOURCE.is_match(&resource) => {}
+            _ => {
+                return Err(format!(
+                    "`resource` '{resource}' must be an absolute URI without a fragment, \
+                    matching `{}`",
+                    RE_RESOURCE.as_str()
+                ));
+            }
+        }
+        let source = ConsentSource::parse(source)
+            .map_err(|err| format!("`source` for '{resource}': {err}"))?;
+        if name.trim().is_empty() {
+            return Err(format!("`name` for '{resource}' must not be empty"));
+        }
+
+        Ok(Self {
+            resource,
+            source,
+            name,
+        })
+    }
 }
 
 #[derive(Debug)]
 pub struct VarsCredStuff {
+    /// The detector only ever does something with this enabled: it counts login attempts with a
+    /// password per IP and blacklists an IP that exceeds `blacklist_threshold` of them.
+    pub enable: bool,
     pub blacklist_duration: Duration,
     pub blacklist_threshold: u32,
     pub scan_window: Duration,
@@ -4539,14 +5175,17 @@ pub struct VarsEmailJobs {
 
 #[derive(Debug)]
 pub struct VarsEmailTzFmt {
+    pub cs: Cow<'static, str>,
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
     pub es: Cow<'static, str>,
     pub fr: Cow<'static, str>,
+    pub it: Cow<'static, str>,
     pub ja: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub nl: Cow<'static, str>,
     pub no: Cow<'static, str>,
+    pub pl: Cow<'static, str>,
     pub pt: Cow<'static, str>,
     pub ru: Cow<'static, str>,
     pub uk: Cow<'static, str>,
@@ -4558,6 +5197,41 @@ pub struct VarsEmailTzFmt {
 pub struct VarsEncryption {
     pub key_active: String,
     pub keys: Vec<String>,
+}
+
+/// The local parts that are reserved when `[user_registration].reserved_names` is not set.
+///
+/// RFC 2142 defines `allowance`, `abuse`, `help`, `hostmaster`, `postmaster`, `privacy`, `usenet`, and
+/// team addresses like `webmaster` / `ftp`. Mail daemons and system accounts are included because a
+/// self-registration for one of them claims a mailbox that is almost never owned by a real user.
+fn default_reserved_names() -> Vec<String> {
+    [
+        "abuse",
+        "admin",
+        "administrator",
+        "daemon",
+        "ftp",
+        "hostmaster",
+        "mailnull",
+        "mailer-daemon",
+        "noc",
+        "no-reply",
+        "noreply",
+        "null",
+        "operator",
+        "postmaster",
+        "proxy",
+        "root",
+        "security",
+        "support",
+        "uucp",
+        "usenet",
+        "webmaster",
+        "www",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect()
 }
 
 /// `ephemeral_clients.max_document_bytes` must leave room for a minimal CIMD document.
@@ -4660,6 +5334,7 @@ pub struct VarsEvents {
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
+    pub level_consent_granted: EventLevel,
     pub level_consent_revoked: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_email_send_error: EventLevel,
@@ -4741,6 +5416,10 @@ pub struct VarsLogging {
     pub level: Cow<'static, str>,
     pub level_database: Cow<'static, str>,
     pub level_access: Cow<'static, str>,
+    pub log_file: Option<PathBuf>,
+    pub log_file_cleanup: Cow<'static, str>,
+    pub log_file_keep_for: Duration,
+    pub log_file_archive_after: Option<Duration>,
     pub log_fmt: Cow<'static, str>,
 }
 
@@ -4752,6 +5431,8 @@ pub struct VarsMatrix {
 #[derive(Debug)]
 pub struct VarsMfa {
     pub admin_force_mfa: bool,
+    pub optional_select_mfa: bool,
+    pub admin_passkey_only: bool,
 }
 
 #[derive(Debug)]
@@ -4835,6 +5516,7 @@ pub struct VarsServer {
     pub swagger_ui_public: bool,
     pub see_keep_alive: Duration,
     pub ssp_threshold: u16,
+    pub instance_label: Option<String>,
 }
 
 #[derive(Debug)]
@@ -4858,14 +5540,17 @@ pub struct VarsTemplates {
 
 #[derive(Debug)]
 pub struct VarsTemplatesLanguages {
+    pub cs: VarsTemplate,
     pub de: VarsTemplate,
     pub en: VarsTemplate,
     pub es: VarsTemplate,
     pub fr: VarsTemplate,
+    pub it: VarsTemplate,
     pub ja: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
     pub nl: VarsTemplate,
+    pub pl: VarsTemplate,
     pub pt: VarsTemplate,
     pub ru: VarsTemplate,
     pub uk: VarsTemplate,
@@ -4923,6 +5608,77 @@ pub struct VarsUserRegistration {
     pub domain_restriction: Option<String>,
     pub domain_blacklist: Vec<String>,
     pub allow_open_redirect: bool,
+    pub post_reset_redirect_uri: Option<String>,
+    pub reject_plus_subaddressing: bool,
+    pub reserved_names: Vec<String>,
+    pub danger_reg_acc_init_immediate: bool,
+}
+
+impl VarsUserRegistration {
+    pub fn validate_email_domain(&self, email: &str) -> Result<(), ErrorResponse> {
+        if self.domain_restriction.is_none() && self.domain_blacklist.is_empty() {
+            return Ok(());
+        }
+
+        let Some((_, domain)) = email.rsplit_once('@') else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid E-Mail address",
+            ));
+        };
+
+        if let Some(restriction) = &self.domain_restriction {
+            if !domain.eq_ignore_ascii_case(restriction) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Domains are restricted to '@{restriction}'"),
+                ));
+            }
+        } else if self
+            .domain_blacklist
+            .iter()
+            .any(|blacklisted| domain.eq_ignore_ascii_case(blacklisted))
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Domain is blacklisted",
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_email_name(&self, email: &str) -> Result<(), ErrorResponse> {
+        if !self.reject_plus_subaddressing && self.reserved_names.is_empty() {
+            return Ok(());
+        }
+
+        let Some((local, _)) = email.split_once('@') else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid E-Mail address",
+            ));
+        };
+
+        if self.reject_plus_subaddressing && local.contains('+') {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Subaddressed E-Mail addresses are not allowed",
+            ));
+        }
+
+        let local = local.to_lowercase();
+        for reserved in &self.reserved_names {
+            if local == *reserved {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotAccepted,
+                    format!("The E-Mail address '{local}' is reserved"),
+                ));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -4939,6 +5695,7 @@ pub struct VarsUserValuesConfig {
     pub revalidate_during_login: bool,
     pub name_order_reverse: bool,
     pub password_reset_redirect_timeout: u16,
+    pub self_service_email_change_deny: bool,
     pub preferred_username: VarsUserPreferredUsername,
 }
 
@@ -5007,7 +5764,7 @@ impl VarsWebauthn {
     pub fn passkey_reg_type_str(&self) -> String {
         self.passkey_reg_type
             .iter()
-            .map(|t| t.as_str())
+            .map(PasskeyRegType::as_str)
             .collect::<Vec<_>>()
             .join(" ")
     }
@@ -5048,7 +5805,7 @@ pub struct VarsAtproto {
     pub enable: bool,
 }
 
-pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
+pub fn check_table_empty(table: &toml::Table, tbl_name: &str) {
     if !table.is_empty() {
         panic!("Unknown data in section: '{tbl_name}': {table:#?}");
     }
@@ -5105,7 +5862,7 @@ fn parse_duration(input: &str) -> Option<Duration> {
         .ok()
         // i64 casting here is necessary to guarantee safety when we downcast later on
         // for cache TTL and so on.
-        .map(|v| Duration::from_secs((v as i64).saturating_mul(mul) as u64))
+        .map(|v| Duration::from_secs(i64::from(v).saturating_mul(mul) as u64))
 }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
@@ -5113,15 +5870,11 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
 
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
-            .as_deref()
-            .map(|v| match v.parse::<bool>() {
-                Ok(b) => b,
-                Err(_) => {
-                    panic!("{}", err_env(env_var, "bool"));
-                }
-            })
     {
-        return Some(v);
+        match v.parse::<bool>() {
+            Ok(b) => return Some(b),
+            Err(err) => panic!("{}: {}", err_env(env_var, "bool"), err),
+        }
     }
 
     let Value::Boolean(b) = value? else {
@@ -5188,15 +5941,11 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 
     if !env_var.is_empty()
         && let Ok(v) = env::var(env_var)
-            .as_deref()
-            .map(|v| match v.parse::<i64>() {
-                Ok(b) => b,
-                Err(_) => {
-                    panic!("{}", err_env(env_var, "Integer"));
-                }
-            })
     {
-        return Some(v);
+        match v.parse::<i64>() {
+            Ok(i) => return Some(i),
+            Err(err) => panic!("{}: {}", err_env(env_var, "Integer"), err),
+        }
     }
 
     let Value::Integer(i) = value? else {
@@ -5207,7 +5956,7 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 
 fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u32> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u32::MAX as i64 {
+        if v < 0 || v > i64::from(u32::MAX) {
             panic!("{}", err_t(key, parent, "u32"));
         }
         Some(v as u32)
@@ -5217,7 +5966,7 @@ fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u16> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u16::MAX as i64 {
+        if v < 0 || v > i64::from(u16::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u16)
@@ -5227,7 +5976,7 @@ fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) ->
 }
 fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u8> {
     if let Some(v) = t_i64(map, parent, key, env_overwrite) {
-        if v < 0 || v > u8::MAX as i64 {
+        if v < 0 || v > i64::from(u8::MAX) {
             panic!("{}", err_t(key, parent, "u16"));
         }
         Some(v as u8)
@@ -5331,7 +6080,57 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entity::clients::tests::redirect_test_client;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn italian_email_overrides_keep_localized_defaults() -> Result<(), toml::de::Error> {
+        let mut vars = Vars::default();
+        let mut table: toml::Table = toml::from_str(
+            r#"
+            [email.tz_fmt]
+            it = "%d-%m-%Y %T"
+
+            [[templates]]
+            lang = "it"
+            typ = "password_new"
+            subject = "Crea la tua password"
+
+            [[templates]]
+            lang = "it"
+            typ = "password_reset"
+            subject = "Cambia la tua password"
+            "#,
+        )?;
+        vars.parse_email(&mut table, &mut RauthySecrets::default());
+        vars.parse_templates(&mut table);
+
+        assert_eq!(vars.email.tz_fmt.it, "%d-%m-%Y %T");
+        assert_eq!(vars.email.tz_fmt.en, "%m/%d/%Y %T (%Z)");
+        assert_eq!(
+            vars.templates.password_new.it.subject,
+            "Crea la tua password"
+        );
+        assert_eq!(
+            vars.templates.password_new.it.button.as_deref(),
+            Some("Imposta password")
+        );
+        assert_eq!(
+            vars.templates.password_reset.it.subject,
+            "Cambia la tua password"
+        );
+        assert_eq!(
+            vars.templates
+                .password_reset
+                .it
+                .button_text_request_new
+                .as_deref(),
+            Some("Richiedi un nuovo link"),
+        );
+        assert_eq!(vars.templates.password_new.en.subject, "New Password");
+
+        Ok(())
+    }
 
     #[test]
     fn consent_enable() {
@@ -5344,14 +6143,319 @@ mod tests {
         assert!(vars.consent.enable);
     }
 
-    #[test]
-    fn consent_revoked_event_level() {
+    fn parse_consent(toml_src: &str) -> Vars {
+        let mut table: toml::Table = toml::from_str(toml_src).unwrap();
         let mut vars = Vars::default();
+        vars.parse_consent(&mut table);
+        vars
+    }
+
+    #[test]
+    fn consent_sources() {
+        let vars = parse_consent("[consent]\nenable = true");
+        assert_eq!(vars.consent.content_cache_ttl, Duration::from_hours(1));
+        assert!(vars.consent.sources.is_empty());
+        let ephemeral = redirect_test_client("https://cimd.example.com/client", "");
+        let static_client = redirect_test_client("app", "");
+        assert!(!vars.consent.missing_required_resource(&ephemeral, None));
+
+        let vars = parse_consent(
+            r"
+[consent]
+enable = true
+content_cache_ttl = 600
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'Example API'
+
+[[consent.sources]]
+resource = 'urn:example:data'
+source = 'https://consent.example.com/data'
+name = 'Data'
+",
+        );
+        assert_eq!(vars.consent.content_cache_ttl, Duration::from_mins(10));
+        assert_eq!(
+            vars.consent.sources.values().cloned().collect::<Vec<_>>(),
+            vec![
+                VarsConsentSource {
+                    resource: "https://api.example.com".to_string(),
+                    source: ConsentSource::Local,
+                    name: "Example API".to_string(),
+                },
+                VarsConsentSource {
+                    resource: "urn:example:data".to_string(),
+                    source: ConsentSource::Remote(
+                        reqwest::Url::parse("https://consent.example.com/data").unwrap()
+                    ),
+                    name: "Data".to_string(),
+                },
+            ]
+        );
+        assert_eq!(
+            vars.consent.source_for("urn:example:data").unwrap().name,
+            "Data"
+        );
+        assert!(
+            vars.consent
+                .source_for("https://other.example.com")
+                .is_none()
+        );
+        assert!(vars.consent.missing_required_resource(&ephemeral, None));
+        assert!(
+            !vars
+                .consent
+                .missing_required_resource(&ephemeral, Some("urn:example:data"))
+        );
+        assert!(!vars.consent.missing_required_resource(&static_client, None));
+
+        // without `consent.enable` no `resource` is required
+        let vars = parse_consent(
+            r"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'Example API'
+",
+        );
+        assert!(!vars.consent.missing_required_resource(&ephemeral, None));
+    }
+
+    #[test]
+    fn consent_source_entry_validation() {
+        let entry = |resource: &str, source: &str, name: &str| {
+            VarsConsentSource::new(resource.to_string(), source, name.to_string())
+        };
+        assert!(entry("https://api.example.com", "local", "API").is_ok());
+
+        // resource: absolute URI, no fragment
+        assert!(entry("api.example.com", "local", "API").is_err());
+        assert!(entry("/api", "local", "API").is_err());
+        assert!(entry("https://api.example.com/#x", "local", "API").is_err());
+        // source: `local` or https URL
+        assert!(entry("https://api.example.com", "remote", "API").is_err());
+        assert!(
+            entry(
+                "https://api.example.com",
+                "http://consent.example.com",
+                "API"
+            )
+            .is_err()
+        );
+        // resource: must also match `RE_RESOURCE`, like the request `resource`
+        assert!(entry("https://api.example.com/a b", "local", "API").is_err());
+        assert!(entry("https://api.example.com/ä", "local", "API").is_err());
+        assert!(entry("https://api.example.com/[x]", "local", "API").is_err());
+        // source: no `lang` query key, Rauthy appends it
+        assert!(
+            entry(
+                "https://api.example.com",
+                "https://consent.example.com/api?lang=en",
+                "API"
+            )
+            .is_err()
+        );
+        assert!(
+            entry(
+                "https://api.example.com",
+                "https://consent.example.com/api?v=1",
+                "API"
+            )
+            .is_ok()
+        );
+        // name: non-empty
+        assert!(entry("https://api.example.com", "local", " ").is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate `resource` 'https://api.example.com'")]
+    fn consent_sources_duplicate_panics() {
+        parse_consent(
+            r"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'A'
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'B'
+",
+        );
+    }
+
+    #[test]
+    fn consent_content_cache_ttl_duration() {
+        for (value, secs) in [("90", 90), ("'90s'", 90), ("'15m'", 900), ("'2h'", 7200)] {
+            let vars = parse_consent(&format!("[consent]\ncontent_cache_ttl = {value}"));
+            assert_eq!(
+                vars.consent.content_cache_ttl,
+                Duration::from_secs(secs),
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1s")]
+    fn consent_content_cache_ttl_zero_panics() {
+        parse_consent("[consent]\ncontent_cache_ttl = 0");
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1s")]
+    fn consent_content_cache_ttl_zero_duration_panics() {
+        parse_consent("[consent]\ncontent_cache_ttl = '0m'");
+    }
+
+    #[test]
+    #[should_panic(expected = "`name` is mandatory")]
+    fn consent_sources_missing_name_panics() {
+        parse_consent(
+            r"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+",
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Unknown data in section: 'consent.sources'")]
+    fn consent_sources_unknown_key_panics() {
+        parse_consent(
+            r"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'A'
+url = 'https://consent.example.com'
+",
+        );
+    }
+
+    #[test]
+    fn used_after_db_init_defaults_are_valid() {
+        Vars::default().validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`database.sched_user_exp` must be greater than 0")]
+    fn used_after_db_init_sched_user_exp_zero() {
+        let mut vars = Vars::default();
+        vars.database.sched_user_exp = Duration::ZERO;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid `email.smtp_from`")]
+    fn used_after_db_init_invalid_smtp_from() {
+        let mut vars = Vars::default();
+        vars.email.smtp_from = "Rauthy <rauthy@>".into();
+        vars.validate_used_after_db_init();
+    }
+
+    fn smtp_vars() -> Vars {
+        let mut vars = Vars::default();
+        vars.email.smtp_url = Some("smtp.example.com".into());
+        vars.email.smtp_username = Some("rauthy".into());
+        vars.email.smtp_password = Some("secret".into());
+        vars
+    }
+
+    #[test]
+    fn used_after_db_init_valid_smtp() {
+        smtp_vars().validate_used_after_db_init();
+
+        let mut vars = smtp_vars();
+        vars.email.smtp_username = None;
+        vars.email.smtp_tls_mode = EmailTlsMode::DangerInsecure;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`email.smtp_url` is set but `email.smtp_username` is not")]
+    fn used_after_db_init_smtp_without_username() {
+        let mut vars = smtp_vars();
+        vars.email.smtp_username = None;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`email.smtp_url` is set but `email.smtp_password` is not")]
+    fn used_after_db_init_smtp_without_password() {
+        let mut vars = smtp_vars();
+        vars.email.smtp_password = None;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid `email.root_ca`")]
+    fn used_after_db_init_invalid_smtp_root_ca() {
+        let mut vars = smtp_vars();
+        vars.email.root_ca = Some("not a certificate".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid `email.root_ca`")]
+    fn used_after_db_init_malformed_smtp_root_ca() {
+        let mut vars = smtp_vars();
+        vars.email.root_ca =
+            Some("-----BEGIN CERTIFICATE-----\nnot base64 !\n-----END CERTIFICATE-----\n".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid time zone for `email.tz_fmt.tz_fallback`")]
+    fn used_after_db_init_invalid_tz() {
+        let mut vars = Vars::default();
+        vars.email.tz_fmt.tz_fallback = "Europe/Nowhere".into();
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`events.matrix_room_id` is not")]
+    fn used_after_db_init_matrix_missing_room() {
+        let mut vars = Vars::default();
+        vars.events.matrix_user_id = Some("@rauthy:example.com".into());
+        vars.events.matrix_access_token = Some("token".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "neither `events.matrix_access_token`")]
+    fn used_after_db_init_matrix_missing_credentials() {
+        let mut vars = Vars::default();
+        vars.events.matrix_user_id = Some("@rauthy:example.com".into());
+        vars.events.matrix_room_id = Some("!room:example.com".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`user_pictures.bucket` is not set")]
+    fn used_after_db_init_s3_missing_bucket() {
+        let mut vars = Vars::default();
+        vars.user_pictures.storage_type = "s3".into();
+        vars.user_pictures.s3_url = Some("https://s3.example.com".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    fn consent_event_levels() {
+        let mut vars = Vars::default();
+        assert_eq!(vars.events.level_consent_granted, EventLevel::Notice);
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Notice);
 
-        let mut table: toml::Table =
-            toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
+        let mut table: toml::Table = toml::from_str(
+            "[events]\nlevel_consent_granted = 'info'\nlevel_consent_revoked = 'critical'",
+        )
+        .unwrap();
         vars.parse_events(&mut table, &mut RauthySecrets::default());
+        assert_eq!(vars.events.level_consent_granted, EventLevel::Info);
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
     }
 
@@ -5364,6 +6468,52 @@ mod tests {
             toml::from_str("[user_registration]\nallow_open_redirect = true").unwrap();
         vars.parse_user_registration(&mut table);
         assert!(vars.user_registration.allow_open_redirect);
+    }
+
+    #[test]
+    fn user_values_self_service_email_change_deny() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_values.self_service_email_change_deny);
+
+        let mut table: toml::Table =
+            toml::from_str("[user_values]\nself_service_email_change_deny = true").unwrap();
+        vars.parse_user_values(&mut table);
+        assert!(vars.user_values.self_service_email_change_deny);
+    }
+
+    #[test]
+    fn user_registration_validate_email_domain() {
+        let mut vars = Vars::default();
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\ndomain_restriction = 'my-domain.com'").unwrap();
+        vars.parse_user_registration(&mut table);
+
+        vars.user_registration
+            .validate_email_domain("me@my-domain.com")
+            .expect("inside the restricted domain");
+        let err = vars
+            .user_registration
+            .validate_email_domain("me@other.tld")
+            .expect_err("outside the restricted domain");
+        assert!(err.message.contains("@my-domain.com"), "{err:?}");
+
+        let mut vars = Vars::default();
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\ndomain_blacklist = ['spam.tld']").unwrap();
+        vars.parse_user_registration(&mut table);
+
+        vars.user_registration
+            .validate_email_domain("me@ok.tld")
+            .expect("not blacklisted");
+        vars.user_registration
+            .validate_email_domain("me@spam.tld")
+            .expect_err("blacklisted domain");
+
+        // no restriction and no blacklist: anything passes
+        let vars = Vars::default();
+        vars.user_registration
+            .validate_email_domain("me@anywhere.tld")
+            .expect("no domain rules configured");
     }
 
     #[test]
@@ -5419,33 +6569,21 @@ mod tests {
     fn test_parse_duration() {
         assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
         assert_eq!(parse_duration("2s").unwrap(), Duration::from_secs(2));
-        assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
-        assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
-        assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
-        assert_eq!(parse_duration("2h").unwrap(), Duration::from_secs(2 * 3600));
-        assert_eq!(
-            parse_duration("1d").unwrap(),
-            Duration::from_secs(24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2d").unwrap(),
-            Duration::from_secs(2 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("1w").unwrap(),
-            Duration::from_secs(7 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2w").unwrap(),
-            Duration::from_secs(14 * 24 * 3600)
-        );
+        assert_eq!(parse_duration("1m").unwrap(), Duration::from_mins(1));
+        assert_eq!(parse_duration("2m").unwrap(), Duration::from_mins(2));
+        assert_eq!(parse_duration("1h").unwrap(), Duration::from_hours(1));
+        assert_eq!(parse_duration("2h").unwrap(), Duration::from_hours(2));
+        assert_eq!(parse_duration("1d").unwrap(), Duration::from_hours(24));
+        assert_eq!(parse_duration("2d").unwrap(), Duration::from_hours(2 * 24));
+        assert_eq!(parse_duration("1w").unwrap(), Duration::from_hours(7 * 24));
+        assert_eq!(parse_duration("2w").unwrap(), Duration::from_hours(14 * 24));
         assert_eq!(
             parse_duration("1y").unwrap(),
-            Duration::from_secs(365 * 24 * 3600)
+            Duration::from_hours(365 * 24)
         );
         assert_eq!(
             parse_duration("2y").unwrap(),
-            Duration::from_secs(2 * 365 * 24 * 3600)
+            Duration::from_hours(2 * 365 * 24)
         );
     }
 
@@ -5509,10 +6647,10 @@ mod tests {
     #[test]
     fn ephemeral_default_scopes_fall_back_to_allowed_when_absent() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile', 'email']
-"#,
+",
         );
         assert_eq!(
             vars.ephemeral_clients.allowed_scopes,
@@ -5524,21 +6662,21 @@ allowed_scopes = ['openid', 'profile', 'email']
     #[test]
     fn ephemeral_default_scopes_empty_falls_back_to_allowed() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile']
 default_scopes = []
-"#,
+",
         );
         assert_eq!(vars.ephemeral_clients.default_scopes, None);
 
         // all-blank entries count as empty as well
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile']
 default_scopes = ['', '  ']
-"#,
+",
         );
         assert_eq!(vars.ephemeral_clients.default_scopes, None);
     }
@@ -5546,11 +6684,11 @@ default_scopes = ['', '  ']
     #[test]
     fn ephemeral_default_scopes_explicit_value_is_kept() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 allowed_scopes = ['openid', 'profile', 'email']
 default_scopes = ['openid', ' email ']
-"#,
+",
         );
         assert_eq!(
             vars.ephemeral_clients.default_scopes,
@@ -5561,12 +6699,12 @@ default_scopes = ['openid', ' email ']
     #[test]
     fn ephemeral_allowed_scopes_are_trimmed() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = ['openid', ' email ', '  ']
 default_scopes = ['openid', 'email']
-"#,
+",
         );
         assert_eq!(
             vars.ephemeral_clients.allowed_scopes,
@@ -5578,22 +6716,22 @@ default_scopes = ['openid', 'email']
     #[test]
     fn validate_ephemeral_default_scopes_fallback_without_openid_is_accepted() {
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = ['profile', 'email']
-"#,
+",
         );
         assert_eq!(vars.ephemeral_clients.default_scopes, None);
         vars.validate_ephemeral_clients();
 
         let vars = parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = []
 default_scopes = []
-"#,
+",
         );
         vars.validate_ephemeral_clients();
     }
@@ -5602,12 +6740,12 @@ default_scopes = []
     #[should_panic(expected = "must contain `openid`")]
     fn validate_ephemeral_default_scopes_explicit_without_openid_panics() {
         parse_eph(
-            r#"
+            r"
 [ephemeral_clients]
 enable = true
 allowed_scopes = ['openid', 'profile', 'email']
 default_scopes = ['profile']
-"#,
+",
         )
         .validate_ephemeral_clients();
     }
@@ -5662,5 +6800,186 @@ default_scopes = ['profile']
     fn validate_cron_rejects_exhausted_schedule() {
         // valid syntax, but the year is in the past -> never fires again
         validate_cron("geo.maxmind_update_cron", "0 30 3 1 * * 2020");
+    }
+
+    #[test]
+    fn validate_accepts_pow_difficulty_inside_spow_range() {
+        let mut vars = vars_minimally_valid();
+        vars.pow.difficulty = POW_DIFFICULTY_MIN;
+        vars.validate();
+        vars.pow.difficulty = POW_DIFFICULTY_MAX;
+        vars.validate();
+    }
+
+    #[test]
+    #[should_panic(expected = "`pow.difficulty` must be within 10..=99, it is: 5")]
+    fn validate_rejects_pow_difficulty_below_spow_range() {
+        let mut vars = vars_minimally_valid();
+        vars.pow.difficulty = 5;
+        vars.validate();
+    }
+
+    #[test]
+    #[should_panic(expected = "`pow.difficulty` must be within 10..=99, it is: 100")]
+    fn validate_rejects_pow_difficulty_above_spow_range() {
+        let mut vars = vars_minimally_valid();
+        vars.pow.difficulty = 100;
+        vars.validate();
+    }
+
+    #[test]
+    fn user_registration_reserved_names_and_subaddressing() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_registration.reject_plus_subaddressing);
+        assert!(
+            vars.user_registration
+                .reserved_names
+                .iter()
+                .any(|i| i == "postmaster")
+        );
+
+        let mut table: toml::Table = toml::from_str(
+            "[user_registration]\nreject_plus_subaddressing = true\nreserved_names = ['CEO', 'root']",
+        )
+        .unwrap();
+        vars.parse_user_registration(&mut table);
+        assert!(vars.user_registration.reject_plus_subaddressing);
+        assert_eq!(
+            vars.user_registration.reserved_names,
+            vec!["ceo".to_string(), "root".to_string()]
+        );
+    }
+
+    #[test]
+    fn user_registration_danger_reg_acc_init_immediate() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_registration.danger_reg_acc_init_immediate);
+
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\ndanger_reg_acc_init_immediate = true").unwrap();
+        vars.parse_user_registration(&mut table);
+        assert!(vars.user_registration.danger_reg_acc_init_immediate);
+    }
+
+    #[test]
+    fn user_registration_validate_email_name() {
+        let mut vars = Vars::default();
+        vars.user_registration.reserved_names = vec!["postmaster".to_string()];
+
+        assert!(
+            vars.user_registration
+                .validate_email_name("PostMaster@mail.example")
+                .is_err()
+        );
+        assert!(
+            vars.user_registration
+                .validate_email_name("postmaster@mail.example")
+                .is_err()
+        );
+        assert!(
+            vars.user_registration
+                .validate_email_name("postmaster.news@mail.example")
+                .is_ok()
+        );
+        assert!(
+            vars.user_registration
+                .validate_email_name("ceo+news@mail.example")
+                .is_ok()
+        );
+
+        vars.user_registration.reject_plus_subaddressing = true;
+        let err = vars
+            .user_registration
+            .validate_email_name("ceo+news@mail.example")
+            .expect_err("must be rejected");
+        assert!(err.message.contains("Subaddressed"));
+    }
+
+    /// A `Vars` that passes every startup check of `validate()`, to test one check at a time.
+    fn vars_minimally_valid() -> Vars {
+        let mut vars = Vars::default();
+        vars.encryption.key_active = "0".to_string();
+        vars.encryption.keys = vec!["0-test-key".to_string()];
+        vars.server.pub_url = "localhost:8081".to_string();
+        vars.webauthn.rp_id = "localhost".to_string();
+        vars.webauthn.rp_origin = "http://localhost:8081".to_string();
+        vars
+    }
+
+    /// The full hardened set `danger_reg_acc_init_immediate` requires on top of `vars_minimally_valid()`.
+    fn vars_hardened_acc_init_immediate() -> Vars {
+        let mut vars = vars_minimally_valid();
+        vars.user_registration.danger_reg_acc_init_immediate = true;
+        vars.user_registration.enable = true;
+        vars.user_registration.domain_restriction = Some("localhost".to_string());
+        vars.user_registration.reject_plus_subaddressing = true;
+        vars.user_values.self_service_email_change_deny = true;
+        vars
+    }
+
+    #[test]
+    #[should_panic(expected = "danger_reg_acc_init_immediate` is only allowed with all of these")]
+    fn validate_reg_acc_init_immediate_lists_the_hardened_requirements() {
+        let mut vars = vars_minimally_valid();
+        vars.user_registration.danger_reg_acc_init_immediate = true;
+        vars.validate();
+    }
+
+    #[test]
+    fn validate_reg_acc_init_immediate_accepts_the_hardened_config() {
+        vars_hardened_acc_init_immediate().validate();
+    }
+
+    fn parse_user_reg(toml_src: &str) -> VarsUserRegistration {
+        let mut table: toml::Table = toml::from_str(toml_src).unwrap();
+        let mut vars = Vars::default();
+        vars.parse_user_registration(&mut table);
+        vars.user_registration
+    }
+
+    #[test]
+    fn validate_email_domain_matches_the_domain_part_exactly() {
+        let reg = parse_user_reg("[user_registration]\ndomain_restriction = 'example.com'");
+        assert!(reg.validate_email_domain("me@example.com").is_ok());
+        assert!(reg.validate_email_domain("me@EXAMPLE.com").is_ok());
+        assert!(reg.validate_email_domain("me@exAMPLE.com").is_ok());
+
+        // a plain `ends_with` accepted all of these, and each one is a domain under control of
+        // someone else than the restricted one
+        for evil in [
+            "me@evil-example.com",
+            "me@example.com.evil.tld",
+            "me@sub.example.com",
+            "meexample.com",
+            "me@sub.example.com.evil.tld",
+        ] {
+            assert!(reg.validate_email_domain(evil).is_err(), "accepted {evil}");
+        }
+    }
+
+    #[test]
+    fn validate_email_domain_blacklist_is_exact_and_case_insensitive() {
+        let reg = parse_user_reg("[user_registration]\ndomain_blacklist = [ 'spam.tld' ]");
+        assert!(reg.validate_email_domain("me@spam.tld").is_err());
+        assert!(reg.validate_email_domain("me@SPAM.TLD").is_err());
+        assert!(reg.validate_email_domain("me@SpAm.TlD").is_err());
+        // not a domain match anymore: this is a different, non blacklisted domain
+        assert!(reg.validate_email_domain("me@evil-spam.tld").is_ok());
+        assert!(reg.validate_email_domain("me@ham.tld").is_ok());
+    }
+
+    #[test]
+    fn validate_email_name_is_exact_and_case_insensitive() {
+        let reg = parse_user_reg(
+            "[user_registration]\nreserved_names = [ 'ceo' ]\nreject_plus_subaddressing = true",
+        );
+        assert!(reg.validate_email_name("ceo@mail.example").is_err());
+        assert!(reg.validate_email_name("CEO@mail.example").is_err());
+        assert!(reg.validate_email_name("CeO@mail.example").is_err());
+        assert!(reg.validate_email_name("ceo+news@mail.example").is_err());
+        assert!(reg.validate_email_name("ceO.news@mail.example").is_ok());
+
+        let reg = parse_user_reg("[user_registration]\nreject_plus_subaddressing = false");
+        assert!(reg.validate_email_name("ceo+news@mail.example").is_ok());
     }
 }

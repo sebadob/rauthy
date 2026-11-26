@@ -16,6 +16,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_service::oidc::logout;
 use std::cmp::max;
+use std::str::FromStr;
 use tokio::task;
 use tracing::error;
 use validator::Validate;
@@ -53,12 +54,12 @@ pub async fn get_sessions(
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
     let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    if user_count >= ssp_threshold as i64 {
-        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
-        let offset = params.offset.unwrap_or(0) as i64;
+    if user_count >= i64::from(ssp_threshold) {
+        let page_size = i64::from(max(params.page_size.unwrap_or(20), ssp_threshold));
+        let offset = i64::from(params.offset.unwrap_or(0));
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
-            Some(ContinuationToken::try_from(token.as_str())?)
+            Some(ContinuationToken::from_str(token.as_str())?)
         } else {
             None
         };
@@ -90,7 +91,7 @@ pub async fn get_sessions(
             resp.push(SessionResponse {
                 id: &s.id,
                 user_id: s.user_id.as_deref(),
-                is_mfa: s.is_mfa,
+                is_mfa: s.is_mfa_completed(),
                 state: rauthy_api_types::sessions::SessionState::from(
                     s.state()
                         .unwrap_or(rauthy_data::entity::sessions::SessionState::Unknown),
@@ -98,7 +99,7 @@ pub async fn get_sessions(
                 exp: s.exp,
                 last_seen: s.last_seen,
                 remote_ip: s.remote_ip.as_deref(),
-            })
+            });
         }
 
         Ok(HttpResponse::Ok().json(resp))

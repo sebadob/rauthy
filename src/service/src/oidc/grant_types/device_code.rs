@@ -1,4 +1,6 @@
-use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet};
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet,
+};
 use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
@@ -18,24 +20,18 @@ use tracing::{debug, error, warn};
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
 pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
-    let device_code = match &payload.device_code {
-        None => {
-            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidRequest,
-                error_description: Some(Cow::from("`device_code` is missing")),
-            });
-        }
-        Some(dc) => dc,
+    let Some(device_code) = &payload.device_code else {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidRequest,
+            error_description: Some(Cow::from("`device_code` is missing")),
+        });
     };
 
-    let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
-        Ok(Some(code)) => code,
-        Ok(None) | Err(_) => {
-            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::ExpiredToken,
-                error_description: Some(Cow::from("invalid `device_code` or request has expired")),
-            });
-        }
+    let Ok(Some(mut code)) = DeviceAuthCode::find_by_device_code(device_code).await else {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::ExpiredToken,
+            error_description: Some(Cow::from("invalid `device_code` or request has expired")),
+        });
     };
 
     if Some(code.client_id.as_str()) != payload.client_id.as_deref() {
@@ -59,12 +55,12 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         // TODO compare to live-secret because of graceful secret migration
         code.client_secret
             .as_ref()
-            .map(|s| s.as_bytes())
+            .map(String::as_bytes)
             .unwrap_or_default(),
         payload
             .client_secret
             .as_ref()
-            .map(|s| s.as_bytes())
+            .map(String::as_bytes)
             .unwrap_or_default(),
     ) {
         return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
@@ -161,8 +157,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         // `force_mfa` is checked in `post_device_verify`, where the approving session is known.
         let access: Result<(), ErrorResponse> = user
             .check_enabled()
-            .and_then(|_| user.check_expired())
-            .and_then(|_| client.validate_user_groups(&user));
+            .and_then(|()| user.check_expired())
+            .and_then(|()| client.validate_user_groups(&user));
         if let Err(err) = access {
             if let Err(err) = code.delete().await {
                 error!(?err, "deleting DeviceAuthCode");
@@ -173,9 +169,9 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             });
         }
 
-        let access_exp = now.add(chrono::Duration::seconds(
-            client.access_token_lifetime as i64,
-        ));
+        let access_exp = now.add(chrono::Duration::seconds(i64::from(
+            client.access_token_lifetime,
+        )));
         let refresh_exp = if client.allow_refresh_token() {
             Some(
                 access_exp
@@ -251,6 +247,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             code.resource,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
+            // no consent step
+            ConsentCheck::Exempt,
         )
         .await
         {

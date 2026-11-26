@@ -36,15 +36,29 @@ export let I18nAdminJa: I18nAdmin = {
         size: 'サイズ',
     },
     clients: {
+        settings: { general: '一般', tokens: 'トークン', integrations: '連携' },
         allowedResources: '許可するリソース',
         defaultAud: '既定の Audience',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources:
             'この Client が要求できる RFC 8707 の Resource Indicator（任意）。空にすると、「resource」リクエストパラメーターはすべて「invalid_target」で拒否されます。',
         descDefaultAud:
             '「resource」リクエストパラメーターに関係なく、この Client の Token に常に追加される Audience。',
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout:
             'この Client が {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
+            title: '外観',
+            theme: 'テーマ',
+            light: 'ライトテーマ',
+            dark: 'ダークテーマ',
+            preview: 'プレビュー',
+            assets: 'ロゴとファビコン',
+            logo: 'ロゴ',
+            advanced: '高度な CSS',
+            resetTheme: 'テーマをリセット',
+            resetThemeConfirm: '既定の色と角の丸みを復元しますか？',
+            assetsImmediate: 'ファイルの変更はすぐに反映されます。',
             descHsl:
                 '次の値は HSL 値で指定してください。指定するのは基本色だけです。アルファチャンネルなどの値は、テーマが動的に調整します。',
             descFullCss:
@@ -64,6 +78,11 @@ export let I18nAdminJa: I18nAdmin = {
         confidentialNoSecret:
             'これはコンフィデンシャルではない Client のため、Secret はありません。',
         config: 'Client の設定',
+        consent: {
+            builtIn: '組み込み',
+            desc: `'consent.enable' が設定されているときに、同意画面の内容をどこから取得するか。組み込みは要求された Scope を表示します。URL の場合、同意の内容を JSON で返す必要があります。要求されたリソースに対する '[[consent.sources]]' のエントリーが優先されます。`,
+            source: '同意の取得元',
+        },
         delete1: 'この Client を削除してもよろしいですか？',
         descAuthCode:
             '安全性を高めるため、Auth Code の有効期間を調整できます。Auth Code は一度しか使えず、既定では 60 秒間有効です。Client がログインの手続きを十分速く行える範囲で、有効期間は短いほど良いです。',
@@ -122,6 +141,20 @@ export let I18nAdminJa: I18nAdmin = {
         },
     },
     common: {
+        about: 'Rauthy について',
+        date: '日付',
+        time: '時刻',
+        preferences: '環境設定',
+        profile: 'プロフィール',
+        contactDetails: '連絡先',
+        access: 'アクセス',
+        activity: 'アクティビティ',
+
+        compactNavigation: 'コンパクトナビゲーション',
+        administration: '管理',
+        selectEntry: '項目を選択してください',
+        selectEntryHint: '一覧から項目を選択すると、詳細の表示と管理ができます。',
+
         account: 'アカウント',
         addNew: '新規追加',
         back: '戻る',
@@ -130,6 +163,7 @@ export let I18nAdminJa: I18nAdmin = {
         copiedToClip: '値をクリップボードにコピーしました',
         details: '詳細',
         edit: '編集',
+        discard: '破棄',
         enabled: '有効',
         filter: '絞り込み',
         from: '開始',
@@ -143,6 +177,8 @@ export let I18nAdminJa: I18nAdmin = {
         noEntries: '項目がありません',
         preview: 'プレビュー',
         reset: 'リセット',
+        unsavedChanges: '未保存の変更',
+        unsavedChangesDesc: '未保存の変更があります。続行して破棄しますか？',
         searchOptions: '検索オプション',
         until: '終了',
     },
@@ -202,8 +238,9 @@ export let I18nAdminJa: I18nAdmin = {
         },
         openapi:
             '外部のアプリケーションを連携させて Rauthy の API を使いたい場合は、次をご覧ください:',
-        openapiNote:
-            '既定の設定では、上のリンクから Swagger UI は使えません。設定の「server.swagger_ui_enable」と、必要に応じて「server.swagger_ui_public」で有効にできます。',
+        openapiNote: '既定の設定では、上のリンクから Swagger UI は使えません。',
+        openapiEnable:
+            '設定の「server.swagger_ui_enable」と、必要に応じて「server.swagger_ui_public」で有効にできます。',
         source: 'ソースコードはこちら',
     },
     editor: {
@@ -242,12 +279,22 @@ export let I18nAdminJa: I18nAdmin = {
             'Rauthy の管理者アカウントでは、<b>多要素認証を有効にする</b>必要があります。<br>お使いの<b>アカウント</b>の画面で多要素認証を有効にしてください。<br>その後、一度ログアウトしてから、もう一度ログインしてください。',
     },
     events: {
+        searchContent: '内容',
+        timestamp: '日時',
+        level: 'レベル',
+        type: '種類',
+        allLevels: 'すべてのレベル',
+        sendTest: 'テストイベントを送信',
         eventLevel: 'イベントのレベル',
         eventType: 'イベントの種類',
     },
     groups: {
         delete1: 'このグループを削除してもよろしいですか？',
         name: 'グループの名前',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'アルゴリズム',
@@ -258,6 +305,7 @@ export let I18nAdminJa: I18nAdmin = {
         rotateKeys: '鍵をローテーション',
     },
     kv: {
+        limit: '上限',
         accessTestDesc:
             'Access Key は、<code>Authorization</code> ヘッダーで <code>Bearer</code> Token として渡す必要があります。試すには、次の <code>curl</code> コマンドを使えます。',
         addNewKey: '新しい Access Key',
@@ -290,6 +338,7 @@ export let I18nAdminJa: I18nAdmin = {
         value: 'JSON の値',
     },
     nav: {
+        kvStore: 'KV ストア',
         apiKeys: 'API Keys',
         attributes: '属性',
         blacklist: 'ブロックリスト',
@@ -357,6 +406,9 @@ export let I18nAdminJa: I18nAdmin = {
                 '「ユーザーを自動で連携」を有効にすると、このプロバイダーでログインしたときに、まだ連携していない既存のユーザーがいれば自動でこのプロバイダーと連携します。',
             autoLinkDesc2:
                 '注意: プロバイダーがユーザーのメールアドレスを十分に確認せず、他人のアドレスを追加できてしまう場合、このオプションは非常に危険で、アカウントの乗っ取りにつながります！そのような場合は絶対に使わないでください！',
+            hideLogin: 'ログインボタンを表示しない',
+            hideLoginDesc:
+                'このプロバイダーのログインボタンはログインページと登録ページに表示されません。クエリパラメーター "idp_hint" を使ったログインはそのまま可能で、これを使ってこのプロバイダー専用のログインボタンを追加できます。',
             clientName: 'Client の名前',
             custRootCa: '独自のルート CA（PEM）',
             descAuthMethod:
@@ -377,7 +429,26 @@ export let I18nAdminJa: I18nAdmin = {
                 p4: 'パスの中で <code>*</code> をワイルドカードとして使えます',
                 p5: '<code>$.roles</code> は <code>&#123;"roles": "value"&#125;</code> を対象にします',
                 p6: '<code>$.roles.*</code> は、次のようなオブジェクトや配列の中の値を対象にできます<br><code>&#123;"roles": ["value", "notMyValue"]&#125;</code>',
+                p7: '<code>value</code> は完全一致です。先頭が <code>^</code> (プレフィックス)、<code>~</code> (正規表現)、<code>^^</code> (リテラルの <code>^</code>) の場合は除きます',
+                p8: "<code>a-z A-Z 0-9 _ -</code> 以外の文字を含むキーは引用符が必要です: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                '上流プロバイダの ID トークンの値を、既存のローカルのロールとグループにマッピングします。ルールは <code>path</code> のクレームが <code>value</code> に一致した場合にターゲットを追加し、いずれのルールも一致しない場合に削除します。ここで設定したターゲットのみが削除され、ここで設定したターゲットはプロバイダに属します - 管理者がそのユーザーに手動で付与したロールとグループも、いずれのルールも一致しないログインでは削除されます。',
+            addMapping: 'マッピングを追加',
+            removeMapping: 'マッピングを削除',
+            mappingTyp: 'タイプ',
+            typRole: 'ロール',
+            typGroup: 'グループ',
+            pathClaim: 'クレームパス',
+            valueClaim: 'クレーム値',
+            targetClaim: 'ロール / グループ',
+            noTargetSelected: '— ロール / グループなし —',
+            targetMissing:
+                '保存されたターゲット {{ target }} はもうロール / グループではありません。既存のターゲットを選択するか、このマッピングを削除してください。',
+            groupAdminTarget: '(グループ管理者)',
+            maxMappings: '認証プロバイダは最大 32 件のクレームマッピングをサポートします。',
+            regexCost:
+                '<code>~</code> で始まる <code>value</code> は正規表現で、ログインごとのすべてのクレームノードに対して評価されます。アンカーを付け、できるだけ軽いパターンにしてください。',
             lookup: '照会',
             pathAdminClaim: '管理者 Claim のパス',
             pathMfaClaim: '多要素認証 Claim のパス',
@@ -401,6 +472,10 @@ export let I18nAdminJa: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code> ロールは変更できません。',
         delete1: 'このロールを削除してもよろしいですか？',
         name: 'ロールの名前',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Claim を Token の最上位に出力する',
@@ -449,6 +524,17 @@ export let I18nAdminJa: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin ロールは外せません',
         },
         attributes: '属性',
+        consents: {
+            title: '同意',
+            desc: 'このユーザーがアプリケーションに与えた同意です。時刻はローカルのタイムゾーンで表示されます。時刻にカーソルを合わせると UTC で表示されます。',
+            none: 'このユーザーはまだどのアプリケーションにも同意していません。',
+            revokeDesc:
+                '取り消すと同意が削除され、アプリケーションはこのユーザーのアクセスを更新できなくなります。アプリケーションはユーザーに再度同意を求める必要があります。',
+            revokeAllDesc:
+                'このユーザーのすべての同意を取り消します。各アプリケーションはユーザーに再度同意を求める必要があります。',
+            sessionsWarning:
+                'ユーザーのすべてのセッションも削除され、ユーザーはすべての場所からログアウトされます。',
+        },
         deleteUser: 'このユーザーを削除してもよろしいですか？',
         descAttr:
             'ユーザーの独自属性を設定します。すべてのキーと値の組は、文字列 / JSON の値として扱われます。',

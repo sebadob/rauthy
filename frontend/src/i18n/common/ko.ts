@@ -149,10 +149,15 @@ export const I18nKo: I18n = {
             connectedApps: '연결된 앱',
             connectedAppsDesc: '계정 접근에 동의한 애플리케이션입니다.',
             granted: '허용일',
+            logoutWarning:
+                '이 작업은 모든 기기의 모든 세션에서도 로그아웃합니다. 다시 로그인해야 합니다.',
             noConnectedApps: '아직 접근 권한을 받은 애플리케이션이 없습니다.',
             privacy: '개인정보',
             resource: '리소스',
             revoke: '접근 권한 취소',
+            revokeAll: '모든 접근 권한 취소',
+            revokeAllDesc:
+                '여기에 표시된 모든 애플리케이션에 대한 동의를 취소합니다. 각 애플리케이션은 다시 동의를 요청해야 합니다.',
             revokeDesc:
                 '취소하면 동의가 삭제되고 애플리케이션은 더 이상 접근 권한을 갱신할 수 없습니다. 삭제된 리프레시 토큰과 함께 발급된 액세스 토큰은 userinfo와 인트로스펙션에서 취소됩니다. 토큰을 직접 검증하는 애플리케이션은 만료될 때까지 이를 계속 받아들일 수 있습니다. 애플리케이션은 다시 동의를 요청해야 합니다.',
             scopes: '스코프',
@@ -185,9 +190,31 @@ export const I18nKo: I18n = {
         zip: '우편번호',
     },
     authorize: {
+        busy: '서버가 현재 사용 중입니다. 잠시 후 다시 시도해 주세요.',
         clientForceMfa: `이 로그인은 더 높은 수준의 보안을 위해서 MFA를 강제합니다.\n접근하려면, 계정에 
             로그인하고 최소 하나 이상의 패스키를 추가해야 합니다.`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',
+        consent: {
+            agree: '[내 데이터 전송]에 동의합니다',
+            changed: '동의 내용이 변경되었습니다. 다시 확인해 주세요.',
+            continue: '계속',
+            details: '자세히',
+            intro: '{{ CLIENT }}에서 다음에 대한 액세스를 요청합니다:',
+            introResource: '{{ CLIENT }}에서 {{ RESOURCE }}에 대한 액세스를 요청합니다:',
+            required: '항상',
+            scopes: {
+                address: '우편 주소',
+                email: '이메일 주소',
+                groups: '그룹 멤버십',
+                openid: '로그인용 사용자 ID 및 역할',
+                phone: '전화번호',
+                profile: '이름, 사용자 이름(이메일 주소일 수 있음), 사진, 언어, 생년월일 및 시간대',
+                webid: 'WebID',
+            },
+            terms: '약관',
+            title: '동의',
+            warning: '주의 깊게 읽어 주세요',
+        },
         email: '이메일',
         emailBadFormat: '잘못된 이메일 형식입니다.',
         emailRequired: '이메일이 필요합니다.',
@@ -200,6 +227,10 @@ export const I18nKo: I18n = {
         login: '로그인',
         mfaAck: '확인되었습니다.',
         mfaOpenApp: '앱을 열어 계속 진행하세요',
+        mfaSelectionDesc: '인증 방법을 선택하세요:',
+        usePasskey: '패스키 사용',
+        useEmailCode: '이메일 코드 사용',
+        emailCodeDesc: '이메일로 일회용 코드를 받습니다',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,

@@ -39,12 +39,26 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        settings: { general: 'Generelt', tokens: 'Tokener', integrations: 'Integrasjoner' },
         allowedResources: 'Tillatte ressurser',
         defaultAud: 'Standard-mottakere (aud)',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Valgfrie RFC 8707 ressursindikatorer denne klienten kan be om. En tom liste avviser enhver 'resource'-parameter med 'invalid_target'.`,
         descDefaultAud: `Mottakere (aud) som alltid legges til i denne klientens tokens, uavhengig av en 'resource'-parameter.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
+            title: 'Utseende',
+            theme: 'Tema',
+            light: 'Lyst tema',
+            dark: 'Mørkt tema',
+            preview: 'Forhåndsvisning',
+            assets: 'Logo og favicon',
+            logo: 'Logo',
+            advanced: 'Avansert CSS',
+            resetTheme: 'Tilbakestill tema',
+            resetThemeConfirm: 'Gjenopprette standardfargene og hjørneradiusen?',
+            assetsImmediate: 'Filendringer trer i kraft med en gang.',
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.
                 Alpha kanaler og andre verdier justeres dynamisk av temaet.`,
             descFullCss: `Fargene må angis som fullstendige, gyldige CSS <code>color</code> verdier.
@@ -66,6 +80,11 @@ export let I18nAdminNb: I18nAdmin = {
         confidential: 'Følsomt',
         confidentialNoSecret: 'Dette er ikke en følsom klient, og har derfor ingen hemmelighet.',
         config: 'Klient konfigurasjon',
+        consent: {
+            builtIn: 'Innebygd',
+            desc: `Hvor innholdet i samtykkesiden kommer fra, når 'consent.enable' er satt. Innebygd viser de forespurte scopes. En URL må levere samtykkeinnholdet som JSON. En '[[consent.sources]]'-oppføring for den forespurte ressursen har forrang.`,
+            source: 'Samtykkekilde',
+        },
         delete1: 'Skal denne klienten slettes?',
         descAuthCode: `Gyldigheten til Auth kodene kan justeres for å oppnå ekstra sikkerhet.
             Auth kodene kan kun brukes en gang og er normalt gyldige i 60 sekunder. Jo kortere, jo bedre
@@ -137,6 +156,20 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
+        about: 'Om Rauthy',
+        date: 'Dato',
+        time: 'Tid',
+        preferences: 'Innstillinger',
+        profile: 'Profil',
+        contactDetails: 'Kontaktinformasjon',
+        access: 'Tilgang',
+        activity: 'Aktivitet',
+
+        compactNavigation: 'Kompakt navigasjon',
+        administration: 'Administrasjon',
+        selectEntry: 'Velg en oppføring',
+        selectEntryHint: 'Velg et element fra listen for å se og administrere detaljene.',
+
         account: 'Konto',
         addNew: 'Legg til ny',
         back: 'Tilbake',
@@ -145,6 +178,7 @@ export let I18nAdminNb: I18nAdmin = {
         copiedToClip: 'Kopiert til utklippstavle',
         details: 'Detaljer',
         edit: 'Rediger',
+        discard: 'Forkast',
         enabled: 'Aktivert',
         filter: 'Filter',
         from: 'Fra',
@@ -158,6 +192,8 @@ export let I18nAdminNb: I18nAdmin = {
         noEntries: 'Ingen oppføringer',
         preview: 'Preview',
         reset: 'Tilbakestill',
+        unsavedChanges: 'Ulagrede endringer',
+        unsavedChangesDesc: 'Du har ulagrede endringer. Vil du fortsette og forkaste dem?',
         searchOptions: 'Søkealternativer',
         until: 'Til',
     },
@@ -243,8 +279,10 @@ export let I18nAdminNb: I18nAdmin = {
             mCost3: 'Den minimale tillatte verdien for <code>m_cost</code> er <code>32768</code>.',
         },
         openapi: 'For integrering av en ekstern applikasjon via Rauthys API, se',
-        openapiNote: `I standardkonfigurasjonen er ikke Swagger-grensesnittet aktivt via lenken ovenfor. Det kan 
-            aktiveres via konfigurasjon 'server.swagger_ui_enable' og muligens 'server.swagger_ui_public'.`,
+        openapiNote:
+            'I standardkonfigurasjonen er ikke Swagger-grensesnittet aktivt via lenken ovenfor.',
+        openapiEnable:
+            "Det kan aktiveres via konfigurasjon 'server.swagger_ui_enable' og muligens 'server.swagger_ui_public'.",
         source: 'Kildekoden finnes her',
     },
     editor: {
@@ -283,12 +321,22 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
+        searchContent: 'Innhold',
+        timestamp: 'Tidsstempel',
+        level: 'Nivå',
+        type: 'Type',
+        allLevels: 'Alle nivåer',
+        sendTest: 'Send testhendelse',
         eventLevel: 'Hendelsesnivå',
         eventType: 'Hendelsestype',
     },
     groups: {
         delete1: 'Skal denne gruppen slettes?',
         name: 'Gruppenavn',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritme',
@@ -299,6 +347,7 @@ export let I18nAdminNb: I18nAdmin = {
         rotateKeys: 'Roter nøkler',
     },
     kv: {
+        limit: 'Grense',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -336,6 +385,7 @@ export let I18nAdminNb: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV-lager',
         apiKeys: 'API-nøkler',
         attributes: 'Attributter',
         blacklist: 'Svarteliste',
@@ -394,6 +444,10 @@ export let I18nAdminNb: I18nAdmin = {
             autoLink: 'Auto-link bruker',
             autoLinkDesc1: `Hvis auto-link bruker er aktivert, vil en eventuell eksisterende, ikke-koblet bruker automatisk kobles til denne leverandøren ved innlogging.`,
             autoLinkDesc2: `ADVARSEL: Dette kan være svært farlig og føre til kontoovertakelse hvis leverandøren ikke utfører fullstendig e-postverifisering og lar en fremmed adresse bli registrert for en bruker! MÅ ALDRI brukes i slike tilfeller!`,
+            hideLogin: 'Skjul innloggingsknappen',
+            hideLoginDesc: `Innloggingsknappen for denne leverandøren er skjult på innloggingssiden og
+                registreringssiden. Innlogging er fortsatt mulig via query-parameteren "idp_hint", som kan brukes til
+                å legge til en egen innloggingsknapp for denne leverandøren.`,
             clientName: 'Klientnavn',
             custRootCa: 'Egen Root CA PEM',
             descAuthMethod: `Autentiseringsmetoden som skal brukes på <code>/token</code>-endepunktet.<br>De fleste leverandører bør fungere med <code>basic</code>, noen kun med <code>post</code>. I sjeldne tilfeller må begge aktiveres, selv om det kan føre til feil med andre leverandører.`,
@@ -411,7 +465,26 @@ export let I18nAdminNb: I18nAdmin = {
                 p4: '<code>*</code> kan brukes som jokertegn i stien',
                 p5: '<code>$.roles</code> vil treffe <code>&#123;"roles": "verdi"&#125;</code>',
                 p6: `<code>$.roles.*</code> kan treffe en verdi i et objekt eller array som<br><code>&#123;\"roles\": [\"verdi\", \"ikkeMinVerdi\"]&#125;</code>`,
+                p7: 'En <code>value</code> treffer nøyaktig, med mindre den starter med <code>^</code> (prefiks), <code>~</code> (regex) eller <code>^^</code> (en literal <code>^</code>)',
+                p8: "Nøkler med tegn utenfor <code>a-z A-Z 0-9 _ -</code> trenger hermetegn: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Mapper verdier fra ID-tokenet til en upstream-leverandør til eksisterende lokale roller og grupper. En regel legger til målet sitt når claimet på <code>path</code> treffer <code>value</code>, og fjerner det når ingen av reglene treffer. Bare målene som er konfigurert her, fjernes, og et mål konfigurert her tilhører leverandøren: en rolle eller gruppe en admin har tildelt brukeren manuelt, fjernes også ved en pålogging uten treff.',
+            addMapping: 'Legg til mapping',
+            removeMapping: 'Fjern mapping',
+            mappingTyp: 'Type',
+            typRole: 'Rolle',
+            typGroup: 'Gruppe',
+            pathClaim: 'Claim-bane',
+            valueClaim: 'Claim-verdi',
+            targetClaim: 'Rolle / Gruppe',
+            noTargetSelected: '— Ingen rolle / gruppe —',
+            targetMissing:
+                'Den lagrede verdien {{ target }} er ikke en rolle eller gruppe lenger. Velg en eksisterende, eller fjern denne mappingen.',
+            groupAdminTarget: '(gruppeadmin)',
+            maxMappings: 'En auth-leverandør støtter maksimalt 32 claim-mappings.',
+            regexCost:
+                'En <code>value</code> som starter med <code>~</code>, er en regex som evalueres mot hver claim-node ved hver pålogging: hold den anket og så billig som mulig.',
             lookup: 'Søk',
             pathAdminClaim: 'Sti til admin-claim',
             pathMfaClaim: 'Sti til MFA-claim',
@@ -433,6 +506,10 @@ export let I18nAdminNb: I18nAdmin = {
         adminNoMod: 'Rollen <code>rauthy_admin</code> kan ikke endres.',
         delete1: 'Skal denne rollen slettes?',
         name: 'Rollenavn',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
@@ -484,6 +561,17 @@ export let I18nAdminNb: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin-rollen kan ikke fjernes',
         },
         attributes: 'Attributter',
+        consents: {
+            title: 'Samtykker',
+            desc: 'Samtykker denne brukeren har gitt til applikasjoner. Tidspunkter vises i din lokale tidssone; hold musepekeren over et tidspunkt for å se det i UTC.',
+            none: 'Denne brukeren har ikke gitt samtykke til noen applikasjon.',
+            revokeDesc:
+                'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin for denne brukeren. Applikasjonen må be brukeren om samtykke på nytt.',
+            revokeAllDesc:
+                'Trekker tilbake alle samtykkene til denne brukeren. Hver applikasjon må be brukeren om samtykke på nytt.',
+            sessionsWarning:
+                'Alle øktene til brukeren slettes også, og brukeren logges ut overalt.',
+        },
         deleteUser: 'Skal denne brukeren slettes?',
         descAttr: `Sett individuelle bruker-attributter. Alle nøkkel/verdi-par håndteres som String/JSON-verdi.`,
         forceLogout: `Skal alle økter for denne brukeren invalidiseres og alle refresh tokens slettes?`,

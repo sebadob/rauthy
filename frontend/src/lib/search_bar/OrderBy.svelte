@@ -25,13 +25,16 @@
 
     let selected = $state(untrack(() => options[0]));
     let direction: 'up' | 'down' = $state(untrack(() => (firstDirReverse ? 'down' : 'up')));
+    let directionLabel = $derived(
+        direction === 'up' ? ta.search.orderChangeToDesc : ta.search.orderChangeToAsc,
+    );
 
     $effect(() => {
         onChange(selected, direction);
     });
 </script>
 
-<div class="container">
+<div class="container admin-sort">
     <Tooltip text={ta.search.orderBy}>
         <Options
             bind:ref
@@ -39,31 +42,24 @@
             {options}
             bind:value={selected}
             {borderless}
+            showTitle={false}
         />
     </Tooltip>
 
     <div class="btn">
-        {#if direction === 'up'}
+        <Tooltip text={directionLabel}>
             <Button
-                ariaLabel={ta.search.orderChangeToDesc}
+                ariaLabel={directionLabel}
                 invisible
-                onclick={() => (direction = 'down')}
+                onclick={() => (direction = direction === 'up' ? 'down' : 'up')}
             >
-                <Tooltip text={ta.search.orderChangeToDesc}>
+                {#if direction === 'up'}
                     <IconBarsArrowUp />
-                </Tooltip>
-            </Button>
-        {:else}
-            <Button
-                ariaLabel={ta.search.orderChangeToAsc}
-                invisible
-                onclick={() => (direction = 'up')}
-            >
-                <Tooltip text={ta.search.orderChangeToAsc}>
+                {:else}
                     <IconBarsArrowDown />
-                </Tooltip>
+                {/if}
             </Button>
-        {/if}
+        </Tooltip>
     </div>
 </div>
 
@@ -75,5 +71,27 @@
     .container {
         display: flex;
         align-items: center;
+    }
+
+    .admin-sort {
+        justify-content: flex-end;
+    }
+    .admin-sort > :global(.btn) {
+        margin: 0;
+    }
+    .admin-sort :global(.admin-select-trigger) {
+        min-height: 32px;
+        border: 0;
+        padding: 0 6px;
+        background: transparent;
+    }
+    .admin-sort :global(svg) {
+        width: 18px;
+        height: 18px;
+    }
+    .admin-sort :global(.admin-select-trigger[data-border]) {
+        border: 0;
+        background: transparent;
+        padding: 0 6px;
     }
 </style>

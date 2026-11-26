@@ -34,26 +34,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .parse::<bool>()
                 .expect("Cannot parse LOCAL_TEST as bool");
 
-            if local_test {
+            let res = if local_test {
                 server::run(
                     "config-local-test.toml".to_string(),
                     args.secrets_file,
                     false,
                 )
-                .await?
+                .await
             } else {
                 #[cfg(any(debug_assertions, feature = "profiling"))]
                 let test_mode = args.test;
                 #[cfg(not(any(debug_assertions, feature = "profiling")))]
                 let test_mode = false;
-                server::run(args.config_file, args.secrets_file, test_mode).await?
+                server::run(args.config_file, args.secrets_file, test_mode).await
+            };
+            if let Err(err) = res {
+                // shuts down the database / cache layer cleanly, if it was started already
+                rauthy_data::shutdown::fatal(err).await;
             }
         }
         Args::Bootstrap(args) => utils::bootstrap::run(args).await?,
         Args::GenerateConfig(args) => utils::gen_config::generate(args).await?,
         Args::ValidateConfig(args) => utils::validate_config::validate(args).await?,
-        Args::GenerateEncKey(args) => utils::gen_enc_keys::generate(args).await?,
-        Args::GenerateSecrets => utils::gen_secrets::generate().await?,
+        Args::GenerateEncKey(args) => utils::gen_enc_keys::generate(args)?,
+        Args::GenerateSecrets => utils::gen_secrets::generate()?,
         Args::HashPassword(args) => utils::hash_password::hash(args).await?,
     }
 

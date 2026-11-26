@@ -39,12 +39,26 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        settings: { general: 'Загальні', tokens: 'Токени', integrations: 'Інтеграції' },
         allowedResources: 'Дозволені ресурси',
         defaultAud: 'Аудиторії за замовчуванням',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Необов'язкові індикатори ресурсів RFC 8707, які може запитувати цей клієнт. Порожній список відхиляє будь-який параметр 'resource' з помилкою 'invalid_target'.`,
         descDefaultAud: `Аудиторії, які завжди додаються до токенів цього клієнта, незалежно від параметра 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
+            title: 'Оформлення',
+            theme: 'Тема',
+            light: 'Світла тема',
+            dark: 'Темна тема',
+            preview: 'Перегляд',
+            assets: 'Логотип і значок сайту',
+            logo: 'Логотип',
+            advanced: 'Розширений CSS',
+            resetTheme: 'Скинути тему',
+            resetThemeConfirm: 'Відновити типові кольори й радіус заокруглення?',
+            assetsImmediate: 'Зміни файлів набувають чинності одразу.',
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.
             Альфа-канали та інші значення динамічно змінюються темою.`,
             descFullCss: `Наступні значення мають бути повністю валідними CSS-значеннями <code>color</code>.
@@ -65,6 +79,11 @@ export let I18nAdminUk: I18nAdmin = {
         confidential: 'Конфіденційний',
         confidentialNoSecret: 'Цей клієнт не є конфіденційним, тому не має секрету.',
         config: 'Конфігурація клієнта',
+        consent: {
+            builtIn: 'Вбудований',
+            desc: `Звідки береться вміст екрана згоди, якщо задано 'consent.enable'. Вбудований показує запитані scopes. URL має віддавати вміст згоди у форматі JSON. Запис '[[consent.sources]]' для запитаного ресурсу має пріоритет.`,
+            source: 'Джерело згоди',
+        },
         delete1: 'Дійсно видалити цього клієнта?',
         descAuthCode: `Термін дії кодів авторизації можна налаштувати для підвищення безпеки. Коди авторизації
             можна використати лише один раз, і за замовчуванням вони дійсні 60 секунд. Чим коротший термін дії,
@@ -135,6 +154,20 @@ export let I18nAdminUk: I18nAdmin = {
         },
     },
     common: {
+        about: 'Про Rauthy',
+        date: 'Дата',
+        time: 'Час',
+        preferences: 'Налаштування',
+        profile: 'Профіль',
+        contactDetails: 'Контактні дані',
+        access: 'Доступ',
+        activity: 'Активність',
+
+        compactNavigation: 'Компактна навігація',
+        administration: 'Адміністрування',
+        selectEntry: 'Виберіть запис',
+        selectEntryHint: 'Виберіть елемент зі списку, щоб переглянути та змінити його дані.',
+
         account: 'Акаунт',
         addNew: 'Додати',
         back: 'Назад',
@@ -143,6 +176,7 @@ export let I18nAdminUk: I18nAdmin = {
         copiedToClip: 'Скопійовано до буферу обміну',
         details: 'Деталі',
         edit: 'Редагувати',
+        discard: 'Скинути',
         enabled: 'Увімкнено',
         filter: 'Фільтр',
         from: 'Від',
@@ -156,6 +190,8 @@ export let I18nAdminUk: I18nAdmin = {
         noEntries: 'Немає записів',
         preview: 'Попередній перегляд',
         reset: 'Скинути',
+        unsavedChanges: 'Незбережені зміни',
+        unsavedChangesDesc: 'У вас є незбережені зміни. Продовжити і відмовитися від них?',
         searchOptions: 'Параметри пошуку',
         until: 'До',
     },
@@ -242,8 +278,10 @@ export let I18nAdminUk: I18nAdmin = {
         },
         openapi:
             'Якщо ви хочете інтегрувати зовнішній додаток і використовувати API Rauthy, перегляньте',
-        openapiNote: `У стандартній конфігурації інтерфейс Swagger не активний через посилання вище. Це можна 
-            активувати за допомогою конфігурації 'server.swagger_ui_enable' і, можливо, 'server.swagger_ui_public'.`,
+        openapiNote:
+            'У стандартній конфігурації інтерфейс Swagger не активний через посилання вище.',
+        openapiEnable:
+            "Це можна активувати за допомогою конфігурації 'server.swagger_ui_enable' і, можливо, 'server.swagger_ui_public'.",
         source: 'Вихідний код можна знайти тут',
     },
     editor: {
@@ -283,12 +321,22 @@ export let I18nAdminUk: I18nAdmin = {
             Після цього вам потрібно вийти і увійти знову.`,
     },
     events: {
+        searchContent: 'Вміст',
+        timestamp: 'Дата й час',
+        level: 'Рівень',
+        type: 'Тип',
+        allLevels: 'Усі рівні',
+        sendTest: 'Надіслати тестову подію',
         eventLevel: 'Рівень події',
         eventType: 'Тип події',
     },
     groups: {
         delete1: 'Дійсно видалити цю групу?',
         name: 'Назва групи',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Алгоритм',
@@ -303,6 +351,7 @@ export let I18nAdminUk: I18nAdmin = {
         rotateKeys: 'Ротувати ключі',
     },
     kv: {
+        limit: 'Ліміт',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -340,6 +389,7 @@ export let I18nAdminUk: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'Сховище KV',
         apiKeys: 'API Ключі',
         attributes: 'Атрибути',
         blacklist: 'Чорний список',
@@ -413,6 +463,10 @@ export let I18nAdminUk: I18nAdmin = {
             autoLinkDesc2: `УВАГА: Ця опція може бути дуже небезпечною і призвести до захоплення акаунта, якщо
                 провайдер не перевіряє повністю адреси E-Mail для користувачів і, таким чином, дає
                 можливість додати чужу адресу для користувача! НІКОЛИ не використовуйте в такому випадку!`,
+            hideLogin: 'Приховати кнопку входу',
+            hideLoginDesc: `Кнопка входу цього провайдера прихована на сторінках входу та реєстрації. Вхід
+                залишається можливим через query-параметр "idp_hint", за допомогою якого можна додати окрему кнопку
+                входу для нього.`,
             clientName: 'Назва клієнта',
             custRootCa: 'Власний кореневий CA (PEM)',
             descAuthMethod: `Метод автентифікації для ендпоінту <code>/token</code>.<br>
@@ -436,7 +490,26 @@ export let I18nAdminUk: I18nAdmin = {
                 p5: '<code>$.roles</code> вкаже на <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> може вказувати на значення всередині об'єкта або масиву, наприклад:<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Значення <code>value</code> збігається точно, якщо лише не починається з <code>^</code> (префікс), <code>~</code> (регулярний вираз) або <code>^^</code> (літеральний <code>^</code>)',
+                p8: "Ключі з символами поза <code>a-z A-Z 0-9 _ -</code> потребують лапок: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Зіставлення значень з ID-токена провайдера з існуючими локальними ролями та групами. Правило додає ціль, коли клейм за <code>path</code> збігається з <code>value</code>, і видаляє її, коли жодне з його правил не збігається. Видаляються лише цілі, налаштовані тут, і ціль, налаштована тут, належить провайдеру: роль або групу, яку адмін видав цьому користувачу вручну, також видаляють під час входу, якщо жодне правило не збігається.',
+            addMapping: 'Додати зіставлення',
+            removeMapping: 'Видалити зіставлення',
+            mappingTyp: 'Тип',
+            typRole: 'Роль',
+            typGroup: 'Група',
+            pathClaim: 'Шлях клейма',
+            valueClaim: 'Значення клейма',
+            targetClaim: 'Роль / Група',
+            noTargetSelected: '— Немає ролі / групи —',
+            targetMissing:
+                'Збережена ціль {{ target }} більше не є роллю або групою. Виберіть наявну або видаліть це зіставлення.',
+            groupAdminTarget: '(адмін групи)',
+            maxMappings: 'Провайдер авторизації підтримує щонайбільше 32 зіставлення клеймів.',
+            regexCost:
+                '<code>value</code>, що починається з <code>~</code>, це регулярний вираз, який перевіряється за кожним вузлом клейма під час кожного входу: фіксуйте його і робіть максимально простим.',
             lookup: 'Пошук',
             pathAdminClaim: 'Шлях до Admin Claim',
             pathMfaClaim: 'Шлях до MFA Claim',
@@ -460,6 +533,10 @@ export let I18nAdminUk: I18nAdmin = {
         adminNoMod: 'Роль <code>rauthy_admin</code> є незмінною.',
         delete1: 'Дійсно видалити цю роль?',
         name: 'Назва ролі',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
@@ -511,6 +588,17 @@ export let I18nAdminUk: I18nAdmin = {
             rauthyAdmin: 'правило rauthy_admin не можна видалити',
         },
         attributes: 'Атрибути',
+        consents: {
+            title: 'Згоди',
+            desc: 'Згоди, які цей користувач надав застосункам. Час показано у вашому місцевому часовому поясі; наведіть курсор на час, щоб побачити його в UTC.',
+            none: 'Цей користувач ще не надав згоди жодному застосунку.',
+            revokeDesc:
+                'Відкликання видаляє згоду, і застосунок більше не може поновлювати свій доступ для цього користувача. Застосунок має знову запросити згоду користувача.',
+            revokeAllDesc:
+                'Відкликає всі згоди цього користувача. Кожен застосунок має знову запросити згоду користувача.',
+            sessionsWarning:
+                'Усі сесії користувача також видаляються, і користувач виходить із системи всюди.',
+        },
         deleteUser: 'Дійсно видалити цього користувача?',
         descAttr: `Встановіть власні атрибути користувача. Усі пари ключ-значення обробляються як String / JSON Value.`,
         forceLogout: `Дійсно завершити всі існуючі сесії та видалити всі

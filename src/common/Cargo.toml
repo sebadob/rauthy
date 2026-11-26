@@ -19,14 +19,13 @@ cidr = { workspace = true }
 flume = { workspace = true }
 gethostname = { workspace = true }
 pulldown-cmark = { workspace = true }
-openssl = { workspace = true }
-openssl-sys = { workspace = true }
 rand = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
@@ -37,3 +36,6 @@ chrono = { version = "0.4", default-features = false, features = ["now"] }
 
 [dev-dependencies]
 pretty_assertions = "1"
+
+[lints]
+workspace = true

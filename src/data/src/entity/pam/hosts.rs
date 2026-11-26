@@ -71,11 +71,11 @@ impl PamHost {
         let secret = secure_random_alnum(SECRET_LEN_CLIENTS);
         let enc = EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO pam_hosts (id, hostname, gid, secret, force_mfa, local_password_only)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *
-"#;
+";
 
         let slf = if is_hiqlite() {
             DB::hql()
@@ -90,7 +90,7 @@ RETURNING *
                 &[
                     &id,
                     &hostname,
-                    &(gid as i64),
+                    &i64::from(gid),
                     &enc,
                     &force_mfa,
                     &local_password_only,
@@ -265,13 +265,13 @@ RETURNING *
     }
 
     pub async fn find_by_ip_full(ip: IpAddr) -> Result<Self, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM pam_hosts WHERE id = (
     SELECT host_id FROM pam_hosts_ips
     WHERE ip = $1
     LIMIT 1
 )
-"#;
+";
         let ip = ip.to_string();
 
         let mut slf: Self = if is_hiqlite() {
@@ -291,14 +291,14 @@ SELECT * FROM pam_hosts WHERE id = (
     }
 
     pub async fn find_by_alias_full(hostname: String) -> Result<Self, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM pam_hosts WHERE hostname = $1 OR id = (
     SELECT host_id FROM pam_hosts_aliases
     WHERE alias = $1
     LIMIT 1
 )
 LIMIT 1
-"#;
+";
 
         let mut slf: Self = if is_hiqlite() {
             DB::hql().query_map_one(sql, params!(hostname)).await?
@@ -323,7 +323,7 @@ LIMIT 1
             let mut row = DB::hql().query_raw_one(sql, params!(gid)).await?;
             row.get("count")
         } else {
-            let row = DB::pg_query_one_row(sql, &[&(gid as i64)]).await?;
+            let row = DB::pg_query_one_row(sql, &[&i64::from(gid)]).await?;
             row.get("count")
         };
 
@@ -336,13 +336,13 @@ LIMIT 1
         let mut hosts: Vec<Self> = if is_hiqlite() {
             DB::hql().query_map(sql, params!(gid)).await?
         } else {
-            DB::pg_query(sql, &[&(gid as i64)], 8).await?
+            DB::pg_query(sql, &[&i64::from(gid)], 8).await?
         };
 
         let aliases = Self::find_aliases_all().await?;
         let ips = Self::find_ips_all().await?;
 
-        for host in hosts.iter_mut() {
+        for host in &mut hosts {
             if let Some(a) = aliases.get(&host.id) {
                 host.aliases = a.clone();
             }
@@ -380,7 +380,7 @@ LIMIT 1
         let aliases = Self::find_aliases_all().await?;
         let ips = Self::find_ips_all().await?;
 
-        for host in hosts.iter_mut() {
+        for host in &mut hosts {
             if let Some(a) = aliases.get(&host.id) {
                 host.aliases = a.clone();
             }
@@ -408,11 +408,11 @@ LIMIT 1
         host_id: String,
         payload: PamHostUpdateRequest,
     ) -> Result<(), ErrorResponse> {
-        let sql_update = r#"
+        let sql_update = r"
 UPDATE pam_hosts
 SET hostname = $1, gid = $2, force_mfa = $3, local_password_only = $4, notes = $5
 WHERE id = $6
-"#;
+";
         let sql_cleanup_1 = "DELETE FROM pam_hosts_ips WHERE host_id = $1";
         let sql_cleanup_2 = "DELETE FROM pam_hosts_aliases WHERE host_id = $1";
 
@@ -453,7 +453,7 @@ WHERE id = $6
                 sql_update,
                 &[
                     &payload.hostname,
-                    &(payload.gid as i64),
+                    &i64::from(payload.gid),
                     &payload.force_mfa,
                     &payload.local_password_only,
                     &payload.notes,
@@ -496,11 +496,11 @@ impl PamHost {
     pub async fn build_wheel_group_response(
         &self,
     ) -> Result<PamGroupMembersResponse, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT name FROM pam_rel_groups_users pu
 JOIN pam_users u ON pu.uid = u.id
 WHERE pu.gid = $1 AND pu.wheel = $2
-"#;
+";
 
         let members = if is_hiqlite() {
             DB::hql()
@@ -510,7 +510,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
                 .map(|mut r| r.get("name"))
                 .collect::<Vec<String>>()
         } else {
-            DB::pg_query_rows(sql, &[&(self.gid as i64), &true], 4)
+            DB::pg_query_rows(sql, &[&i64::from(self.gid), &true], 4)
                 .await?
                 .into_iter()
                 .map(|r| r.get("name"))
@@ -534,7 +534,7 @@ WHERE pu.gid = $1 AND pu.wheel = $2
                 .await
                 .is_ok()
         } else {
-            DB::pg_query_one_row(sql, &[&(self.gid as i64), &(user.id as i64)])
+            DB::pg_query_one_row(sql, &[&i64::from(self.gid), &i64::from(user.id)])
                 .await
                 .is_ok()
         }

@@ -53,6 +53,9 @@ export const I18nEn: I18n = {
         year: 'Year',
     },
     account: {
+        noEditableAttributes: 'No editable attributes.',
+        attributes: 'Attributes',
+        stringOrJson: 'String / JSON',
         account: 'User Account',
         accType: 'Account Type',
         accTypePasskeyText1: `This account is currently a passkey only account.\nThis means, that 
@@ -85,6 +88,7 @@ export const I18nEn: I18n = {
         deviceName: 'Name',
         devices: 'Devices',
         devicesDesc: 'Devices linked to this account',
+        devicesEmpty: 'No devices linked yet.',
         emailUpdateConfirm: `The E-Mail address has not been updated yet. A message has been\nsent 
             out to your new address. You need to click the confirmation link inside it. Once it 
             has been\nconfirmed, your new address will be updated.`,
@@ -155,10 +159,15 @@ export const I18nEn: I18n = {
             connectedApps: 'Connected Apps',
             connectedAppsDesc: 'Applications you have given consent to access your account.',
             granted: 'Granted',
+            logoutWarning:
+                'This also signs you out of all your sessions on every device. You will have to log in again.',
             noConnectedApps: 'No application has been granted access yet.',
             privacy: 'Privacy',
             resource: 'Resource',
             revoke: 'Revoke Access',
+            revokeAll: 'Revoke All Access',
+            revokeAllDesc:
+                'Revokes your consent for all applications listed here. Each application has to ask for your consent again.',
             revokeDesc:
                 'Revoking removes the consent and the application can no longer renew its access. Access tokens issued with the deleted refresh tokens are revoked at userinfo and introspection. Applications that validate their tokens themselves can still accept them until they expire. The application has to ask for your consent again.',
             scopes: 'Scopes',
@@ -192,9 +201,32 @@ export const I18nEn: I18n = {
         zip: 'ZIP / Postal Code',
     },
     authorize: {
+        busy: 'The server is busy right now. Please try again in a moment.',
         clientForceMfa: `This login forces MFA to achieve higher security.\nTo get access, you need 
             to log in to your account and add at least one additional Passkey`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',
+        consent: {
+            agree: 'I consent to the [transmission of my data]',
+            changed: 'The consent content has changed, please check it again.',
+            continue: 'Continue',
+            details: 'Details',
+            intro: '{{ CLIENT }} requests access to:',
+            introResource: '{{ CLIENT }} requests access to {{ RESOURCE }}:',
+            required: 'always',
+            scopes: {
+                address: 'Your postal address',
+                email: 'Your E-Mail address',
+                groups: 'Your group memberships',
+                openid: 'Your user ID and roles to sign you in',
+                phone: 'Your phone number',
+                profile:
+                    'Your name, username (may be your E-Mail address), picture, language, birthdate and time zone',
+                webid: 'Your WebID',
+            },
+            terms: 'Terms',
+            title: 'Consent',
+            warning: 'Please read carefully',
+        },
         email: 'E-Mail',
         emailBadFormat: 'Bad E-Mail format',
         emailRequired: 'E-Mail is required',
@@ -207,6 +239,10 @@ export const I18nEn: I18n = {
         login: 'Login',
         mfaAck: 'Acknowledged',
         mfaOpenApp: 'Open the App to continue',
+        mfaSelectionDesc: 'Choose your verification method:',
+        usePasskey: 'Use Passkey',
+        useEmailCode: 'Use Email Code',
+        emailCodeDesc: 'Receive a one-time code via email',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
@@ -219,8 +255,8 @@ export const I18nEn: I18n = {
         passwordForgotten: 'Password forgotten?',
         passwordRequest: 'Request',
         passwordRequired: 'Password is required',
-        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your 
-            address exists in out database, you will receive a link via E-Mail.`,
+        passwordResetDesc: `Enter your email address to request a password reset link. If an account
+            exists for that address, you will receive a link by email.`,
         passwordResetSuccess: 'Request received. You can close this window now.',
         requestExpires: 'Request expires',
         requestExpired: 'Request has expired',
@@ -264,6 +300,7 @@ export const I18nEn: I18n = {
     },
     mfa: {
         webauthn: {
+            empty: 'No passkeys registered.',
             title: 'Passkeys',
             p1: `If you plan on using your MFA key with multiple systems like Windows and Android, 
                 you should do the registration with Android.`,
@@ -277,6 +314,9 @@ export const I18nEn: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
+            empty: 'No one-time password methods registered.',
+            active: 'Active',
+            inactive: 'Inactive',
             title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
@@ -303,6 +343,7 @@ export const I18nEn: I18n = {
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 non-special characters',
         passwordInvalid: 'Password Invalid',
+        testPasskey: 'Test passkey',
         test: 'Test',
         testError: 'Error starting the Test',
         testSuccess: 'Test successful',

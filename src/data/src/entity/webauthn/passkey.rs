@@ -72,7 +72,7 @@ impl PasskeyEntity {
             name,
             passkey_user_id: passkey_user_id.to_string(),
             passkey,
-            credential_id: pk.cred_id().to_vec(),
+            credential_id: pk.cred_id().clone(),
             registered: now,
             last_used: now,
             user_verified: Some(user_verified),
@@ -83,12 +83,12 @@ impl PasskeyEntity {
         let user_email = user.as_ref().map(|u| u.email.clone());
         let client = DB::hql();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO passkeys (
     user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified,
     resident_key, aaguid
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -195,7 +195,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
                 if user.password.is_some() {
                     user.password_expires = Some(
                         Utc::now()
-                            .add(chrono::Duration::days(valid_days as i64))
+                            .add(chrono::Duration::days(i64::from(valid_days)))
                             .timestamp(),
                     );
                 } else {
@@ -329,7 +329,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
 
         let opt: Option<Vec<Vec<u8>>> = client.get(Cache::Webauthn, &idx).await?;
         if let Some(bytes) = opt {
-            return Ok(bytes.into_iter().map(CredentialID::from).collect());
+            return Ok(bytes);
         }
 
         let sql = "SELECT credential_id FROM passkeys WHERE user_id = $1";
@@ -351,7 +351,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
         let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp.as_secs() as i64);
         client.put(Cache::Webauthn, idx, &creds, ttl).await?;
 
-        Ok(creds.into_iter().map(CredentialID::from).collect())
+        Ok(creds)
     }
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
@@ -429,10 +429,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
     pub async fn update_passkey(&self) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let sql = r#"
+        let sql = r"
 UPDATE passkeys
 SET passkey = $1, last_used = $2
-WHERE user_id = $3 AND name = $4"#;
+WHERE user_id = $3 AND name = $4";
 
         if is_hiqlite() {
             client
@@ -492,7 +492,7 @@ impl PasskeyEntity {
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user_with_uv(user_id: &str) -> String {
-        format!("{IDX_WEBAUTHN}_UV_{user_id}",)
+        format!("{IDX_WEBAUTHN}_UV_{user_id}")
     }
 
     /// Index for credentials for a user
@@ -517,5 +517,42 @@ fn format_aaguid(aaguid: &[u8]) -> String {
         )
     } else {
         hex
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use webauthn_rs::prelude::{Credential, ParsedAttestationData};
+
+    // Payloads generated with webauthn-rs 0.5.5 to verify stored passkeys stay readable on upgrade.
+    const V05_PASSKEY_PLAIN: &str = r#"{"cred":{"cred_id":"AQIDBA","cred":{"type_":"ES256","key":{"EC_EC2":{"curve":"SECP256R1","x":"ERERERERERERERERERERERERERERERERERERERERERE","y":"IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI"}}},"counter":42,"transports":["internal","hybrid"],"user_verified":true,"backup_eligible":true,"backup_state":false,"registration_policy":"required","extensions":{"cred_protect":"NotRequested","hmac_create_secret":"NotRequested","appid":"NotRequested","cred_props":"NotRequested"},"attestation":{"data":"None","metadata":"None"},"attestation_format":"none"}}"#;
+    const V05_PASSKEY_ATTESTED: &str = r#"{"cred":{"cred_id":"BQYHCA","cred":{"type_":"ES256","key":{"EC_EC2":{"curve":"SECP256R1","x":"ERERERERERERERERERERERERERERERERERERERERERE","y":"IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI"}}},"counter":7,"transports":["usb"],"user_verified":true,"backup_eligible":false,"backup_state":false,"registration_policy":"required","extensions":{"cred_protect":"NotRequested","hmac_create_secret":"NotRequested","appid":"NotRequested","cred_props":"NotRequested"},"attestation":{"data":{"Basic":["MIIC3jCCAj-gAwIBAgIGAOq0AAACMAoGCCqGSM49BAMEMIGRMQswCQYDVQQGEwJVUzELMAkGA1UECAwCVkExDzANBgNVBAcMBlJlc3RvbjEtMCsGA1UECgwkSURFTUlBIElkZW50aXR5IGFuZCBTZWN1cml0eSBVU0EgTExDMTUwMwYDVQQDDCxJREVNSUEgSWRlbnRpdHkgYW5kIFNlY3VyaXR5IFVTQSBMTEMgUm9vdCBDQTAgFw0yNDA5MTgyMjAwMDBaGA8yMDY0MDkxOTIxNTk1OVowgZExCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJWQTEPMA0GA1UEBwwGUmVzdG9uMS0wKwYDVQQKDCRJREVNSUEgSWRlbnRpdHkgYW5kIFNlY3VyaXR5IFVTQSBMTEMxNTAzBgNVBAMMLElERU1JQSBJZGVudGl0eSBhbmQgU2VjdXJpdHkgVVNBIExMQyBSb290IENBMIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAlcTYsCV2LxuwK8Q5PK-03_wSAPSpQZR6k12P2pqfB1p7M3JUfUwvemitohKJY2EepPLadIiwz2gVarPB6MFc_H4BRmv5ycUYhWwJyPiRfqFJQrcnOr2QmGUm7n_GZhQKVz5ur8L7NOpnonvxcuhceujee1xHpIU-WryCo2hpNfXoYiKjPDA6MB0GA1UdDgQWBBQ7VjlL3agSTXvVAFyKb4GIEcp0wzALBgNVHQ8EBAMCAP8wDAYDVR0TBAUwAwEB_zAKBggqhkjOPQQDBAOBjAAwgYgCQgE-fbbJFcXiFgQZbZr3xQdUWSngg1hNrkHFHh5Q6REHXHEXayx-Imf00iPoNpAE6c9mCSTVeWBsGOqDS4B36RVQoQJCAbXwMD-l1F_LsxRBe4-0MHhwr20v6hkm-s2KOVUr2n-IAz2cghCClLOTdXXvQGl4653XX3vwX9VpgyRSUT1thiex"]},"metadata":{"Packed":{"aaguid":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}}},"attestation_format":"packed"}}"#;
+
+    #[test]
+    fn passkey_v05_json_compatibility() {
+        let plain: Passkey = serde_json::from_str(V05_PASSKEY_PLAIN).unwrap();
+        assert_eq!(plain.cred_id().as_slice(), &[1, 2, 3, 4]);
+        let plain_roundtrip = serde_json::to_string(&plain).unwrap();
+        let plain_cred =
+            Credential::from(serde_json::from_str::<Passkey>(&plain_roundtrip).unwrap());
+        assert!(plain_cred.user_verified);
+        assert_eq!(plain_cred.counter, 42);
+        assert!(matches!(
+            plain_cred.attestation.data,
+            ParsedAttestationData::None
+        ));
+
+        let attested: Passkey = serde_json::from_str(V05_PASSKEY_ATTESTED).unwrap();
+        assert_eq!(attested.cred_id().as_slice(), &[5, 6, 7, 8]);
+        let attested_roundtrip = serde_json::to_string(&attested).unwrap();
+        let attested_cred =
+            Credential::from(serde_json::from_str::<Passkey>(&attested_roundtrip).unwrap());
+        assert!(attested_cred.user_verified);
+        assert_eq!(attested_cred.counter, 7);
+        assert!(matches!(
+            &attested_cred.attestation.data,
+            ParsedAttestationData::Basic(certs) if certs.len() == 1
+        ));
     }
 }

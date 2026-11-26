@@ -156,10 +156,15 @@ export const I18nNl: I18n = {
             connectedAppsDesc:
                 'Applicaties die u toestemming heeft gegeven om uw account te gebruiken.',
             granted: 'Verleend',
+            logoutWarning:
+                'Hiermee wordt u ook afgemeld bij al uw sessies op alle apparaten. U moet opnieuw inloggen.',
             noConnectedApps: 'Er heeft nog geen applicatie toegang gekregen.',
             privacy: 'Privacy',
             resource: 'Resource',
             revoke: 'Toegang intrekken',
+            revokeAll: 'Alle toegang intrekken',
+            revokeAllDesc:
+                'Trekt uw toestemming in voor alle hier vermelde applicaties. Elke applicatie moet opnieuw om uw toestemming vragen.',
             revokeDesc:
                 'Intrekken verwijdert de toestemming en de applicatie kan haar toegang niet meer vernieuwen. Access tokens die met de verwijderde refresh tokens zijn uitgegeven, worden ingetrokken bij userinfo en introspectie. Applicaties die hun tokens zelf valideren, kunnen ze nog accepteren tot ze verlopen. De applicatie moet opnieuw om uw toestemming vragen.',
             scopes: 'Scopes',
@@ -195,9 +200,32 @@ export const I18nNl: I18n = {
         zip: 'Postcode',
     },
     authorize: {
+        busy: 'De server is op dit moment bezet. Probeer het zo meteen opnieuw.',
         clientForceMfa: `Voor deze login is MFA vereist voor hogere veiligheid.\nOm toegang te
             krijgen, moet u inloggen op uw account en minimaal één extra Passkey toevoegen`,
         clientGroupPrefixForbidden: 'Ontbrekende groepstoewijzing voor deze login',
+        consent: {
+            agree: 'Ik stem in met de [overdracht van mijn gegevens]',
+            changed: 'De inhoud van de toestemming is gewijzigd, controleer deze opnieuw.',
+            continue: 'Doorgaan',
+            details: 'Details',
+            intro: '{{ CLIENT }} vraagt toegang tot:',
+            introResource: '{{ CLIENT }} vraagt toegang tot {{ RESOURCE }}:',
+            required: 'altijd',
+            scopes: {
+                address: 'Je postadres',
+                email: 'Je e-mailadres',
+                groups: 'Je groepslidmaatschappen',
+                openid: 'Je gebruikers-ID en rollen om in te loggen',
+                phone: 'Je telefoonnummer',
+                profile:
+                    'Je naam, gebruikersnaam (kan je e-mailadres zijn), foto, taal, geboortedatum en tijdzone',
+                webid: 'Je WebID',
+            },
+            terms: 'Voorwaarden',
+            title: 'Toestemming',
+            warning: 'Lees zorgvuldig',
+        },
         email: 'E-Mail',
         emailBadFormat: 'Ongeldig e-mailformaat',
         emailRequired: 'E-Mail is verplicht',
@@ -210,6 +238,10 @@ export const I18nNl: I18n = {
         login: 'Inloggen',
         mfaAck: 'Bevestigd',
         mfaOpenApp: 'Open de app om verder te gaan',
+        mfaSelectionDesc: 'Kies je verificatiemethode:',
+        usePasskey: 'Passkey gebruiken',
+        useEmailCode: 'E-mailcode gebruiken',
+        emailCodeDesc: 'Ontvang een eenmalige code via e-mail',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Sommige informatie voor dit account ontbreekt. U moet deze waarden
             bijwerken voordat u kunt doorgaan met inloggen.`,

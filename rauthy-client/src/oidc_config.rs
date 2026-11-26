@@ -80,17 +80,16 @@ pub enum JwtClaimTyp {
 mod tests {
     use super::*;
     use crate::rauthy_error::RauthyError;
-    use std::ops::Deref;
 
     #[test]
     fn test_claim_mapping() -> Result<(), RauthyError> {
         let mapping = ClaimMapping::None;
         // no matter which roles / group we have - None should always deny access
-        assert!(!mapping.matches(&vec!["".to_string()], &vec!["".to_string()]));
+        assert!(!mapping.matches(&["".to_string()], &["".to_string()]));
 
         let mapping = ClaimMapping::Any;
         // no matter which roles / group we have - Any should always allow access
-        assert!(mapping.matches(&vec!["".to_string()], &vec!["".to_string()]));
+        assert!(mapping.matches(&["".to_string()], &["".to_string()]));
 
         let test_roles = vec![
             "role1".to_string(),
@@ -114,7 +113,7 @@ mod tests {
                 value: "group1".to_string(),
             },
         ]);
-        assert!(mapping.matches(test_roles.deref(), test_groups.deref()));
+        assert!(mapping.matches(&test_roles, &test_groups));
 
         let mapping = ClaimMapping::And(vec![
             JwtClaim {
@@ -130,7 +129,7 @@ mod tests {
                 value: "group3".to_string(),
             },
         ]);
-        assert!(mapping.matches(test_roles.deref(), test_groups.deref()));
+        assert!(mapping.matches(&test_roles, &test_groups));
 
         // AND: these should not be allowed
         let mapping = ClaimMapping::And(vec![
@@ -143,7 +142,7 @@ mod tests {
                 value: "group4".to_string(),
             },
         ]);
-        assert!(!mapping.matches(test_roles.deref(), test_groups.deref()));
+        assert!(!mapping.matches(&test_roles, &test_groups));
 
         let mapping = ClaimMapping::And(vec![
             JwtClaim {
@@ -155,7 +154,7 @@ mod tests {
                 value: "group2".to_string(),
             },
         ]);
-        assert!(!mapping.matches(test_roles.deref(), test_groups.deref()));
+        assert!(!mapping.matches(&test_roles, &test_groups));
 
         // OR: should be allowed
         let mapping = ClaimMapping::Or(vec![
@@ -176,7 +175,7 @@ mod tests {
                 value: "group5".to_string(),
             },
         ]);
-        assert!(mapping.matches(test_roles.deref(), test_groups.deref()));
+        assert!(mapping.matches(&test_roles, &test_groups));
 
         // OR: should not be allowed
         let mapping = ClaimMapping::Or(vec![
@@ -189,7 +188,7 @@ mod tests {
                 value: "group4".to_string(),
             },
         ]);
-        assert!(!mapping.matches(test_roles.deref(), test_groups.deref()));
+        assert!(!mapping.matches(&test_roles, &test_groups));
 
         Ok(())
     }

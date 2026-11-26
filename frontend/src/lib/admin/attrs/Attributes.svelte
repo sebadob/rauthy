@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
@@ -8,19 +9,17 @@
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
     import { fetchGet } from '#api/fetch.ts';
     import { useParam } from '#state/param.svelte.ts';
+    import type { UnsavedField } from '#utils/unsaved.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
     } from '#api/types/user_attrs.ts';
     import AttrAddNew from '#lib/admin/attrs/AttrAddNew.svelte';
     import AttrDetails from '#lib/admin/attrs/AttrDetails.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
+    import UnsavedGuard from '#lib/admin/UnsavedGuard.svelte';
+    import { page } from '$app/state';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -29,6 +28,10 @@
     let attrsFiltered: UserAttrConfigValueResponse[] = $state([]);
     let attr: undefined | UserAttrConfigValueResponse = $state();
     let an = useParam('an');
+    // set by the guard inside AttrDetails' form; switching an attribute unmounts it
+    let guard: (run: () => void) => void = $state(run => run());
+    let fields: UnsavedField[] = $state([]);
+    let reset: () => void = $state(() => {});
 
     const searchOptions = [ta.common.name];
     let searchOption = $state(searchOptions[0]);
@@ -74,25 +77,31 @@
         fetchAttrs();
     }
 
+    // search, ordering and re-selecting this very attribute keep the form mounted.
+    // compare against the current URL: a tile click already updates the `an` param
+    // before `goto` resolves, so the `attr` at that point is the target attribute
+    function isSameTarget(to: URL): boolean {
+        return (
+            to.pathname === page.url.pathname &&
+            to.searchParams.get('an') === page.url.searchParams.get('an')
+        );
+    }
+
     async function onAddNew(name: string) {
         closeModal?.();
         await fetchAttrs();
-        an.set(name);
+        guard(() => an.set(name));
     }
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
+    detail={!!attr}
+    onBack={() => guard(() => an.set(undefined))}
+    error={err}
     buttonTilesAriaControls="groups"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={attrs.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <AdminListHeading title={ta.nav.attributes} count={attrsFiltered.length} />
+    <ButtonAddModal level={attrs.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <AttrAddNew onSave={onAddNew} {attrs} />
     </ButtonAddModal>
     <OrderSearchBar
@@ -107,7 +116,10 @@
     {#snippet buttonTiles()}
         <div class="attrsList">
             {#each attrsFiltered as attr (attr.name)}
-                <NavButtonTile onclick={() => an.set(attr.name)} selected={an.get() === attr.name}>
+                <NavButtonTile
+                    onclick={() => guard(() => an.set(attr.name))}
+                    selected={an.get() === attr.name}
+                >
                     {attr.name}
                 </NavButtonTile>
             {/each}
@@ -124,10 +136,12 @@
 
     <div id="groups">
         {#if attr}
-            <AttrDetails {attr} {attrs} {onSave} />
+            <AttrDetails {attr} {attrs} bind:fields bind:reset {onSave} />
         {/if}
     </div>
 </ContentAdmin>
+
+<UnsavedGuard {fields} bind:guard {isSameTarget} onDiscard={reset} />
 
 <style>
     .attrsList {

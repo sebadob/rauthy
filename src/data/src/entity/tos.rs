@@ -27,9 +27,9 @@ impl ToS {
     ) -> Result<(), ErrorResponse> {
         let ts = Utc::now().timestamp();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO tos (ts, author, is_html, opt_until, content)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import {
@@ -41,7 +42,7 @@
     let postLogoutRedirectURIs: string[] = $state([]);
 
     $effect(() => {
-        requestAnimationFrame(() => {
+        tick().then(() => {
             ref?.focus();
         });
     });

@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::env;
 use std::sync::{LazyLock, OnceLock};
+use std::time::Duration;
 
 #[derive(Debug, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -40,6 +41,9 @@ pub static BUILD_TIME: LazyLock<DateTime<Utc>> = LazyLock::new(|| {
 });
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// The config file used when none is given explicitly. Only this one may be missing, which allows
+/// a config via env vars only.
+pub const DEFAULT_CONFIG_PATH: &str = "./config.toml";
 pub static CONTENT_TYPE_WEBP: &str = "image/webp";
 pub static HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub static HEADER_ALLOW_ALL_ORIGINS: (&str, &str) = ("access-control-allow-origin", "*");
@@ -75,6 +79,19 @@ pub static API_KEY_LENGTH: usize = 64;
 pub static DEVICE_KEY_LENGTH: u8 = 64;
 /// Max serialized length of a client's custom `claims` JSON object.
 pub const CLIENT_CLAIMS_MAX_LEN: usize = 1024;
+/// Max number of claim mapping rules a single auth provider may have. It bounds the
+/// size of the `claim_mappings` column and the compiled rule work of a federated login.
+pub const CLAIM_MAPPINGS_MAX_RULES: usize = 32;
+/// The leading char of a `claim_value` that selects a matcher instead of an exact compare:
+/// `~` is a regex, `^` is a prefix, and a doubled `^^` types a literal `^`.
+pub const CLAIM_VALUE_SIGIL_REGEX: char = '~';
+pub const CLAIM_VALUE_SIGIL_PREFIX: char = '^';
+/// Max length in bytes of a consent source URL.
+pub const CONSENT_SOURCE_MAX_LEN: usize = 1024;
+/// Hard maximum length in characters of a plain password accepted by any request.
+pub const PASSWORD_MAX_LEN: u64 = 1024;
+/// [`PASSWORD_MAX_LEN`] as [`i32`], which is the type the password policy stores its lengths in.
+pub const PASSWORD_MAX_LEN_I32: i32 = PASSWORD_MAX_LEN as i32;
 pub static EVENTS_LATEST_LIMIT: u16 = 100;
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 pub const CACHE_TTL_APP: Option<i64> = Some(43200);
@@ -82,6 +99,13 @@ pub const CACHE_TTL_AUTH_PROVIDER_CALLBACK: Option<i64> =
     Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);
 pub const CACHE_TTL_SESSION: Option<i64> = Some(14400);
 pub const CACHE_TTL_USER: Option<i64> = Some(600);
+/// The delay a database write waits before it invalidates the cache entries it changed. A
+/// concurrent cache fill reads the database and only then puts its snapshot, and that put can
+/// land after the write has invalidated. The delay orders the write's delete after the put of
+/// any fill that read before the write, which is what removes that stale snapshot. A fill
+/// slower than this keeps its stale entry until that key's TTL expires.
+/// The delay avoids the need of locking for DB updates in many places.
+pub const CACHE_INVALIDATION_DELAY: Duration = Duration::from_millis(50);
 
 pub static IDX_APP_VERSION: &str = "rauthy_app_version";
 pub static IDX_AUTH_PROVIDER: &str = "auth_provider_";

@@ -184,13 +184,14 @@ operation. ideally, you have 2-4 WAL files around during normal operation. At th
 should make make these values too small so that Snapshots are not being created more than probably
 every 15 minutes.
 
-```admonish notice
-You should not push the `wal_size` below `131072`. The benefits in memory usage will become very 
-small in exchange for a lot more disk I/O. Also, the `wal_size` should always be a multiple of `4096` 
-for optimal alignment. Values bigger than the default 2MiB will typically not have too much positive 
-impact as well, as long as you are not having too many Snapshots because of a huge amount of 
-concurrent users.
-```
+> [!IMPORTANT]
+> You should not push the `wal_size` below `131072`. The benefits in memory usage will become very 
+> small in exchange for a lot more disk I/O. Also, the `wal_size` should always be a multiple of
+> `4096` 
+> for optimal alignment. Values bigger than the default 2MiB will typically not have too much
+> positive 
+> impact as well, as long as you are not having too many Snapshots because of a huge amount of 
+> concurrent users.
 
 ## HTTP Server
 
@@ -318,11 +319,11 @@ I will not go into the details of `jemalloc` here. If you are interested in this
 find lots of information via the search engine of your choice. I only want to give you recipes that
 should just work.
 
-```admonish caution
-You need to set the `MALLOC_CONF` environment variable from the recipes below BEFORE the application 
-starts, or otherwise it will be ignored. Anything like the `-e` flag for docker, or a regular 
-environment variable inside K8s will work.
-```
+> [!WARNING]
+> You need to set the `MALLOC_CONF` environment variable from the recipes below BEFORE the
+> application 
+> starts, or otherwise it will be ignored. Anything like the `-e` flag for docker, or a regular 
+> environment variable inside K8s will work.
 
 ### Small Instance
 
@@ -383,7 +384,7 @@ will let you scale into millions of users easily.
 MALLOC_CONF=abort_conf:true,narenas:64,tcache_max:32768,dirty_decay_ms:30000,muzzy_decay_ms:30000
 ```
 
-```admonish note
-The Memory Allocator tuning does not work on Windows msvc or freebsd targets, if you are running a 
-custom-compiled version of Rauthy. It should work everywhere else though.
-```
+> [!NOTE]
+> The Memory Allocator tuning does not work on Windows msvc or freebsd targets, if you are running a
+> 
+> custom-compiled version of Rauthy. It should work everywhere else though.

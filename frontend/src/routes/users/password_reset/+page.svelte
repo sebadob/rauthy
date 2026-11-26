@@ -2,13 +2,10 @@
     import Button from '#lib/button/Button.svelte';
     import { TPL_CLIENT_LOGO_UPDATED } from '#utils/constants.ts';
     import Input from '#lib/form/Input.svelte';
-    import LangSelector from '#lib/LangSelector.svelte';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import { useI18n } from '#state/i18n.svelte.js';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.js';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import Form from '#lib/form/Form.svelte';
     import ClientLogo from '#lib/ClientLogo.svelte';
     import { fetchSolvePow } from '#utils/pow.ts';
@@ -47,68 +44,60 @@
 </script>
 
 <svelte:head>
-    <title>{t?.register.register || 'Register'}</title>
+    <title>{t.passwordReset.passwordReset}</title>
 </svelte:head>
 
 <Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
 
-<Main>
-    <ContentCenter>
-        <div class="container">
+<PublicPage>
+    <div class="public-card">
+        <div class="brand">
             <ClientLogo
-                clientId="rauthy"
-                updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
+                clientId={clientLogoUpdated >= 0 ? 'rauthy' : undefined}
+                updated={clientLogoUpdated >= 0 ? clientLogoUpdated : undefined}
             />
-
-            <div class="desc">
-                <h1>{t.passwordReset.passwordReset}</h1>
-                <p>{t.authorize.passwordResetDesc}</p>
-            </div>
-
-            <Form action="/auth/v1/users/request_reset" {onSubmit} withPowAs="pow">
-                <Input
-                    typ="email"
-                    name="email"
-                    autocomplete="email"
-                    label={t.common.email}
-                    placeholder={t.common.email}
-                    required
-                    value={email_hint.get()}
-                />
-
-                <div class="submit">
-                    <Button type="submit" {isLoading}>{t.authorize.passwordRequest}</Button>
-                </div>
-                {#if success}
-                    <div class="success">
-                        {t.authorize.passwordResetSuccess}<br />
-                    </div>
-                {:else if err}
-                    <div class="err">
-                        {err}
-                    </div>
-                {/if}
-            </Form>
         </div>
 
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
-</Main>
+        <div class="desc">
+            <h1>{t.passwordReset.passwordReset}</h1>
+            <p>{t.authorize.passwordResetDesc}</p>
+        </div>
+
+        <Form action="/auth/v1/users/request_reset" {onSubmit} withPowAs="pow">
+            <Input
+                typ="email"
+                name="email"
+                autocomplete="email"
+                label={t.common.email}
+                placeholder={t.common.email}
+                required
+                value={email_hint.get()}
+            />
+
+            <div class="submit">
+                <Button type="submit" {isLoading}>{t.authorize.passwordRequest}</Button>
+            </div>
+            {#if success}
+                <div class="success">
+                    {t.authorize.passwordResetSuccess}<br />
+                </div>
+            {:else if err}
+                <div class="err">
+                    {err}
+                </div>
+            {/if}
+        </Form>
+    </div>
+</PublicPage>
 
 <style>
-    .submit {
-        margin-top: 0.66rem;
+    .brand {
+        display: flex;
+        justify-content: center;
     }
 
-    .container {
-        max-width: 23rem;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        border-radius: var(--border-radius);
-        background: hsla(var(--bg-high) / 0.25);
+    .submit {
+        margin-top: 0.66rem;
     }
 
     .err {

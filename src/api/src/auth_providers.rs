@@ -9,7 +9,7 @@ use rauthy_api_types::auth_providers::{
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::generic::LogoParams;
-use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
+use rauthy_api_types::users::{LoginResponse, UserResponse};
 use rauthy_common::constants::{HEADER_JSON, PROVIDER_ATPROTO};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::auth_providers::{
@@ -20,7 +20,9 @@ use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
 use rauthy_data::html::HtmlCached;
+use rauthy_data::language::Language;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_service::oidc::auth_providers::login_start::{ProviderLoginStart, login_start};
 use spow::pow::Pow;
 use tracing::{debug, error};
 use validator::Validate;
@@ -140,12 +142,14 @@ pub async fn post_provider_lookup(
     request_body = ProviderLoginRequest,
     responses(
         (status = 202, description = "Accepted"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 400, description = "BadRequest, or `ConsentRequired` carrying the consent content to ask for", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
+        (status = 503, description = "`ServiceUnavailable`: the consent fetcher is busy, retry after the `x-retry-not-before` timestamp", body = ErrorResponse),
     ),
 )]
 #[post("/providers/login")]
 pub async fn post_provider_login(
+    req: HttpRequest,
     Json(payload): Json<ProviderLoginRequest>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -155,8 +159,9 @@ pub async fn post_provider_login(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
+    let lang = Language::try_from(&req).unwrap_or_default();
     let (cookie, xsrf_token, location) =
-        rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;
+        login_start(payload, ProviderLoginStart::Login(lang)).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
@@ -182,7 +187,7 @@ pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse
     tag = "providers",
     request_body = ProviderCallbackRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login, one entry per method the user may choose", body = Vec<LoginResponse>),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
@@ -222,7 +227,12 @@ pub async fn post_provider_callback_handle(
         {
             Ok(r) => r,
             Err(err) => {
-                error!("Error during Auth Provider Callback: {}", err.message);
+                // the message of `ConsentRequired` is the consent content to ask for
+                if err.error == ErrorResponseType::ConsentRequired {
+                    debug!("Auth Provider Callback asks for consent");
+                } else {
+                    error!("Error during Auth Provider Callback: {}", err.message);
+                }
                 return Err(err);
             }
         };
@@ -568,7 +578,7 @@ pub async fn post_provider_link(
 
     // directly redirect to the provider login page
     let (login_cookie, xsrf_token, location) =
-        rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;
+        login_start(payload, ProviderLoginStart::Link).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))

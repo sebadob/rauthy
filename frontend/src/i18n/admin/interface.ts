@@ -5,6 +5,10 @@
  */
 export interface I18nAdmin {
     api_key: {
+        validity?: string;
+        permissions?: string;
+        secret?: string;
+        examples?: string;
         delete1: string;
         expires: string;
         generate1: string;
@@ -31,6 +35,7 @@ export interface I18nAdmin {
         userEditable: string;
     };
     backup: {
+        title?: string;
         createBackup: string;
         disabledDesc: string;
         lastModified: string;
@@ -39,8 +44,20 @@ export interface I18nAdmin {
         size: string;
     };
     clients: {
+        settings: { general: string; tokens: string; integrations: string };
         backchannelLogout: string;
         branding: {
+            title: string;
+            theme: string;
+            light: string;
+            dark: string;
+            preview: string;
+            assets: string;
+            logo: string;
+            advanced: string;
+            resetTheme: string;
+            resetThemeConfirm: string;
+            assetsImmediate: string;
             descHsl: string;
             // inserted as html
             descFullCss: string;
@@ -55,13 +72,20 @@ export interface I18nAdmin {
         confidential: string;
         confidentialNoSecret: string;
         config: string;
+        consent: {
+            builtIn: string;
+            desc: string;
+            source: string;
+        };
         delete1: string;
         descAuthCode: string;
         descClientUri: string;
         allowedResources: string;
         defaultAud: string;
+        actorSameClient: string;
         descAllowedResources: string;
         descDefaultAud: string;
+        descActorSameClient: string;
         descGroupPrefix: string;
         descName: string;
         descOrigin: string;
@@ -111,6 +135,19 @@ export interface I18nAdmin {
         };
     };
     common: {
+        about: string;
+        date: string;
+        time: string;
+        preferences: string;
+        profile: string;
+        contactDetails: string;
+        access: string;
+        activity: string;
+
+        compactNavigation: string;
+        administration: string;
+        selectEntry: string;
+        selectEntryHint: string;
         account: string;
         addNew: string;
         back: string;
@@ -118,6 +155,7 @@ export interface I18nAdmin {
         contact: string;
         copiedToClip: string;
         details: string;
+        discard: string;
         edit: string;
         enabled: string;
         filter: string;
@@ -132,6 +170,8 @@ export interface I18nAdmin {
         noEntries: string;
         preview: string;
         reset: string;
+        unsavedChanges: string;
+        unsavedChangesDesc: string;
         searchOptions: string;
         until: string;
     };
@@ -192,9 +232,12 @@ export interface I18nAdmin {
         };
         openapi: string;
         openapiNote: string;
+        openapiEnable: string;
         source: string;
     };
     editor: {
+        format?: string;
+        plainText?: string;
         bold: string;
         code: string;
         heading1: string;
@@ -212,13 +255,16 @@ export interface I18nAdmin {
         textArea: string;
     };
     email: {
+        delivery?: string;
         cancelJob: string;
         // MUST be in the order:
         // 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role'
         filterType: string[];
         immediate: string;
         jobs: string;
+        recipients?: string;
         scheduled: string;
+        scheduledDelivery?: string;
         sendAllUsers: string;
         sendAllUsersFiltered: string;
         sendMail: string;
@@ -232,12 +278,22 @@ export interface I18nAdmin {
         noAdmin: string;
     };
     events: {
+        searchContent: string;
+        timestamp: string;
+        level: string;
+        type: string;
+        allLevels: string;
+        sendTest: string;
         eventLevel: string;
         eventType: string;
     };
     groups: {
         delete1: string;
         name: string;
+        users: {
+            empty: string;
+            remove: string;
+        };
     };
     jwks: {
         alg: string;
@@ -248,6 +304,7 @@ export interface I18nAdmin {
         rotateKeys: string;
     };
     kv: {
+        limit: string;
         // inserted as HTML
         accessTestDesc: string;
         addNewKey: string;
@@ -283,6 +340,7 @@ export interface I18nAdmin {
         value: string;
     };
     nav: {
+        kvStore: string;
         apiKeys: string;
         attributes: string;
         blacklist: string;
@@ -330,6 +388,9 @@ export interface I18nAdmin {
         usernameNewDesc: string;
     };
     passwordPolicy: {
+        lengthRules?: string;
+        characterRules?: string;
+        expiryRules?: string;
         configDesc: string;
         resetSet0: string;
         validForDays: string;
@@ -337,10 +398,23 @@ export interface I18nAdmin {
     };
     providers: {
         config: {
+            sections?: {
+                access: string;
+                endpoints: string;
+                client: string;
+                claims: string;
+                tokenAuth?: string;
+                adminMapping?: string;
+                mfaMapping?: string;
+                roleGroupMapping?: string;
+                claimHelp?: string;
+            };
             allowInsecureTls: string;
             autoLink: string;
             autoLinkDesc1: string;
             autoLinkDesc2: string;
+            hideLogin: string;
+            hideLoginDesc: string;
             clientName: string;
             custRootCa: string;
             // inserted as html
@@ -363,7 +437,26 @@ export interface I18nAdmin {
                 p5: string;
                 // inserted as html
                 p6: string;
+                // inserted as html
+                p7: string;
+                // inserted as html
+                p8: string;
             };
+            mapRoleGroups: string;
+            addMapping: string;
+            removeMapping: string;
+            mappingTyp: string;
+            typRole: string;
+            typGroup: string;
+            pathClaim: string;
+            valueClaim: string;
+            targetClaim: string;
+            noTargetSelected: string;
+            targetMissing: string;
+            groupAdminTarget: string;
+            maxMappings: string;
+            // inserted as html
+            regexCost: string;
             lookup: string;
             pathAdminClaim: string;
             pathMfaClaim: string;
@@ -386,8 +479,13 @@ export interface I18nAdmin {
         adminNoMod: string;
         delete1: string;
         name: string;
+        users: {
+            empty: string;
+            remove: string;
+        };
     };
     scopes: {
+        defaultBadge?: string;
         claimsAtRoot: string;
         claimsAtRootWarning: string;
         defaultNoMod: string;
@@ -425,6 +523,8 @@ export interface I18nAdmin {
         tos: string;
     };
     users: {
+        searchName?: string;
+        searchUsername?: string;
         antiLockout: {
             rule: string;
             delete: string;
@@ -432,6 +532,14 @@ export interface I18nAdmin {
             rauthyAdmin: string;
         };
         attributes: string;
+        consents: {
+            title: string;
+            desc: string;
+            none: string;
+            revokeDesc: string;
+            revokeAllDesc: string;
+            sessionsWarning: string;
+        };
         deleteUser: string;
         descAttr: string;
         forceLogout: string;

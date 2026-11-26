@@ -59,7 +59,7 @@
             let v: AttrValue = {
                 name: a.name,
                 desc: a.desc,
-                value: stringifyJsonValue(attrsUser.find(au => au.key === a.name)?.value),
+                value: stringifyJsonValue(attrsUser.find(au => au.key === a.name)?.value, 1),
                 defaultValue: stringifyJsonValue(a.default_value),
                 userEditable: a.user_editable || false,
             };
@@ -79,10 +79,7 @@
     async function fetchUserAttr() {
         let res = await fetchGet<UserAttrValuesResponse>(`/auth/v1/users/${user.id}/attr`);
         if (res.body) {
-            attrsUser = res.body.values.map(v => {
-                v.value = stringifyJsonValue(v.value, 1);
-                return v;
-            });
+            attrsUser = res.body.values;
         } else {
             err = res.error?.message || 'Error fetching users attrs';
         }
@@ -122,14 +119,13 @@
     {#if attrsCombined.length === 0}
         <p>{ta.common.noEntries}</p>
     {:else}
-        <p>{ta.users.descAttr}</p>
-
         {#each attrsCombined as a}
             <Input
                 bind:value={a.value}
+                formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                 autocomplete="off"
                 label={a.name}
-                placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
+                placeholder={a.defaultValue ? a.defaultValue : a.desc || ''}
                 onEnter={onSubmit}
             />
         {/each}

@@ -45,13 +45,13 @@ async fn execute_logout_retries(
     let mut tasks = JoinSet::new();
 
     for failure in failures {
-        if failure.retry_count >= retry_count as i32 {
+        if failure.retry_count >= i32::from(retry_count) {
             warn!("Retry count exceeded for backchannel logout {failure:?}");
 
             Event::backchannel_logout_failed(
                 &failure.client_id,
                 &failure.sub,
-                failure.retry_count as i64,
+                i64::from(failure.retry_count),
             )
             .send()
             .await?;
@@ -103,9 +103,7 @@ async fn execute_logout_retries(
             sid,
             kp.unwrap(),
             &mut tasks,
-        )
-        .await
-        {
+        ) {
             error!(?err, "executing Backchannel Logout");
         }
     }

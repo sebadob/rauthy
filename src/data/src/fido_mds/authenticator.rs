@@ -8,9 +8,9 @@ use hiqlite::params;
 use rauthy_common::constants::IDX_WEBAUTHN_MDS_CA_LIST;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 use std::collections::BTreeMap;
-use tracing::error;
+use tracing::{error, warn};
 use uuid::Uuid;
 use webauthn_rs::prelude::{AttestationCaList, AttestationCaListBuilder};
 
@@ -23,9 +23,7 @@ pub struct MdsAuthenticator {
 
 impl MdsAuthenticator {
     pub async fn clear_cache() -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, IDX_WEBAUTHN_MDS_CA_LIST)
-            .await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_WEBAUTHN_MDS_CA_LIST))]).await?;
         Ok(())
     }
 
@@ -88,9 +86,9 @@ impl MdsAuthenticator {
             authenticators.retain(|a| {
                 verify_mds_attestation(
                     &a.entry,
-                    &config.force_passkey_cert_level,
-                    &config.force_passkey_protection,
-                    &config.force_passkey_attachment,
+                    config.force_passkey_cert_level.as_ref(),
+                    config.force_passkey_protection.as_ref(),
+                    config.force_passkey_attachment.as_ref(),
                 )
                 .is_ok()
             });
@@ -101,6 +99,7 @@ impl MdsAuthenticator {
         }
 
         let mut builder = AttestationCaListBuilder::new();
+        let mut inserted = 0usize;
         for auth in authenticators {
             let Ok(aaguid) = Uuid::from_slice(&auth.entry.aaguid) else {
                 error!("Invalid AAGUID in MDS certs set");
@@ -114,12 +113,18 @@ impl MdsAuthenticator {
                     auth.entry.description.clone(),
                     BTreeMap::new(),
                 ) {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        format!("Failed to insert MDS root certificate: {err:?}"),
-                    ));
+                    warn!(
+                        "Skipping FIDO MDS root certificate for {} ({}): {:?}",
+                        aaguid, auth.entry.description, err
+                    );
+                } else {
+                    inserted += 1;
                 }
             }
+        }
+        if inserted == 0 {
+            error!("No valid FIDO MDS root certificates could be loaded");
+            return Ok(None);
         }
         Ok(Some(builder.build()))
     }
@@ -133,11 +138,11 @@ struct MdsAaguidCertRow {
 
 impl MdsAaguidCertRow {
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT e.aaguid, c.cert_der
 FROM fido_mds_entry_certs e
 JOIN fido_mds_certs c ON c.hash = e.cert_hash
-ORDER BY e.aaguid, c.hash"#;
+ORDER BY e.aaguid, c.hash";
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!()).await?

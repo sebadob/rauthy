@@ -4,8 +4,6 @@ use chrono::{DateTime, Utc};
 use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::DEVICE_KEY_LENGTH;
-#[cfg(debug_assertions)]
-use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
@@ -37,11 +35,11 @@ impl DeviceEntity {
     }
 
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO devices
 (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name,
 client_created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
         if is_hiqlite() {
             DB::hql()
@@ -107,9 +105,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
 
-        let sql = r#"
+        let sql = r"
 DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql().execute(sql, params!(exp)).await?
@@ -216,27 +214,10 @@ pub struct DeviceAuthCode {
     // the given interval and gets 'slow_down' from us. If this happens
     // too many times, the IP will be blacklisted.1
     pub warnings: u8,
-    /// `Client::created_micros` of `client_id` when the code was created. Last on purpose: bincode
-    /// ignores trailing bytes, so older versions can still decode a code with this field.
     pub client_created_micros: Option<i64>,
     /// RFC 8707 resource indicator validated at the device authorization request. It becomes
     /// part of the access token `aud`. After `client_created_micros` for the same reason.
     pub resource: Option<String>,
-}
-
-/// `DeviceAuthCode` as cached by v0.37, before `client_created_micros` existed.
-#[derive(Deserialize)]
-#[cfg_attr(test, derive(Serialize))]
-struct DeviceAuthCodeV037 {
-    client_id: String,
-    device_code: String,
-    verified_by: Option<String>,
-    exp: DateTime<Utc>,
-    last_poll: DateTime<Utc>,
-    scopes: Option<String>,
-    nonce: Option<String>,
-    client_secret: Option<String>,
-    warnings: u8,
 }
 
 impl DeviceAuthCode {
@@ -287,45 +268,13 @@ impl DeviceAuthCode {
     }
 
     pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
-        let bytes = DB::hql()
-            .get_remove_bytes(Cache::DeviceCode, user_code)
-            .await?;
-        Self::validate_expiry(bytes.as_deref().and_then(Self::decode)).await
+        let slf = DB::hql().get_remove(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
     }
 
     pub async fn find_pending(user_code: String) -> Result<Option<Self>, ErrorResponse> {
-        let bytes = DB::hql().get_bytes(Cache::DeviceCode, user_code).await?;
-        Self::validate_expiry(bytes.as_deref().and_then(Self::decode)).await
-    }
-
-    /// Decodes a cached code, falling back to the v0.37 layout. Such codes only match clients
-    /// created before `Client::created_micros` existed.
-    fn decode(bytes: &[u8]) -> Option<Self> {
-        #[cfg(debug_assertions)]
-        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
-            todo!("Remove DeviceAuthCodeV037");
-        }
-
-        let config = bincode_next::config::legacy();
-        if let Ok((slf, _)) = bincode_next::serde::decode_from_slice::<Self, _>(bytes, config) {
-            return Some(slf);
-        }
-
-        let (code, _) =
-            bincode_next::serde::decode_from_slice::<DeviceAuthCodeV037, _>(bytes, config).ok()?;
-        Some(Self {
-            client_id: code.client_id,
-            device_code: code.device_code,
-            verified_by: code.verified_by,
-            exp: code.exp,
-            last_poll: code.last_poll,
-            scopes: code.scopes,
-            nonce: code.nonce,
-            client_secret: code.client_secret,
-            warnings: code.warnings,
-            client_created_micros: None,
-            resource: None,
-        })
+        let slf = DB::hql().get(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
     }
 
     async fn validate_expiry(slf: Option<Self>) -> Result<Option<Self>, ErrorResponse> {
@@ -427,68 +376,6 @@ mod tests {
         assert!(!code.is_for_client(&client("client_1", Some(2))));
         assert!(!code.is_for_client(&client("client_1", None)));
         assert!(!code.is_for_client(&client("client_2", Some(1))));
-    }
-
-    fn encode<T: Serialize>(value: &T) -> Vec<u8> {
-        bincode_next::serde::encode_to_vec(value, bincode_next::config::legacy()).unwrap()
-    }
-
-    #[test]
-    fn test_device_code_decode_v037() {
-        let now = Utc::now();
-        let old = DeviceAuthCodeV037 {
-            client_id: "client_1".to_string(),
-            device_code: "code".to_string(),
-            verified_by: Some("user_1".to_string()),
-            exp: now,
-            last_poll: now,
-            scopes: Some("openid".to_string()),
-            nonce: None,
-            client_secret: None,
-            warnings: 2,
-        };
-        let code = DeviceAuthCode::decode(&encode(&old)).unwrap();
-        assert_eq!(code.client_created_micros, None);
-        assert_eq!(code.resource, None);
-        assert_eq!(code.verified_by.as_deref(), Some("user_1"));
-        assert_eq!(code.scopes.as_deref(), Some("openid"));
-        assert_eq!(code.warnings, 2);
-        assert!(code.is_for_client(&client("client_1", None)));
-    }
-
-    #[test]
-    fn test_device_code_decode_current_and_by_older_versions() {
-        let now = Utc::now();
-        let code = DeviceAuthCode {
-            client_id: "client_1".to_string(),
-            device_code: "code".to_string(),
-            verified_by: None,
-            exp: now,
-            last_poll: now,
-            scopes: Some("openid".to_string()),
-            nonce: None,
-            client_secret: Some("secret".to_string()),
-            warnings: 1,
-            client_created_micros: Some(1),
-            resource: Some("https://api.example.com/mcp".to_string()),
-        };
-        let bytes = encode(&code);
-
-        let decoded = DeviceAuthCode::decode(&bytes).unwrap();
-        assert_eq!(decoded.client_created_micros, Some(1));
-        assert_eq!(decoded.client_secret.as_deref(), Some("secret"));
-        assert_eq!(
-            decoded.resource.as_deref(),
-            Some("https://api.example.com/mcp")
-        );
-
-        let (old, _) = bincode_next::serde::decode_from_slice::<DeviceAuthCodeV037, _>(
-            &bytes,
-            bincode_next::config::legacy(),
-        )
-        .unwrap();
-        assert_eq!(old.client_secret.as_deref(), Some("secret"));
-        assert_eq!(old.warnings, 1);
     }
 
     #[test]

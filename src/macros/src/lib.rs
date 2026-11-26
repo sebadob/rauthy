@@ -1,7 +1,5 @@
 // Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
 
-#![forbid(unsafe_code)]
-
 use crate::from_pg_row::impl_from_pg_row;
 use syn::{DeriveInput, parse_macro_input};
 

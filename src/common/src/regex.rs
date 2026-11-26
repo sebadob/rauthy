@@ -62,12 +62,33 @@ pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,
 pub static RE_PREFERRED_USERNAME: OnceLock<Regex> = OnceLock::new();
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/:\p{Zs}*.]{0,512}$").unwrap());
+// `RE_USER_NAME`'s characters plus everything that can appear in an email, an id, a username, a
+// session id, or an IP
 pub static RE_SEARCH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+@]+$").unwrap());
+    LazyLock::new(|| Regex::new(&format!("^[{USER_NAME_CHARS},:/_&?=~#!$()*+@]+$")).unwrap());
 pub static RE_STREET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\p{Zs}]{0,48}$").unwrap());
 pub static RE_URI: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
+// An auth provider claim mapping path. A JSONPath needs `[`, `]`, `{`, `}`, `"`, space, `<`,
+// `>`, `|` and `;`, none of which `RE_URI` allows, so a path has its own charset. It is never
+// used as a URI, a redirect prefix, a header or a template — only by `rauthy_common::json_path`,
+// which is the real validator: this regex only bounds charset and length so a megabyte-long path
+// cannot be stored and evaluated on every federated login.
+const JSON_PATH_CHARS: &str = r#"a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@\[\]{}<>"|; "#;
+pub static RE_JSON_PATH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(&format!("^[{JSON_PATH_CHARS}]{{1,256}}$")).unwrap());
+// An auth provider claim mapping value. Needs `^` and `~` for the matcher sigils and
+// whitespace, because a claim value is text to compare against, not a URI. The length bound
+// covers `~regex:` values: a compiled `Regex` holds DFA memory.
+pub static RE_CLAIM_VALUE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@^ ]{1,128}$").unwrap());
+// The local role / group name a claim mapping targets. Both name rules at once, so a role target
+// and a group target share one field, minus the `,`: targets are written into the comma-separated
+// `roles` / `groups` columns of a user. The type-specific rule and the target's existence are
+// checked at config save.
+pub static RE_ROLE_GROUP_TARGET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/:*.\s]{2,64}$").unwrap());
 // A URI with a non-empty host part: optional scheme, then a host (optionally with a port), and
 // only after that any `/` or `?` separator. Used for the client home URL (`client_uri`), redirect
 // URIs and post-logout redirect URIs: unlike `RE_URI`, degenerate values such as `https://`, `/`
@@ -92,8 +113,11 @@ pub static RE_RESOURCE: LazyLock<Regex> =
 // filter where an empty value selects the entries without a resource.
 pub static RE_RESOURCE_OR_EMPTY: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(&format!("^[{RESOURCE_CHARS}]{{0,1024}}$")).unwrap());
+// the characters a `given_name` / `family_name` may contain - the `-` is escaped so this can be
+// embedded into any character class without creating a range
+const USER_NAME_CHARS: &str = r"\p{L}\p{M}\p{N}\p{Zs}'.\-";
 pub static RE_USER_NAME: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}$").unwrap());
+    LazyLock::new(|| Regex::new(&format!("^[{USER_NAME_CHARS}]{{1,32}}$")).unwrap());
 pub static RE_TOKEN_68: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap());
 pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
@@ -134,6 +158,28 @@ mod tests {
         assert!(!RE_USER_NAME.is_match("\n"));
         assert!(!RE_USER_NAME.is_match("<script>"));
         assert!(!RE_USER_NAME.is_match("😉"));
+    }
+
+    #[test]
+    fn test_re_search() {
+        assert!(RE_SEARCH.is_match("admin@localhost"));
+        assert!(RE_SEARCH.is_match("user+tag@gmail.com"));
+        // everything a `given_name` / `family_name` can be made of
+        assert!(RE_SEARCH.is_match("André Gödel"));
+        assert!(RE_SEARCH.is_match("My Name 123"));
+        assert!(RE_SEARCH.is_match("クライアント"));
+        assert!(RE_SEARCH.is_match("Виктория Ефанова"));
+
+        assert!(RE_SEARCH.is_match("127.0.0.1"));
+        assert!(RE_SEARCH.is_match("localhost:8081/callback"));
+
+        // no LIKE wildcards, no markup, no multi-line
+        assert!(!RE_SEARCH.is_match(""));
+        assert!(!RE_SEARCH.is_match("%"));
+        assert!(!RE_SEARCH.is_match("a%b"));
+        assert!(!RE_SEARCH.is_match("<script>"));
+        assert!(!RE_SEARCH.is_match("😉"));
+        assert!(!RE_SEARCH.is_match("a\nb"));
     }
 
     #[test]
@@ -181,5 +227,54 @@ mod tests {
         assert!(!RE_ATPROTO_HANDLE.is_match("@did:plc:abc123"));
         assert!(!RE_ATPROTO_HANDLE.is_match("example..com"));
         assert!(!RE_ATPROTO_HANDLE.is_match("@example."));
+    }
+    #[test]
+    fn test_claim_mapping_paths_and_values() {
+        // Bracket-based paths must be storable.
+        for path in [
+            "$.groups",
+            "$.groups.*",
+            "$.groups[*]",
+            "$.groups[0]",
+            "$..['tgchat:admin']",
+            "$['x-groups'][*]",
+            "$.groups[-1]",
+        ] {
+            assert!(RE_JSON_PATH.is_match(path), "path: {path}");
+        }
+        // Only charset and length are bounded here: a filter expression such as
+        // `$.groups[?match(@, "x")]` passes this regex and is rejected by `json_path` at config
+        // save, which is the real path validator.
+        for bad in [
+            "",
+            &"x".repeat(257),
+            "$.groups\n",
+            "$.groups\t",
+            "$.groups\u{0}",
+        ] {
+            assert!(!RE_JSON_PATH.is_match(bad), "path: {bad}");
+        }
+
+        // Each matcher sigil must be storable.
+        for value in [
+            "engineering",
+            "^tgchat:",
+            "^^literal",
+            "~tgchat:.*",
+            "mfa code",
+            "42",
+        ] {
+            assert!(RE_CLAIM_VALUE.is_match(value), "value: {value}");
+        }
+        for bad in ["", "a\nb", &"x".repeat(129), "$.groups[*]"] {
+            assert!(!RE_CLAIM_VALUE.is_match(bad), "value: {bad}");
+        }
+
+        // `tgchat:admin` from the issue is a valid name for a role and for a group.
+        assert!(RE_ROLE_GROUP_TARGET.is_match("tgchat:admin"));
+        assert!(RE_ROLE_GROUP_TARGET.is_match("My Group 1"));
+        for bad in ["x", &"x".repeat(65), "a;b", "a,b"] {
+            assert!(!RE_ROLE_GROUP_TARGET.is_match(bad), "target: {bad}");
+        }
     }
 }

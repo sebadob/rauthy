@@ -16,9 +16,10 @@ actix-web = { workspace = true }
 chrono = { workspace = true }
 cron = { workspace = true }
 hiqlite = { workspace = true }
-openssl = { workspace = true }
-openssl-sys = { workspace = true }
 reqwest = { workspace = true }
 semver = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+
+[lints]
+workspace = true

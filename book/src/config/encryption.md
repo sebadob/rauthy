@@ -56,15 +56,16 @@ key_active = "90eb6d69"
 You can add more keys if you like, **separated by new lines**, which is needed for the key rotation
 described below. The `encryption.key_active` will be the key being used for all new encryption's.
 
-```admonish note
-It seems that in some environments, the above `openssl` command does not output proper values, which 
-will make Rauthy panic on startup, when it checks the given values. If you run into that situation, 
-you can generate them without `openssl` as well, with e.g:
-
-<pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
-
-... or just use the CLI as described above.
-```
+> [!NOTE]
+> It seems that in some environments, the above `openssl` command does not output proper values,
+> which 
+> will make Rauthy panic on startup, when it checks the given values. If you run into that
+> situation, 
+> you can generate them without `openssl` as well, with e.g:
+>
+> <pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+>
+> ... or just use the CLI as described above.
 
 ## Key Rotation
 
@@ -74,10 +75,9 @@ impact.
 
 **1. Add a new key to the `encryption.keys` in you secrets**
 
-```admonish fail
-You **must not remove** a current key, before the migration has been done via the UI.  
-If the old key is gone, the migration will fail.
-```
+> [!CAUTION]
+> You **must not remove** a current key, before the migration has been done via the UI.  
+> If the old key is gone, the migration will fail.
 
 **2. Generate a new key + id**
 
@@ -145,18 +145,19 @@ After a successful migration via the UI tool, you could remove old keys from the
 it is not recommended as long as you did not have a known data breach. Just keep them around for
 some time because of encrypted cookies with older keys.
 
-```admonish caution
-All cookies are encrypted with the `key_active`. This means, if you remove something from the `keys` 
-which has been used to encrypt cookies, the user will be prompted to log in again, even if cookies 
-have not expired yet. 
-```
+> [!WARNING]
+> All cookies are encrypted with the `key_active`. This means, if you remove something from the
+> `keys` 
+> which has been used to encrypt cookies, the user will be prompted to log in again, even if cookies
+> 
+> have not expired yet. 
 
-```admonish note
-Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some 
-attack vectors if its used without hardware acceleration.  
-
-Usually, devices these days all come with AES-NI, even embedded ones. However, with VM's this is 
-often a different story and its not guaranteed, that you will have AES acceleration when you spin 
-up a VM in some cloud. Rauthy tries to be as secure as possible by default and therefore 
-ChaCha20Poly1305 has a slight advantage over AES.
-```
+> [!NOTE]
+> Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has
+> some 
+> attack vectors if its used without hardware acceleration.  
+>
+> Usually, devices these days all come with AES-NI, even embedded ones. However, with VM's this is 
+> often a different story and its not guaranteed, that you will have AES acceleration when you spin 
+> up a VM in some cloud. Rauthy tries to be as secure as possible by default and therefore 
+> ChaCha20Poly1305 has a slight advantage over AES.

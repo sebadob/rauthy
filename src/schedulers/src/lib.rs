@@ -50,7 +50,7 @@ pub fn spawn() {
 }
 
 /// sleeps until the next scheduled event
-async fn sleep_schedule_next(schedule: &cron::Schedule) {
+pub async fn sleep_schedule_next(schedule: &cron::Schedule) {
     // this 10 sec sleep is done to prevent an overlap with the calculation in some cases
     time::sleep(Duration::from_secs(10)).await;
 

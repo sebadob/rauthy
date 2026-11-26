@@ -16,7 +16,7 @@ use rauthy_api_types::oidc::{
     SessionInfoResponse, TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
-use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
+use rauthy_api_types::users::{LoginResponse, Userinfo};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip_dyn};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
@@ -49,14 +49,16 @@ use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::forward_auth::auth_header;
+use rauthy_service::oidc::consent_grant::{ConsentAsk, ConsentRequest, consent_to_ask};
 use rauthy_service::oidc::{authorize, logout, token_info, token_revocation, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::mem;
 use std::ops::Add;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tracing::{error, info, warn};
+use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 /// OIDC Authorization HTML
@@ -137,17 +139,13 @@ pub async fn get_authorize(
             true
         }
     } else {
-        // TODO we should add a new DB table that tracks to which clients a user has logged-in
-        //  in the past. When we have that information and we find a `consent` prompt, we would
-        //  never trigger the automatic refresh frontend action. This would mean the user has to
-        //  click the login button which works as a consent.
-        //  We can keep ignoring `select_account|create` options as they have no meaning with
-        //  Rauthy.
+        // We keep ignoring `select_account|create` options as they have no meaning with Rauthy.
         false
     };
 
     // check if the user needs to do a MFA login each time
     let mut action = FrontendAction::None;
+    let mut mfa_user_id: Option<String> = None;
     if !force_new_session {
         // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
@@ -155,30 +153,88 @@ pub async fn get_authorize(
             && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
             && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
         {
+            mfa_user_id = Some(user.id);
             action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
 
-    // check for `prompt=none` and redirect if we don't have a valid session
-    if !force_new_session
-        && params
-            .prompt
-            .as_ref()
-            .map(|p| p.contains("none"))
-            .unwrap_or(false)
-        && principal.validate_session_auth().is_err()
-    {
-        // RFC 9207 - error responses carry `iss` as well
+    // RFC 9207 - error responses carry `iss` as well
+    let redirect_error = |error: &str| {
         let loc = authorization_redirect(
             &params.redirect_uri,
-            &[("error", "login_required")],
+            &[("error", error)],
             params.state.as_deref(),
             &RauthyConfig::get().issuer,
         );
-
-        return Ok(HttpResponse::Found()
+        HttpResponse::Found()
             .insert_header(("location", loc))
-            .finish());
+            .finish()
+    };
+
+    // check for `prompt=none` and redirect if we don't have a valid session
+    let prompt_none = params.prompt.as_ref().is_some_and(|p| p.contains("none"));
+    let is_session_valid = !force_new_session && principal.validate_session_auth().is_ok();
+    if prompt_none && !is_session_valid {
+        return Ok(redirect_error("login_required"));
+    }
+
+    let resource = params.resource.as_deref();
+    if let Some(resource) = resource
+        && let Err(err) = client.validate_resource_request(resource)
+    {
+        warn!(
+            "Invalid `resource` in the authorization request: {}",
+            err.message
+        );
+        return Ok(redirect_error("invalid_target"));
+    }
+    if RauthyConfig::get()
+        .vars
+        .consent
+        .missing_required_resource(&client, resource)
+    {
+        warn!("Authorization request without the `resource` the consent requires");
+        return Ok(redirect_error("consent_required"));
+    }
+
+    // the consent to ask for, if the user's grant does not cover the request
+    let prompt_consent = params
+        .prompt
+        .as_ref()
+        .is_some_and(|p| p.contains("consent"));
+    let ask = if prompt_consent {
+        ConsentAsk::Always
+    } else {
+        ConsentAsk::IfNotCovered
+    };
+    let scopes = params
+        .scope
+        .split_whitespace()
+        .map(String::from)
+        .collect::<Vec<_>>();
+    let scopes = client.sanitize_login_scopes(Some(&scopes));
+    // a valid session, or a valid MFA cookie for the user the form logs in, has proven the user,
+    // whose grant may then be shown
+    let user_id = if is_session_valid {
+        principal
+            .session
+            .as_ref()
+            .and_then(|s| s.user_id.as_deref())
+    } else {
+        mfa_user_id.as_deref()
+    };
+    let consent_req = ConsentRequest {
+        client: &client,
+        resource,
+        scopes: &scopes,
+        lang,
+    };
+    let consent = match consent_to_ask(&consent_req, user_id, ask).await {
+        Ok(consent) => consent,
+        Err(err) => return Ok(redirect_error(consent_error_code(&err))),
+    };
+    if prompt_none && consent.is_some() {
+        return Ok(redirect_error("consent_required"));
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
@@ -186,7 +242,7 @@ pub async fn get_authorize(
     let favicon_updated =
         Logo::find_updated_with_res(&client.id, LogoRes::Favicon, &LogoType::Client).await?;
 
-    let mut templates = Vec::with_capacity(10);
+    let mut templates = Vec::with_capacity(12);
     templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
     templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
     templates.push(HtmlTemplate::ClientUrl(
@@ -206,20 +262,23 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::AtprotoId(provider_atproto.id));
     }
 
-    // if the user is still authenticated and everything is valid -> immediate refresh
-    let prompt_consent = params
-        .prompt
-        .as_ref()
-        .map(|p| p.contains("consent"))
-        .unwrap_or(false);
-    if !force_new_session && !prompt_consent && principal.validate_session_auth().is_ok() {
+    // if the user is still authenticated and everything is valid -> immediate refresh, after the
+    // consent if one is needed
+    if is_session_valid && (consent.is_some() || !prompt_consent) {
         let csrf = principal.get_session_csrf_token()?;
 
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
-        templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
+        let action = match consent {
+            Some(consent) => {
+                templates.push(HtmlTemplate::ConsentContent(consent));
+                FrontendAction::RefreshConsent
+            }
+            None => FrontendAction::Refresh,
+        };
+        templates.push(HtmlTemplate::LoginAction(action));
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
-        build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
+        build_authorize_resp(&accept_encoding, body, None, origin_header, &browser_id)
     } else {
         // check if we can re-use a still valid session or need to create a new one
         let session = if principal.session.is_some() {
@@ -245,26 +304,41 @@ pub async fn get_authorize(
             return Ok(ErrorHtml::response(body, status));
         }
 
+        if let Some(consent) = consent {
+            templates.push(HtmlTemplate::ConsentContent(consent));
+        }
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
-            accept_encoding,
+            &accept_encoding,
             body,
             Some(&session),
             origin_header,
-            browser_id,
+            &browser_id,
         )
     }
 }
 
+/// The `error` of the authorization redirect when the consent to ask for cannot be resolved:
+/// `temporarily_unavailable` for the back pressure of the consent fetcher, else `server_error`.
+fn consent_error_code(err: &ErrorResponse) -> &'static str {
+    if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) {
+        debug!("The consent for the authorization request is busy: {err}");
+        "temporarily_unavailable"
+    } else {
+        error!("Cannot resolve the consent for the authorization request: {err}");
+        "server_error"
+    }
+}
+
 fn build_authorize_resp(
-    accept_encoding: web::Header<header::AcceptEncoding>,
+    accept_encoding: &header::AcceptEncoding,
     body: String,
     session: Option<&Session>,
     origin_header: Option<(HeaderName, HeaderValue)>,
-    browser_id: BrowserId,
+    browser_id: &BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
     let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
         // for dynamic, fast compression, gzip wins over brotli
@@ -324,13 +398,11 @@ fn build_authorize_resp(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with MFA Login (Webauthn or OTP)", content(
-            (WebauthnLoginResponse = "application/webauthn+json"),
-            (OtpLoginResponse = "application/otp+json"),
-        )),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login, one entry per method the user may choose", body = Vec<LoginResponse>),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
-        (status = 400, description = "Missing / bad input data", body = ErrorResponse),
-        (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
+        (status = 400, description = "Password required, invalid form credentials, missing / bad input data, or `ConsentRequired` carrying the consent content to ask for", body = ErrorResponse),
+        (status = 401, description = "Invalid authentication, expired session, or CSRF token error", body = ErrorResponse),
+        (status = 503, description = "`ServiceUnavailable`: the consent fetcher is busy, retry after the `x-retry-not-before` timestamp", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize")]
@@ -347,19 +419,35 @@ pub async fn post_authorize(
 #[inline(always)]
 pub async fn post_authorize_handle(
     req: HttpRequest,
-    payload: LoginRequest,
+    mut payload: LoginRequest,
     principal: ReqPrincipal,
     browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
 
     let session = principal.get_session()?;
 
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
+
+    // Before the user checks, so that neither error reveals anything about the credentials.
+    let client = Client::find_maybe_ephemeral(mem::take(&mut payload.client_id)).await?;
+    if RauthyConfig::get()
+        .vars
+        .consent
+        .missing_required_resource(&client, payload.resource.as_deref())
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "a `resource` is required",
+        ));
+    }
+
+    let uses_password_form = payload.email.is_some() && payload.resident_key_token.is_none();
+    let has_password = payload.password.is_some();
 
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;
@@ -369,6 +457,7 @@ pub async fn post_authorize_handle(
     let res = match authorize::post_authorize(
         &req,
         payload,
+        client,
         session.clone(),
         &mut has_password_been_hashed,
         &mut add_login_delay,
@@ -379,12 +468,21 @@ pub async fn post_authorize_handle(
     .await
     {
         Ok(auth_step) => map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await,
+        Err(err) if is_consent_error(&err) => {
+            // Only returned after the user checks: the consent content to ask for, which is not
+            // logged and carries the user's grant only once a factor proved the user, or the
+            // back pressure of the consent source or ephemeral client fetcher, to be retried.
+            debug!(error = ?err.error, "POST /authorize asks for consent or a retry");
+            return Err(err);
+        }
         Err(err) => {
             warn!("POST /authorize Error: {:?}", err);
             // We always must return the exact same error type, no matter what the actual error is,
-            // to prevent information enumeration. The only exception is when the user needs to add
-            // a passkey to the account while having given the correct credentials. In that case,
-            // we return the original error to be able to display the info message in the UI.
+            // to prevent information enumeration. The exceptions, all returned only after the user
+            // checks, are a missing MFA while the credentials were correct, an expired password, a
+            // client group prefix mismatch, and, above, `ConsentRequired` and the back pressure of
+            // the consent source or ephemeral client fetcher. In those cases, we return the original error to be able
+            // to display the info in the UI.
             if user_needs_mfa {
                 // in this case, we can return directly without any login delay
                 return Err(err);
@@ -402,10 +500,17 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
-            let err = Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid user credentials",
-            ));
+            // Normalize by the submitted form step, even when the account does not exist.
+            // Safari can retry a challenged POST and reuse its already consumed proof of work.
+            let (kind, message) = match (uses_password_form, has_password) {
+                (true, false) => (ErrorResponseType::PasswordRequired, "Password required"),
+                (true, true) => (
+                    ErrorResponseType::InvalidCredentials,
+                    "Invalid user credentials",
+                ),
+                _ => (ErrorResponseType::Unauthorized, "Invalid user credentials"),
+            };
+            let err = Err(ErrorResponse::new(kind, message));
             if !add_login_delay {
                 return err;
             }
@@ -425,6 +530,15 @@ pub async fn post_authorize_handle(
     .await
 }
 
+/// `ConsentRequired` and the fetcher back pressure, which `POST /authorize` passes through instead
+/// of the normalized credentials error.
+fn is_consent_error(err: &ErrorResponse) -> bool {
+    matches!(
+        err.error,
+        ErrorResponseType::ConsentRequired | ErrorResponseType::ServiceUnavailable(_)
+    )
+}
+
 /// Immediate login refresh with valid session
 ///
 /// This endpoint is used from the login form if an authenticated and valid session still exists
@@ -437,8 +551,9 @@ pub async fn post_authorize_handle(
     request_body = LoginRefreshRequest,
     responses(
         (status = 202, description = "Accepted"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 400, description = "BadRequest, or `ConsentRequired` carrying the consent content to ask for", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 503, description = "`ServiceUnavailable`: the consent fetcher is busy, retry after the `x-retry-not-before` timestamp", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize/refresh")]
@@ -462,7 +577,7 @@ pub async fn post_authorize_refresh(
     .await?;
 
     let auth_step =
-        authorize::post_authorize_refresh(session, client, header_origin, payload).await?;
+        authorize::post_authorize_refresh(&req, session, client, header_origin, payload).await?;
     map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await
 }
 
@@ -588,17 +703,14 @@ pub async fn post_device_auth(
                     error!(?err, "inserting IP into the cache for rate-limiting",);
                 }
             }
-        };
+        }
     }
 
-    let client = match Client::find(payload.client_id).await {
-        Ok(client) => client,
-        Err(_) => {
-            return HttpResponse::NotFound().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidClient,
-                error_description: Some(Cow::from("`client_id` does not exist")),
-            });
-        }
+    let Ok(client) = Client::find(payload.client_id).await else {
+        return HttpResponse::NotFound().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidClient,
+            error_description: Some(Cow::from("`client_id` does not exist")),
+        });
     };
 
     if !client.enabled {
@@ -878,7 +990,7 @@ pub async fn post_logout(
 pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    JWKS::rotate().await.map(|_| HttpResponse::Ok().finish())
+    JWKS::rotate().await.map(|()| HttpResponse::Ok().finish())
 }
 
 /// Create a new session
@@ -920,9 +1032,9 @@ pub async fn post_session(
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -978,9 +1090,9 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(
@@ -1027,9 +1139,9 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -1073,7 +1185,7 @@ pub async fn post_token(
         return Ok(oidc::grant_type_device_code(ip, payload).await);
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let start = Instant::now();
     let has_password_been_hashed = payload.grant_type == GrantType::Password;
     let mut user_failed_logins = None;
 
@@ -1392,4 +1504,48 @@ pub async fn get_well_known_oauth_rfc8414() -> Result<HttpResponse, ErrorRespons
 #[get("/.well-known/oauth-authorization-server/auth/v1/")]
 pub async fn get_well_known_oauth_rfc8414_trailing() -> Result<HttpResponse, ErrorResponse> {
     well_known_response().await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_consent_error_code() {
+        let busy = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(1), "busy");
+        assert_eq!(consent_error_code(&busy), "temporarily_unavailable");
+        for typ in [
+            ErrorResponseType::TooManyRequests(1),
+            ErrorResponseType::Connection,
+            ErrorResponseType::Internal,
+        ] {
+            let err = ErrorResponse::new(typ.clone(), "err");
+            assert_eq!(consent_error_code(&err), "server_error", "{typ:?}");
+        }
+    }
+
+    #[test]
+    fn test_is_consent_error() {
+        for typ in [
+            ErrorResponseType::ConsentRequired,
+            ErrorResponseType::ServiceUnavailable(1),
+        ] {
+            assert!(
+                is_consent_error(&ErrorResponse::new(typ.clone(), "")),
+                "{typ:?}"
+            );
+        }
+        for typ in [
+            ErrorResponseType::TooManyRequests(1),
+            ErrorResponseType::BadRequest,
+            ErrorResponseType::NotFound,
+            ErrorResponseType::Unauthorized,
+            ErrorResponseType::InvalidCredentials,
+        ] {
+            assert!(
+                !is_consent_error(&ErrorResponse::new(typ.clone(), "")),
+                "{typ:?}"
+            );
+        }
+    }
 }

@@ -3,13 +3,13 @@
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
-    import { formatDateFromTs, formatUtcTsFromDateInput } from '#utils/helpers.js';
+    import { formatDateFromTs } from '#utils/helpers.js';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
-    import IconStop from '#icons/IconStop.svelte';
-    import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import type {
         BlacklistedIp,
@@ -20,7 +20,6 @@
     import Form from '#lib/form/Form.svelte';
     import Tooltip from '#lib/Tooltip.svelte';
     import Pagination from '#lib/pagination/Pagination.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
 
     let t = useI18n();
@@ -30,10 +29,6 @@
     // is full-admin only
     let session = useSession('admin');
     let isAdmin = $derived(session.isAdmin());
-
-    let refOpts: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refOpts?.focus());
 
     const blacklistThreshold = 30;
 
@@ -58,7 +53,13 @@
     });
 
     $effect(() => {
-        refIp?.focus();
+        if (refIp) {
+            const expiry = new Date(Date.now() + 60 * 60_000);
+            expDate = fmtDateInput(expiry);
+            expTime = fmtTimeInput(expiry);
+            errSave = '';
+            refIp.focus();
+        }
     });
 
     $effect(() => {
@@ -82,9 +83,9 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         errSave = '';
 
-        let exp = formatUtcTsFromDateInput(expDate, expTime);
-        if (!exp) {
-            errSave = 'Invalid Date Input: User Expires';
+        const exp = unixTsFromLocalDateTime(expDate, expTime);
+        if (!exp || exp <= Date.now() / 1000) {
+            errSave = t.common.invalidInput;
             return;
         }
 
@@ -109,15 +110,6 @@
         }
     }
 
-    async function deleteIp(ip: string) {
-        let res = await fetchDelete(`/auth/v1/blacklist/${ip}`);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            await fetchBlacklist();
-        }
-    }
-
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
@@ -128,48 +120,51 @@
 
 {err}
 
-<ContentAdmin>
-    <div class="top">
+<ContentAdmin wide>
+    <h2 class="admin-page-title">{ta.nav.blacklist}</h2>
+    <div class="admin-page-toolbar">
         <OrderSearchBar
-            bind:ref={refOpts}
             bind:value={searchValue}
             {orderOptions}
             {onChangeOrder}
-            searchWidth="min(15.75rem, calc(100dvw - 1rem))"
-        />
+            searchWidth="100%"
+            inline
+        >
+            {#snippet actions()}
+                {#if isAdmin}
+                    <ButtonAddModal level={1} bind:closeModal>
+                        <div class="addNew">
+                            <h3>{ta.common.addNew}</h3>
+                            <Form action="/auth/v1/blacklist" {onSubmit}>
+                                <Input
+                                    bind:ref={refIp}
+                                    bind:value={ip}
+                                    autocomplete="off"
+                                    label="IP"
+                                    placeholder="IPv4"
+                                    required
+                                    maxLength={40}
+                                />
+                                <InputDateTimeCombo
+                                    label={ta.options.expires}
+                                    labelTime={ta.common.time}
+                                    bind:value={expDate}
+                                    bind:timeValue={expTime}
+                                    min={fmtDateInput()}
+                                    required
+                                    withTime
+                                />
 
-        {#if isAdmin}
-            <ButtonAddModal level={1} bind:closeModal>
-                <div class="addNew">
-                    <Form action="/auth/v1/blacklist" {onSubmit}>
-                        <Input
-                            bind:ref={refIp}
-                            bind:value={ip}
-                            autocomplete="off"
-                            label="IP"
-                            placeholder="IPv4"
-                            required
-                            maxLength={40}
-                        />
-                        <InputDateTimeCombo
-                            label="Expiry"
-                            bind:value={expDate}
-                            bind:timeValue={expTime}
-                            min={fmtDateInput()}
-                            withTime
-                        />
-
-                        <div style:height=".5rem"></div>
-                        <Button type="submit">
-                            {t.common.save}
-                        </Button>
-                        <div class="err">
-                            {errSave}
+                                <Button type="submit">
+                                    {t.common.save}
+                                </Button>
+                                {#if errSave}<p class="err" role="alert">{errSave}</p>{/if}
+                            </Form>
                         </div>
-                    </Form>
-                </div>
-            </ButtonAddModal>
-        {/if}
+                    </ButtonAddModal>
+                {/if}
+            {/snippet}
+        </OrderSearchBar>
     </div>
 
     <div id="blacklist">
@@ -194,13 +189,15 @@
                         {formatDateFromTs(entry.exp)}
                     </div>
                     {#if isAdmin}
-                        <Button invisible onclick={() => deleteIp(entry.ip)}>
-                            <Tooltip text={t.common.delete}>
-                                <div class="delete">
-                                    <IconStop width="1.25rem" />
-                                </div>
-                            </Tooltip>
-                        </Button>
+                        <div class="blacklist-action">
+                            <EntityDelete
+                                url={`/auth/v1/blacklist/${entry.ip}`}
+                                name={entry.ip}
+                                ariaLabel={`${t.common.delete}: ${entry.ip}`}
+                                iconOnly
+                                onDelete={fetchBlacklist}
+                            />
+                        </div>
                     {/if}
                 </div>
             {/snippet}
@@ -230,56 +227,62 @@
 
 <style>
     .addNew {
-        min-height: 12rem;
+        width: min(25rem, calc(100dvw - 96px));
+    }
+
+    .addNew h3 {
+        margin: 0 0 1rem;
+        font-size: 1.25rem;
+    }
+
+    .addNew :global(button[type='submit']) {
+        margin-top: 1rem;
     }
 
     .blacklist {
-        max-height: calc(100dvh - 5.5rem);
-        overflow-y: auto;
+        display: grid;
+        gap: 0.75rem;
     }
 
     .blacklisted {
-        padding-left: 0.5rem;
-        max-width: 32.5rem;
-        margin: 0.25rem 0;
         display: grid;
-        grid-template-columns: 20.5rem 10rem 1.5rem;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 0.5rem 1rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
-    }
-
-    .blacklisted,
-    .blacklisted div {
-        transition: all 150ms;
-    }
-
-    .blacklisted:nth-of-type(2n + 1) {
-        background: hsla(var(--bg-high) / 0.3);
-    }
-
-    .blacklisted:hover,
-    .blacklisted:hover div {
-        color: hsl(var(--bg));
-        background: hsl(var(--accent));
+        background: var(--ui-surface);
     }
 
     .date {
-        color: hsla(var(--text) / 0.8);
-    }
-
-    .delete {
-        height: 1.25rem;
-        overflow: clip;
+        font-size: 0.8125rem;
+        color: var(--ui-muted);
     }
 
     .ip {
-        text-align: left;
+        overflow-wrap: anywhere;
+        text-align: start;
         cursor: copy;
     }
 
-    .top {
-        margin-bottom: 1rem;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem 1rem;
+    .blacklisted :global(button) {
+        --ui-button-padding: 0 0.375rem;
+    }
+
+    @media (max-width: 520px) {
+        .blacklisted {
+            grid-template-columns: minmax(0, 1fr) auto;
+            padding-inline: 0.625rem;
+        }
+        .date {
+            grid-column: 1;
+            grid-row: 2;
+            padding-inline: 0.375rem;
+        }
+        .blacklist-action {
+            grid-column: 2;
+            grid-row: 1 / span 2;
+        }
     }
 </style>

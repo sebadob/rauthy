@@ -1,6 +1,8 @@
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
+use crate::entity::groups::Group;
 use crate::entity::logos::{Logo, LogoType};
+use crate::entity::roles::Role;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::{atproto, auth_provider_cust_impls};
@@ -11,17 +13,22 @@ use atrium_api::xrpc::http::header::{ACCEPT, AUTHORIZATION};
 use atrium_common::store::Store;
 use chrono::Utc;
 use cryptr::EncValue;
+use dashmap::DashMap;
 use hiqlite::macros::{FromRow, params};
 use itertools::Itertools;
 use rauthy_api_types::auth_providers::{
-    ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
+    ClaimMapping, ClaimMappingTyp, ProviderCallbackRequest, ProviderLinkedUserResponse,
+    ProviderLookupRequest, ProviderLookupResponse, ProviderRequest, ProviderResponse,
 };
-use rauthy_api_types::auth_providers::{ProviderLookupRequest, ProviderRequest};
+use rauthy_api_types::oidc::LoginConsent;
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
-    APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, IDX_AUTH_PROVIDER,
-    IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
+    APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, CLAIM_MAPPINGS_MAX_RULES,
+    IDX_AUTH_PROVIDER, IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
+    RAUTHY_ADMIN_GROUP_PREFIX, RAUTHY_ADMIN_ROLE,
 };
+use rauthy_common::json_path::{ClaimNodes, JsonPath, Matcher};
+use rauthy_common::regex::{RE_GROUPS, RE_ROLES_SCOPES};
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_no_pad_decode, deserialize, new_store_id, serialize,
 };
@@ -29,10 +36,11 @@ use rauthy_common::{http_client, is_hiqlite};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, value};
-use serde_json_path::JsonPath;
+use serde_json::Value;
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 use std::str::FromStr;
+use std::sync::{Arc, LazyLock};
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -57,10 +65,10 @@ impl AuthProviderType {
     }
 }
 
-impl TryFrom<&str> for AuthProviderType {
-    type Error = ErrorResponse;
+impl FromStr for AuthProviderType {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let slf = match value {
             "custom" => Self::Custom,
             "github" => Self::GitHub,
@@ -80,7 +88,7 @@ impl TryFrom<&str> for AuthProviderType {
 impl From<String> for AuthProviderType {
     /// Defaults to Self::OIDC in case of an error
     fn from(value: String) -> Self {
-        Self::try_from(value.as_str()).unwrap_or(Self::Custom)
+        Self::from_str(value.as_str()).unwrap_or(Self::Custom)
     }
 }
 
@@ -128,10 +136,10 @@ pub struct AuthProviderLinkCookie {
     pub user_email: String,
 }
 
-impl TryFrom<&str> for AuthProviderLinkCookie {
-    type Error = ErrorResponse;
+impl FromStr for AuthProviderLinkCookie {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let bytes = base64_decode(value)?;
         let slf = deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
         Ok(slf)
@@ -147,6 +155,118 @@ impl AuthProviderLinkCookie {
 
     pub fn deletion_cookie<'a>() -> Cookie<'a> {
         ApiCookie::build(PROVIDER_LINK_COOKIE, "", 0)
+    }
+}
+
+/// A claim path and its matcher, compiled: the login path evaluates this.
+#[derive(Debug)]
+pub struct ClaimRule {
+    pub path: JsonPath,
+    pub matcher: Matcher,
+}
+
+/// A compiled claim rule plus the local role / group name it manages.
+#[derive(Debug)]
+pub struct TargetRule {
+    pub rule: ClaimRule,
+    pub target: String,
+}
+
+/// All claim rules of one provider, compiled once.
+///
+/// The fingerprint over the provider's claim columns is what keeps the cache coherent across
+/// cluster nodes without a TTL: every federated login reads a fresh provider row from the DB
+/// (`find_by_iss`), so the first login after a config change on any node hashes a different
+/// fingerprint and recompiles.
+///
+/// The admin and the MFA rule grant a fixed name and are the targets of the provider's own
+/// `admin_claim_*` / `mfa_claim_*` fields, so they carry no target.
+#[derive(Debug)]
+pub struct CompiledMappings {
+    fingerprint: u64,
+    admin: Option<ClaimRule>,
+    mfa: Option<ClaimRule>,
+    roles: Vec<TargetRule>,
+    groups: Vec<TargetRule>,
+}
+
+/// Compiled claim mappings, keyed by [`AuthProvider::cache_idx`].
+///
+/// Guard rule: clone the `Arc` out of the `Ref` and drop the `Ref` before touching the map
+/// again — a nested `get` on the same shard deadlocks.
+static CLAIM_MAPPINGS: LazyLock<DashMap<String, Arc<CompiledMappings>, ahash::RandomState>> =
+    LazyLock::new(|| {
+        DashMap::with_hasher_and_shard_amount(
+            ahash::RandomState::default(),
+            usize::from(RauthyConfig::get().vars.server.http_workers) * 2,
+        )
+    });
+
+/// The fingerprint hasher. A single shared `RandomState`, because per-call seeds would make
+/// every fingerprint unique and the cache would recompile on every login.
+static FP_HASHER: LazyLock<ahash::RandomState> = LazyLock::new(ahash::RandomState::new);
+
+impl ClaimRule {
+    /// Parses the path and compiles the matcher of one rule. Both are the expensive parts of a
+    /// claim rule, and neither of them happens on a federated login.
+    fn compile(path: &str, value: &str) -> Result<Self, ErrorResponse> {
+        Ok(Self {
+            path: JsonPath::parse(path)?,
+            matcher: Matcher::from_claim_value(value)?,
+        })
+    }
+
+    /// True when any node this rule's path selects matches its matcher.
+    fn matches<'a>(&self, claims: &'a Value, nodes: &mut ClaimNodes<'a>, buf: &mut String) -> bool {
+        self.path.eval(claims, nodes);
+        nodes.matches(&self.matcher, buf)
+    }
+}
+
+impl CompiledMappings {
+    fn compile(provider: &AuthProvider) -> Result<Self, ErrorResponse> {
+        let admin = provider
+            .admin_claim_path
+            .as_deref()
+            .zip(provider.admin_claim_value.as_deref())
+            .map(|(path, value)| ClaimRule::compile(path, value))
+            .transpose()?;
+        let mfa = provider
+            .mfa_claim_path
+            .as_deref()
+            .zip(provider.mfa_claim_value.as_deref())
+            .map(|(path, value)| ClaimRule::compile(path, value))
+            .transpose()?;
+
+        let mut roles = Vec::new();
+        let mut groups = Vec::new();
+        for mapping in provider.claim_mappings()? {
+            let rule = TargetRule {
+                rule: ClaimRule::compile(&mapping.claim_path, &mapping.claim_value)?,
+                target: mapping.target,
+            };
+            match mapping.typ {
+                ClaimMappingTyp::Role => roles.push(rule),
+                ClaimMappingTyp::Group => groups.push(rule),
+            }
+        }
+
+        Ok(Self {
+            fingerprint: provider.fingerprint(),
+            admin,
+            mfa,
+            roles,
+            groups,
+        })
+    }
+
+    /// True when the provider manages any role name at all. The login path skips the whole
+    /// reconcile when a provider has no admin claim, no MFA claim and no rules.
+    pub fn has_rules(&self) -> bool {
+        self.admin.is_some()
+            || self.mfa.is_some()
+            || !self.roles.is_empty()
+            || !self.groups.is_empty()
     }
 }
 
@@ -173,27 +293,36 @@ pub struct AuthProvider {
     pub admin_claim_value: Option<String>,
     pub mfa_claim_path: Option<String>,
     pub mfa_claim_value: Option<String>,
+    /// `Vec<ClaimMapping>` serialized as JSON. Deserialization happens in
+    /// [`AuthProvider::claim_mappings`], never in the row derive: `#[column(parse)]` would
+    /// `unwrap()` on a corrupt row. `#[serde(default)]` keeps a row written by the previous
+    /// version readable.
+    #[serde(default)]
+    pub claim_mappings: Option<String>,
 
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
     pub auto_onboarding: bool,
     pub auto_link: bool,
+    pub hide_login: bool,
 }
 
 impl AuthProvider {
     pub async fn create(payload: ProviderRequest) -> Result<Self, ErrorResponse> {
+        Self::validate_claim_targets(&payload).await?;
         let slf = Self::try_from_id_req(new_store_id(), payload)?;
         let typ = slf.typ.as_str();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
-mfa_claim_path, mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, auto_onboarding,
-auto_link)
+mfa_claim_path, mfa_claim_value, claim_mappings, use_pkce, client_secret_basic,
+client_secret_post, auto_onboarding, auto_link, hide_login)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+$21, $22, $23)";
 
         if is_hiqlite() {
             DB::hql()
@@ -216,11 +345,13 @@ VALUES
                         &slf.admin_claim_value,
                         &slf.mfa_claim_path,
                         &slf.mfa_claim_value,
+                        &slf.claim_mappings,
                         slf.use_pkce,
                         slf.client_secret_basic,
                         slf.client_secret_post,
                         slf.auto_onboarding,
-                        slf.auto_link
+                        slf.auto_link,
+                        slf.hide_login
                     ),
                 )
                 .await?;
@@ -244,17 +375,20 @@ VALUES
                     &slf.admin_claim_value,
                     &slf.mfa_claim_path,
                     &slf.mfa_claim_value,
+                    &slf.claim_mappings,
                     &slf.use_pkce,
                     &slf.client_secret_basic,
                     &slf.client_secret_post,
                     &slf.auto_onboarding,
                     &slf.auto_link,
+                    &slf.hide_login,
                 ],
             )
             .await?;
-        };
+        }
 
-        Self::invalidate_cache_all().await?;
+        Self::invalidate_cache_all(None).await?;
+        slf.cache_compiled_mappings()?;
 
         DB::hql()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
@@ -343,27 +477,28 @@ VALUES
             DB::pg_execute(sql, &[&id]).await?;
         }
 
-        Self::invalidate_cache_all().await?;
-        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
+        Self::invalidate_cache_all(Some(id)).await?;
+        CLAIM_MAPPINGS.remove(&Self::cache_idx(id));
 
         Ok(())
     }
 
     pub async fn update(id: String, payload: ProviderRequest) -> Result<(), ErrorResponse> {
+        Self::validate_claim_targets(&payload).await?;
         Self::try_from_id_req(id, payload)?.save().await
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let typ = self.typ.as_str();
 
-        let sql = r#"
+        let sql = r"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
 scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
-mfa_claim_value = $15, use_pkce = $16, client_secret_basic = $17, client_secret_post = $18,
-auto_onboarding = $19, auto_link = $20
-WHERE id = $21"#;
+mfa_claim_value = $15, claim_mappings = $16, use_pkce = $17, client_secret_basic = $18,
+client_secret_post = $19, auto_onboarding = $20, auto_link = $21, hide_login = $22
+WHERE id = $23";
 
         if is_hiqlite() {
             DB::hql()
@@ -385,11 +520,13 @@ WHERE id = $21"#;
                         self.admin_claim_value.clone(),
                         self.mfa_claim_path.clone(),
                         self.mfa_claim_value.clone(),
+                        self.claim_mappings.clone(),
                         self.use_pkce,
                         self.client_secret_basic,
                         self.client_secret_post,
                         self.auto_onboarding,
                         self.auto_link,
+                        self.hide_login,
                         self.id.clone()
                     ),
                 )
@@ -413,18 +550,22 @@ WHERE id = $21"#;
                     &self.admin_claim_value,
                     &self.mfa_claim_path,
                     &self.mfa_claim_value,
+                    &self.claim_mappings,
                     &self.use_pkce,
                     &self.client_secret_basic,
                     &self.client_secret_post,
                     &self.auto_onboarding,
                     &self.auto_link,
+                    &self.hide_login,
                     &self.id,
                 ],
             )
             .await?;
         }
 
-        Self::invalidate_cache_all().await?;
+        Self::invalidate_cache_all(None).await?;
+        self.cache_compiled_mappings()?;
+
         DB::hql()
             .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
@@ -448,9 +589,240 @@ impl AuthProvider {
             .join("+")
     }
 
+    /// The provider's claim mapping rules, deserialized from the JSON column. Empty when
+    /// the provider has no rules. A corrupt row is an `Err`, never a panic.
+    pub fn claim_mappings(&self) -> Result<Vec<ClaimMapping>, ErrorResponse> {
+        self.claim_mappings
+            .as_deref()
+            .map(|json| {
+                serde_json::from_str::<Vec<ClaimMapping>>(json).map_err(|err| {
+                    ErrorResponse::new(
+                        ErrorResponseType::Internal,
+                        format!("Cannot deserialize claim_mappings of {}: {err}", self.id),
+                    )
+                })
+            })
+            .unwrap_or_else(|| Ok(Vec::new()))
+    }
+
+    /// The provider's compiled claim rules: the paths and every `~` regex of a provider are
+    /// compiled once, keyed by [`AuthProvider::cache_idx`], and reused by all later federated
+    /// logins. On a fingerprint miss, which is the first login after a config change on this node
+    /// or the first login after a restart, the rules are compiled and inserted.
+    ///
+    /// The login path holds a fresh provider row from `find_by_iss`, so comparing the fingerprint
+    /// of that row is what makes the cache self-correcting across cluster nodes without a TTL.
+    pub fn compiled_mappings(&self) -> Result<Arc<CompiledMappings>, ErrorResponse> {
+        let key = Self::cache_idx(&self.id);
+        let fingerprint = self.fingerprint();
+
+        // The `Ref` of the shard is dropped before anything else touches the map.
+        let cached = CLAIM_MAPPINGS.get(&key).and_then(|entry| {
+            (entry.fingerprint == fingerprint).then(|| Arc::clone(entry.value()))
+        });
+        if let Some(compiled) = cached {
+            return Ok(compiled);
+        }
+
+        let compiled = Arc::new(CompiledMappings::compile(self)?);
+        CLAIM_MAPPINGS.insert(key, Arc::clone(&compiled));
+        Ok(compiled)
+    }
+
+    /// Compiles and caches the provider's claim rules. Called from the write seams next to
+    /// `invalidate_cache_all`, so a config change is live on the very next login.
+    fn cache_compiled_mappings(&self) -> Result<(), ErrorResponse> {
+        let compiled = CompiledMappings::compile(self)?;
+        CLAIM_MAPPINGS.insert(Self::cache_idx(&self.id), Arc::new(compiled));
+        Ok(())
+    }
+
+    /// The content fingerprint of everything the claim matcher reads. `AuthProvider` has no
+    /// `updated` column, so a row version cannot key the compiled cache — the content does.
+    fn fingerprint(&self) -> u64 {
+        let hasher = &*FP_HASHER;
+        let mut hash = hasher.hash_one(&self.admin_claim_path);
+        for part in [
+            &self.admin_claim_value,
+            &self.mfa_claim_path,
+            &self.mfa_claim_value,
+            &self.claim_mappings,
+        ] {
+            hash = hash.rotate_left(1) ^ hasher.hash_one(part);
+        }
+        hash
+    }
+
+    /// Every target of a claim rule must exist before the config is written: Rauthy never creates a
+    /// role or a group on a login path. A `rauthy_admin:<group>` target needs the group behind it,
+    /// any other target needs its role or group. The error names the missing name.
+    /// Both lookups are cached.
+    async fn validate_claim_targets(req: &ProviderRequest) -> Result<(), ErrorResponse> {
+        let mappings = req.claim_mappings.as_deref().unwrap_or_default();
+        if mappings.is_empty() {
+            return Ok(());
+        }
+
+        let roles = Role::find_all()
+            .await?
+            .into_iter()
+            .map(|r| r.name)
+            .collect::<BTreeSet<String>>();
+        let groups = Group::find_all()
+            .await?
+            .into_iter()
+            .map(|g| g.name)
+            .collect::<BTreeSet<String>>();
+
+        for mapping in mappings {
+            if let Some(group) = mapping.target.strip_prefix(RAUTHY_ADMIN_GROUP_PREFIX) {
+                if group.is_empty()
+                    || !groups
+                        .iter()
+                        .any(|name| group_admin_matches_group(name, group))
+                {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        format!(
+                            "Claim mapping target has no group behind it: {}",
+                            mapping.target
+                        ),
+                    ));
+                }
+            } else {
+                let known = match mapping.typ {
+                    ClaimMappingTyp::Role => &roles,
+                    ClaimMappingTyp::Group => &groups,
+                };
+                if !known.contains(&mapping.target) {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        format!("Claim mapping target does not exist: {}", mapping.target),
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validates the claim config of a request and serializes the rules into the column value.
+    ///
+    /// Every path is parsed and every matcher is compiled here, so an unparseable path and an
+    /// invalid regex both fail the config save, naming the rule. A `path` and its `value` must
+    /// always be set together.
+    fn validate_claim_mappings(req: &ProviderRequest) -> Result<Option<String>, ErrorResponse> {
+        for (name, path, value) in [
+            ("admin_claim", &req.admin_claim_path, &req.admin_claim_value),
+            ("mfa_claim", &req.mfa_claim_path, &req.mfa_claim_value),
+        ] {
+            let pair = (
+                path.as_deref().unwrap_or_default(),
+                value.as_deref().unwrap_or_default(),
+            );
+            if pair.0.is_empty() != pair.1.is_empty() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("`{name}` path and value must be set together"),
+                ));
+            }
+            if let (Some(path), Some(value)) = (path, value) {
+                ClaimRule::compile(path, value).map_err(|err| Self::claim_rule_err(name, &err))?;
+            }
+        }
+
+        let mappings = req.claim_mappings.as_deref().unwrap_or_default();
+        if mappings.len() > CLAIM_MAPPINGS_MAX_RULES {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!(
+                    "An auth provider supports at most {CLAIM_MAPPINGS_MAX_RULES} claim mappings"
+                ),
+            ));
+        }
+
+        for mapping in mappings {
+            // The full admin role is only ever granted by the dedicated admin claim mapping. Its
+            // group-admin delegates are valid generic targets, and they always are role names.
+            if mapping.target == RAUTHY_ADMIN_ROLE {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "`{RAUTHY_ADMIN_ROLE}` can only be mapped by the dedicated admin claim"
+                    ),
+                ));
+            }
+            if mapping.target.starts_with(RAUTHY_ADMIN_GROUP_PREFIX)
+                && mapping.typ == ClaimMappingTyp::Group
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "A group admin target `{}` is a role, it cannot be a group mapping",
+                        mapping.target
+                    ),
+                ));
+            }
+
+            // Targets are written into the comma-separated `roles` / `groups` columns of a user, so
+            // a name containing a `,` would come back as several members. Both name rules allow it.
+            if mapping.target.contains(',') {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "Claim mapping targets must not contain a `,`: {}",
+                        mapping.target
+                    ),
+                ));
+            }
+
+            let name_rule = match mapping.typ {
+                ClaimMappingTyp::Role => &*RE_ROLES_SCOPES,
+                ClaimMappingTyp::Group => &*RE_GROUPS,
+            };
+            if !name_rule.is_match(&mapping.target) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "Invalid {} target `{}`",
+                        match mapping.typ {
+                            ClaimMappingTyp::Role => "role",
+                            ClaimMappingTyp::Group => "group",
+                        },
+                        mapping.target
+                    ),
+                ));
+            }
+
+            // The path is parsed and the matcher compiled here, exactly as on the login path, so
+            // neither can fail there.
+            ClaimRule::compile(&mapping.claim_path, &mapping.claim_value)
+                .map_err(|err| Self::claim_rule_err(&mapping.target, &err))?;
+        }
+
+        if mappings.is_empty() {
+            return Ok(None);
+        }
+        serde_json::to_string(mappings).map(Some).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!("Cannot serialize claim_mappings: {err}"),
+            )
+        })
+    }
+
+    fn claim_rule_err(target: &str, err: &ErrorResponse) -> ErrorResponse {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Claim mapping for `{target}`: {}", err.message),
+        )
+    }
+
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
+        let claim_mappings = Self::validate_claim_mappings(&req)?;
+
         let scope = Self::cleanup_scope(&req.scope);
-        let secret = Self::secret_encrypted(&req.client_secret)?;
+        let secret = Self::secret_encrypted(req.client_secret.as_deref())?;
 
         Ok(Self {
             id,
@@ -471,17 +843,31 @@ impl AuthProvider {
             admin_claim_value: req.admin_claim_value,
             mfa_claim_path: req.mfa_claim_path,
             mfa_claim_value: req.mfa_claim_value,
+            claim_mappings,
 
             use_pkce: req.use_pkce,
             client_secret_basic: req.client_secret_basic,
             client_secret_post: req.client_secret_post,
             auto_onboarding: req.auto_onboarding,
             auto_link: req.auto_link,
+            hide_login: req.hide_login,
         })
     }
 
-    async fn invalidate_cache_all() -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, Self::cache_idx("all")).await?;
+    /// Invalidates every auth providers cache, plus the config of `affected_id`, and rebuilds
+    /// the template. The template rebuild must stay after the delay, it is what makes the
+    /// fresh template win over a fill that raced with this write.
+    async fn invalidate_cache_all(affected_id: Option<&str>) -> Result<(), ErrorResponse> {
+        let affected = affected_id
+            .map(|id| (Cache::App, Some(Cow::from(Self::cache_idx(id)))))
+            .into_iter();
+        let cache_entries = [
+            (Cache::App, Some(Cow::from(Self::cache_idx("all")))),
+            (Cache::App, Some(Cow::from(IDX_AUTH_PROVIDER_TEMPLATE))),
+        ]
+        .into_iter()
+        .chain(affected);
+        DB::cache_delete_delayed(cache_entries).await?;
 
         // We don't really need to clean all HTML caches, but rebuilding all of them
         // is a lot easier to maintain and auth providers are not updated often anyway.
@@ -489,7 +875,7 @@ impl AuthProvider {
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
-        AuthProviderTemplate::update_cache().await?;
+        AuthProviderTemplate::get_all_json_template().await?;
 
         Ok(())
     }
@@ -540,7 +926,7 @@ impl AuthProvider {
         let scopes_supported = well_known
             .scopes_supported
             .iter()
-            .map(|s| s.as_str())
+            .map(String::as_str)
             .collect::<Vec<&str>>();
         let mut scope = String::with_capacity(24);
         if scopes_supported.contains(&"openid") {
@@ -582,8 +968,8 @@ impl AuthProvider {
         })
     }
 
-    fn secret_encrypted(secret: &Option<String>) -> Result<Option<Vec<u8>>, ErrorResponse> {
-        if let Some(secret) = &secret {
+    fn secret_encrypted(secret: Option<&str>) -> Result<Option<Vec<u8>>, ErrorResponse> {
+        if let Some(secret) = secret {
             Ok(Some(
                 EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec(),
             ))
@@ -608,6 +994,7 @@ impl TryFrom<AuthProvider> for ProviderResponse {
 
     fn try_from(value: AuthProvider) -> Result<Self, Self::Error> {
         let secret = AuthProvider::secret_cleartext(&value.secret)?;
+        let claim_mappings = value.claim_mappings()?;
         Ok(Self {
             id: value.id,
             name: value.name,
@@ -625,11 +1012,13 @@ impl TryFrom<AuthProvider> for ProviderResponse {
             admin_claim_value: value.admin_claim_value,
             mfa_claim_path: value.mfa_claim_path,
             mfa_claim_value: value.mfa_claim_value,
+            claim_mappings,
             use_pkce: value.use_pkce,
             client_secret_basic: value.client_secret_basic,
             client_secret_post: value.client_secret_post,
             auto_onboarding: value.auto_onboarding,
             auto_link: value.auto_link,
+            hide_login: value.hide_login,
         })
     }
 }
@@ -649,10 +1038,8 @@ pub struct AuthProviderCallback {
     pub req_code_challenge: Option<String>,
     pub req_code_challenge_method: Option<String>,
     /// RFC 8707 resource indicator from the authorization request (#1702).
-    /// `default` so a callback cached by the previous version still decodes
-    /// during a rolling upgrade.
-    #[serde(default)]
     pub req_resource: Option<String>,
+    pub req_consent: Option<LoginConsent>,
 
     pub provider_id: String,
 
@@ -740,7 +1127,7 @@ impl AuthProviderCallback {
                 builder = builder.basic_auth(
                     &provider.client_id,
                     AuthProvider::secret_cleartext(&provider.secret)?,
-                )
+                );
             }
 
             builder
@@ -928,6 +1315,9 @@ pub struct AuthProviderTemplate {
     pub id: String,
     pub name: String,
     pub updated: i64,
+    /// Not rendered as a login button. Part of the template, never filtered out of it, because
+    /// a login via the `idp_hint` query parameter resolves the provider from this very list.
+    pub hide_login: bool,
 }
 
 impl AuthProviderTemplate {
@@ -954,6 +1344,7 @@ impl AuthProviderTemplate {
                 id: provider.id,
                 name: provider.name,
                 updated,
+                hide_login: provider.hide_login,
             });
         }
         let json = serde_json::to_string(&slf)?;
@@ -966,10 +1357,8 @@ impl AuthProviderTemplate {
     }
 
     async fn invalidate_cache() -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
+        DB::cache_delete_delayed([(Cache::App, Some(Cow::from(IDX_AUTH_PROVIDER_TEMPLATE)))])
             .await?;
-
         Ok(())
     }
 
@@ -1070,6 +1459,25 @@ impl AuthProviderIdClaims<'_> {
         }
     }
 
+    /// The claims JSON a login carries, parsed only when the provider has claim rules to evaluate.
+    /// A callback that carries no claims payload at all, like ATProto, is no claims and not an
+    /// error.
+    fn claims_json(&self, has_rules: bool) -> Result<Option<Value>, ErrorResponse> {
+        match self.json_bytes {
+            Some(bytes) if has_rules => {
+                serde_json::from_slice::<Value>(bytes)
+                    .map(Some)
+                    .map_err(|err| {
+                        ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            format!("Cannot parse JSON response from upstream: {err}"),
+                        )
+                    })
+            }
+            _ => Ok(None),
+        }
+    }
+
     fn apply_provider_email(&self, user: &mut User, email: String) -> Option<String> {
         if user.email == email {
             if self.email_verified == Some(true) {
@@ -1136,7 +1544,7 @@ impl AuthProviderIdClaims<'_> {
         // Any json number would become a String too, which is what we need for compatibility.
         let claims_user_id = match claims_user_id_json {
             Value::Number(num) => num.to_string(),
-            Value::String(s) => s.to_string(),
+            Value::String(s) => s.clone(),
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1145,166 +1553,155 @@ impl AuthProviderIdClaims<'_> {
             }
         };
 
-        let (user_opt, new_federated_user) = match User::find_by_federation(
-            &provider.id,
-            &claims_user_id,
-        )
-        .await
+        let (user_opt, new_federated_user) = if let Ok(user) =
+            User::find_by_federation(&provider.id, &claims_user_id).await
         {
-            Ok(user) => {
-                debug!("found already existing user by federation lookup: {user:?}");
-                (Some(user), NewFederatedUserCreated::No)
-            }
-            Err(_) => {
-                debug!("did not find already existing user by federation lookup");
-                if let Ok(mut user) = User::find_by_email(email.clone()).await {
-                    if let Some(link) = link_cookie {
-                        if link.provider_id != provider.id {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie",
-                            ));
-                        }
-
-                        if link.user_id != user.id {
-                            // In this case, the link cookie exists from another user session.
-                            // It is possible to build this situation manually with access to
-                            // multiple accounts.
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie",
-                            ));
-                        }
-
-                        // finally, this is our condition we allow linking for existing accs
-                        if link.user_email != user.email {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "Invalid E-Mail",
-                            ));
-                        }
-
-                        // If we got here, everything was fine, and we can create the link.
-                        // No need to `.save()` here, will be done later anyway with other updates.
-                        user.auth_provider_id = Some(provider.id.clone());
-                        user.federation_uid = Some(claims_user_id.clone());
-
-                        (Some(user), NewFederatedUserCreated::No)
-                    } else if provider.auto_link
-                        && user.federation_uid.is_none()
-                        && user.auth_provider_id.is_none()
-                    {
-                        user.auth_provider_id = Some(provider.id.clone());
-                        user.federation_uid = Some(claims_user_id.clone());
-
-                        (Some(user), NewFederatedUserCreated::No)
-                    } else {
+            debug!("found already existing user by federation lookup: {user:?}");
+            (Some(user), NewFederatedUserCreated::No)
+        } else {
+            debug!("did not find already existing user by federation lookup");
+            if let Ok(mut user) = User::find_by_email(email.clone()).await {
+                if let Some(link) = link_cookie {
+                    if link.provider_id != provider.id {
                         return Err(ErrorResponse::new(
-                            ErrorResponseType::Forbidden,
-                            format!(
-                                "User with email '{}' already exists but is not linked to this provider.",
-                                user.email
-                            ),
+                            ErrorResponseType::BadRequest,
+                            "bad provider_id in link cookie",
                         ));
                     }
-                } else if !provider.auto_onboarding {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::NotFound,
-                        "User not found",
-                    ));
+
+                    if link.user_id != user.id {
+                        // In this case, the link cookie exists from another user session.
+                        // It is possible to build this situation manually with access to
+                        // multiple accounts.
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "bad user_id in link cookie",
+                        ));
+                    }
+
+                    // finally, this is our condition we allow linking for existing accs
+                    if link.user_email != user.email {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "Invalid E-Mail",
+                        ));
+                    }
+
+                    // If we got here, everything was fine, and we can create the link.
+                    // No need to `.save()` here, will be done later anyway with other updates.
+                    user.auth_provider_id = Some(provider.id.clone());
+                    user.federation_uid = Some(claims_user_id.clone());
+
+                    (Some(user), NewFederatedUserCreated::No)
+                } else if provider.auto_link
+                    && user.federation_uid.is_none()
+                    && user.auth_provider_id.is_none()
+                {
+                    user.auth_provider_id = Some(provider.id.clone());
+                    user.federation_uid = Some(claims_user_id.clone());
+
+                    (Some(user), NewFederatedUserCreated::No)
                 } else {
-                    // a new user will be created further down
-                    (None, NewFederatedUserCreated::Yes)
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        format!(
+                            "User with email '{}' already exists but is not linked to this provider.",
+                            user.email
+                        ),
+                    ));
                 }
+            } else if !provider.auto_onboarding {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "User not found",
+                ));
+            } else {
+                // a new user will be created further down
+                (None, NewFederatedUserCreated::Yes)
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
 
-        // `rauthy_admin` role mapping by upstream claim
-        let mut should_be_rauthy_admin = None;
-        if let Some(path) = &provider.admin_claim_path {
-            if provider.admin_claim_value.is_none() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - admin claim path without value",
-                ));
-            }
+        // Paths and regexes are compiled at config save, a federated login only evaluates them.
+        // A provider without claim rules, and a login that carries no claims JSON at all (ATProto),
+        // evaluate nothing.
+        let mappings = provider.compiled_mappings()?;
+        let claims = self.claims_json(mappings.has_rules())?;
 
-            debug!("try validating admin_claim_path: {:?}", path);
-            match JsonPath::parse(path) {
-                Ok(path) => {
-                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
-                    let json =
-                        value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    let admin_value =
-                        value::Value::from(provider.admin_claim_value.as_deref().unwrap())
-                            .to_string();
-                    should_be_rauthy_admin = Some(false);
-                    for value in path.query(&json).all() {
-                        // We actually need this allocation to String to get bigger compatibility.
-                        // This way, we can accept not only string, but we would for instance
-                        // also interpret a given bool as string.
-                        let value = if !value.is_string() {
-                            format!("\"{value}\"")
-                        } else {
-                            value.to_string()
-                        };
-                        if value == admin_value {
-                            should_be_rauthy_admin = Some(true);
-                            break;
-                        }
-                    }
-                }
-                Err(err) => {
-                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
-                }
-            }
-        }
+        // A name is only ever removed when this provider maps it. A name inside the mapping set is
+        // provider-owned, and that includes a name an admin granted to that user by hand. A target
+        // is added when any of its rules matched, and removed only when none of them matched.
+        let mut roles_add: BTreeSet<&str> = BTreeSet::new();
+        let mut roles_managed: BTreeSet<&str> = BTreeSet::new();
+        let mut groups_add: BTreeSet<&str> = BTreeSet::new();
+        let mut groups_managed: BTreeSet<&str> = BTreeSet::new();
 
         // check if mfa has been used by upstream claim
-        let mut provider_mfa_login = ProviderMfaLogin::No;
-        if let Some(path) = &provider.mfa_claim_path {
-            if provider.mfa_claim_value.is_none() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "Misconfigured Auth Provider - mfa claim path without value",
-                ));
-            }
+        let provider_mfa_login = match &claims {
+            Some(claims) => {
+                let mut nodes = ClaimNodes::with_capacity(16);
+                let mut claims_buf = String::with_capacity(16);
 
-            debug!("try validating mfa_claim_path: {:?}", path);
-            match JsonPath::parse(path) {
-                Ok(path) => {
-                    let json_str = String::from_utf8_lossy(self.json_bytes.unwrap());
-                    let json =
-                        value::Value::from_str(json_str.as_ref()).expect("json to build fine");
-                    let mfa_value =
-                        value::Value::from(provider.mfa_claim_value.as_deref().unwrap())
-                            .to_string();
-
-                    for value in path.query(&json).all() {
-                        // We actually need this allocation to String to get bigger compatibility.
-                        // This way, we can accept not only string, but we would for instance
-                        // also interpret a given bool as string.
-                        let value = if !value.is_string() {
-                            format!("\"{value}\"")
-                        } else {
-                            value.to_string()
-                        };
-                        if value == mfa_value {
-                            provider_mfa_login = ProviderMfaLogin::Yes;
-                            break;
-                        }
+                if let Some(rule) = &mappings.admin {
+                    roles_managed.insert(RAUTHY_ADMIN_ROLE);
+                    if rule.matches(claims, &mut nodes, &mut claims_buf) {
+                        roles_add.insert(RAUTHY_ADMIN_ROLE);
                     }
                 }
-                Err(err) => {
-                    error!("Error parsing JsonPath from: '{path}', Error: {err}");
+                for target in &mappings.roles {
+                    roles_managed.insert(target.target.as_str());
+                    if target.rule.matches(claims, &mut nodes, &mut claims_buf) {
+                        roles_add.insert(target.target.as_str());
+                    }
+                }
+                for target in &mappings.groups {
+                    groups_managed.insert(target.target.as_str());
+                    if target.rule.matches(claims, &mut nodes, &mut claims_buf) {
+                        groups_add.insert(target.target.as_str());
+                    }
+                }
+
+                // A target that was deleted after the config save is dropped here, never
+                // auto-created on a login path. Only names that matched need the check, and the
+                // cached role and group lists are only read when something matched at all.
+                if !roles_add.is_empty() {
+                    let all_roles = Role::find_all().await?;
+                    // A group admin role is only meaningful for a group that exists.
+                    let all_groups = if roles_add
+                        .iter()
+                        .any(|name| name.starts_with(RAUTHY_ADMIN_GROUP_PREFIX))
+                    {
+                        Some(Group::find_all().await?)
+                    } else {
+                        None
+                    };
+                    roles_add.retain(|name| match name.strip_prefix(RAUTHY_ADMIN_GROUP_PREFIX) {
+                        Some(group) => all_groups.as_deref().is_some_and(|groups| {
+                            groups
+                                .iter()
+                                .any(|g| group_admin_matches_group(&g.name, group))
+                        }),
+                        None => all_roles.iter().any(|role| role.name == *name),
+                    });
+                }
+                if !groups_add.is_empty() {
+                    let all_groups = Group::find_all().await?;
+                    groups_add.retain(|name| all_groups.iter().any(|group| group.name == *name));
+                }
+
+                if let Some(rule) = &mappings.mfa
+                    && rule.matches(claims, &mut nodes, &mut claims_buf)
+                {
+                    ProviderMfaLogin::Yes
+                } else {
+                    ProviderMfaLogin::No
                 }
             }
-        }
+            None => ProviderMfaLogin::No,
+        };
 
         let now = Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
-            let mut old_email = None;
             let mut forbidden_error = None;
 
             // validate federation_uid
@@ -1322,10 +1719,7 @@ impl AuthProviderIdClaims<'_> {
             }
 
             if let Some(err) = forbidden_error {
-                user.last_failed_login = Some(now);
-                user.failed_login_attempts =
-                    Some(user.failed_login_attempts.unwrap_or_default() + 1);
-                user.save(old_email).await?;
+                user.save_login_failure().await?;
 
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1333,7 +1727,7 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            old_email = self.apply_provider_email(&mut user, email);
+            let old_email = self.apply_provider_email(&mut user, email);
 
             // check other existing values and possibly update them
             let given_name = self.given_name();
@@ -1345,31 +1739,12 @@ impl AuthProviderIdClaims<'_> {
                 user.family_name = family_name.map(String::from);
             }
 
-            // should this user be a rauthy admin?
-            let roles = user.roles_iter().collect::<Vec<_>>();
-
-            // We will only re-map the rauthy_admin role if the claim mapping is configured.
-            // Otherwise, we would remove an admin role from a user it has been manually added for,
-            // which would not be the expected outcome.
-            if let Some(should_be_admin) = should_be_rauthy_admin {
-                if should_be_admin {
-                    if !roles.contains(&"rauthy_admin") {
-                        let is_empty = roles.is_empty();
-                        drop(roles);
-                        if is_empty {
-                            user.roles.push_str("rauthy_admin");
-                        } else {
-                            user.roles.push_str(",rauthy_admin");
-                        }
-                    }
-                } else if roles.contains(&"rauthy_admin") {
-                    if roles.len() == 1 {
-                        user.roles = "".to_string();
-                    } else {
-                        user.roles = roles.into_iter().filter(|r| r != &"rauthy_admin").join(",");
-                    }
-                }
-            }
+            // Empty entries are dropped: `"".split(',')` yields one empty string.
+            let roles: BTreeSet<&str> = user.roles_iter().filter(|r| !r.is_empty()).collect();
+            user.roles = reconcile(&roles, &roles_managed, &roles_add);
+            let groups: BTreeSet<&str> = user.groups_iter().filter(|g| !g.is_empty()).collect();
+            let groups_csv = reconcile(&groups, &groups_managed, &groups_add);
+            user.groups = (!groups_csv.is_empty()).then_some(groups_csv);
 
             // update the user on our side
             user.last_login = Some(now);
@@ -1384,15 +1759,12 @@ impl AuthProviderIdClaims<'_> {
                 email: email.clone(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().map(String::from),
-                roles: should_be_rauthy_admin
-                    .map(|should_be_admin| {
-                        if should_be_admin {
-                            "rauthy_admin".to_string()
-                        } else {
-                            String::default()
-                        }
-                    })
-                    .unwrap_or_default(),
+                roles: roles_add.iter().join(","),
+                groups: if groups_add.is_empty() {
+                    None
+                } else {
+                    Some(groups_add.iter().join(","))
+                },
                 enabled: true,
                 email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
@@ -1402,7 +1774,7 @@ impl AuthProviderIdClaims<'_> {
                     .map(|l| Language::from(l.as_ref()))
                     .unwrap_or_default(),
                 auth_provider_id: Some(provider.id.clone()),
-                federation_uid: Some(claims_user_id.to_string()),
+                federation_uid: Some(claims_user_id.clone()),
                 ..Default::default()
             };
             User::create_federated(new_user).await?
@@ -1458,7 +1830,7 @@ impl AuthProviderIdClaims<'_> {
         let preferred_username = if let Some(username) = &self.preferred_username {
             Some(username.to_string())
         } else {
-            self.login.as_ref().map(|l| l.to_string())
+            self.login.as_ref().map(ToString::to_string)
         };
         if let Some(username) = preferred_username {
             // Check via local read first, which is a lot cheaper than write through the Raft.
@@ -1481,9 +1853,147 @@ impl AuthProviderIdClaims<'_> {
     }
 }
 
+/// Reconcile a user's role / group list against a provider's claim rules. A name is only ever
+/// removed when it is part of `managed`, which is exactly the set of targets the provider's own
+/// rules name. Anything a local admin granted, and anything another provider manages, stays
+/// exactly as it is. Matched targets are added.
+/// Iterating the `BTreeSet` keeps the stored CSV byte-stable across nodes.
+fn reconcile<'a>(
+    current: &BTreeSet<&'a str>,
+    managed: &BTreeSet<&'a str>,
+    matched: &BTreeSet<&'a str>,
+) -> String {
+    let mut out = current.clone();
+    out.extend(matched.iter().copied());
+    for name in managed.difference(matched) {
+        out.remove(name);
+    }
+    out.iter().join(",")
+}
+
+/// Match a group name against the group part of a `rauthy_admin:<group>` role, exactly like the
+/// group admin roles are matched in `Principal`: the name matches itself, a trailing `*` makes it
+/// a prefix glob, and empty group names never match.
+fn group_admin_matches_group(name: &str, group: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+    match group.strip_suffix('*') {
+        Some(prefix) => name.starts_with(prefix),
+        None => name == group,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Both a login without a claims payload (ATProto) and a provider without claim rules mean "no
+    /// claims": no parse, no error, and never an unwrap on `None`.
+    #[test]
+    fn claims_json_needs_both_rules_and_payload() -> Result<(), ErrorResponse> {
+        let json: &[u8] = br#"{"sub": "1", "roles": ["admin"]}"#;
+
+        let with_payload = AuthProviderIdClaims {
+            json_bytes: Some(json),
+            ..Default::default()
+        };
+        assert!(with_payload.claims_json(true)?.is_some());
+        assert!(
+            with_payload.claims_json(false)?.is_none(),
+            "a provider without rules parses nothing"
+        );
+
+        let atproto = AuthProviderIdClaims {
+            email: Some(Cow::Borrowed("a@b.c")),
+            ..Default::default()
+        };
+        assert!(
+            atproto.claims_json(true)?.is_none(),
+            "a callback without a claims payload is no claims"
+        );
+        assert!(
+            atproto.claims_json(false)?.is_none(),
+            "no payload and no rules is no claims"
+        );
+
+        let broken = AuthProviderIdClaims {
+            json_bytes: Some(b"not json"),
+            ..Default::default()
+        };
+        assert!(broken.claims_json(true).is_err());
+
+        Ok(())
+    }
+
+    /// The provider's rules only ever add and remove their own targets. A name an admin granted
+    /// locally is never in `managed`, so it can never be removed, and a name without a rule is
+    /// never added.
+    #[test]
+    fn reconcile_only_touches_provider_managed_names() {
+        let current: BTreeSet<&str> = ["api", "local_admin", "tgchat:admin", "other_prov"]
+            .into_iter()
+            .collect();
+        let managed: BTreeSet<&str> = ["tgchat:admin", "tgchat:read"].into_iter().collect();
+
+        // `tgchat:admin` lost its match, `tgchat:read` gained one: both moves are provider-owned.
+        let matched: BTreeSet<&str> = ["tgchat:read"].into_iter().collect();
+        assert_eq!(
+            reconcile(&current, &managed, &matched),
+            "api,local_admin,other_prov,tgchat:read"
+        );
+
+        // A match adds, and the locally granted names stay untouched in every case.
+        let matched: BTreeSet<&str> = ["tgchat:admin", "tgchat:read"].into_iter().collect();
+        assert_eq!(
+            reconcile(&current, &managed, &matched),
+            "api,local_admin,other_prov,tgchat:admin,tgchat:read"
+        );
+
+        // A provider without any rule never changes the user.
+        let no_rules: BTreeSet<&str> = BTreeSet::new();
+        assert_eq!(
+            reconcile(&current, &no_rules, &no_rules),
+            "api,local_admin,other_prov,tgchat:admin"
+        );
+
+        // New user: there is nothing to keep, the order is the sorted one.
+        assert_eq!(
+            reconcile(&no_rules, &managed, &matched),
+            "tgchat:admin,tgchat:read"
+        );
+    }
+
+    /// Several rules can name the same target. A single match wins over any number of misses.
+    #[test]
+    fn reconcile_adds_a_target_that_any_of_its_rules_matched() {
+        let current: BTreeSet<&str> = BTreeSet::new();
+        let managed: BTreeSet<&str> = ["dev"].into_iter().collect();
+        let matched: BTreeSet<&str> = ["dev"].into_iter().collect();
+        assert_eq!(reconcile(&current, &managed, &matched), "dev");
+
+        let no_match: BTreeSet<&str> = BTreeSet::new();
+        assert_eq!(reconcile(&current, &managed, &no_match), "");
+    }
+
+    /// The group part of a group admin target matches like the group admin roles in `Principal`:
+    /// the name itself, a prefix glob with a trailing `*`, and `*` for every group.
+    #[test]
+    fn group_admin_target_matches_its_groups() {
+        assert!(group_admin_matches_group("dev", "dev"));
+        assert!(!group_admin_matches_group("devx", "dev"));
+        assert!(group_admin_matches_group("dev-read", "dev-*"));
+        assert!(group_admin_matches_group("dev", "dev*"));
+        assert!(group_admin_matches_group("anything", "*"));
+        assert!(
+            !group_admin_matches_group("", "dev"),
+            "an empty group name is never managed"
+        );
+        assert!(
+            !group_admin_matches_group("", "*"),
+            "the global glob does not match an empty group name"
+        );
+    }
 
     fn user_with_email(email: &str, email_verified: bool) -> User {
         User {
@@ -1585,55 +2095,6 @@ mod tests {
         assert_eq!(user.email, "new@example.com");
         assert!(!user.email_verified);
         assert_eq!(old_email.as_deref(), Some("old@example.com"));
-    }
-
-    // exists only to understand the query syntax and experiment with it
-    #[test]
-    #[ignore]
-    fn test_json_path() {
-        let value = serde_json::json!({
-            "foo": {
-                "bar": ["baz", "bop", 23],
-                "bor": "yes"
-            },
-            "bor": "yup"
-        });
-
-        let path = JsonPath::parse("$.foo.bar[*]").unwrap();
-        let nodes = path.query(&value).all();
-        assert_eq!(nodes.first().unwrap().as_str(), Some("baz"));
-        assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
-        assert_eq!(
-            nodes.get(2).unwrap().as_number(),
-            Some(&serde_json::Number::from(23))
-        );
-
-        let path = JsonPath::parse("$.foo.*").unwrap();
-        let nodes = path.query(&value).all();
-        assert_eq!(nodes.len(), 2);
-
-        // works in the same way (in this case -> array) as `$.foo.bar[*]`
-        let path = JsonPath::parse("$.foo.bar.*").unwrap();
-        let nodes = path.query(&value).all();
-        assert_eq!(nodes.len(), 3);
-        assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
-
-        let path = JsonPath::parse("$.foo.bor").unwrap();
-        let nodes = path.query(&value).all();
-        assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
-
-        // we cannot query for single values with the wildcard in the end
-        // -> add 2 possible cases in the checking code for best UX
-        let path = JsonPath::parse("$.foo.bor.*").unwrap();
-        let nodes = path.query(&value).all();
-        assert_eq!(nodes.len(), 0);
-
-        // wildcards work in the front as well
-        let path = JsonPath::parse("$.*.bor").unwrap();
-        let nodes = path.query(&value).all();
-        assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
     }
 
     #[test]

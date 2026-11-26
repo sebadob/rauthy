@@ -71,6 +71,21 @@ const NO_OTP = [];
 
 const SCENARIOS = [
     {
+        name: 'unnamed email OTP',
+        webauthnUserId: 'webauthn-user-id',
+        passkeys: [PASSKEY],
+        otps: [{ id: 'email-otp', kind: 'email', last_used: 0, is_active: true }],
+        authenticator: false,
+        expected: [],
+        async run(/** @type {any} */ page) {
+            await page.getByRole('heading', { name: 'Email-based OTP', exact: true }).waitFor({
+                timeout: 5000,
+            });
+            assert.equal(await page.getByText('Testkey', { exact: true }).count(), 1);
+            assert.equal(await page.getByText('Internal Error', { exact: true }).count(), 0);
+        },
+    },
+    {
         // The regular case for this issue: the form only appears after the request was sent, and
         // the activation the user triggers by typing the code runs exactly once.
         name: 'password',
@@ -246,7 +261,10 @@ for (const scenario of SCENARIOS) {
             handle: (route, request, url) => handle(s, route, request, url),
         });
         await page.goto(`${ORIGIN}${DOCUMENT_PATH}`);
-        await page.getByRole('button', { name: OTP_BUTTON, exact: true }).waitFor();
+        await page.getByRole('button', { name: 'MFA', exact: true }).click();
+        if (scenario.otps.length === 0) {
+            await page.getByRole('button', { name: OTP_BUTTON, exact: true }).waitFor();
+        }
         if (scenario.authenticator) {
             await addVirtualAuthenticator(context, page);
             await createPasskeyCredential(page, { rpName: 'Rauthy', userId: USER_ID });

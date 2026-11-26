@@ -9,19 +9,28 @@
     import Input from '#lib/form/Input.svelte';
     import { PATTERN_CSS_VALUE_LOOSE } from '#utils/patterns.ts';
     import BrandingMode from '#lib/admin/clients/branding/BrandingMode.svelte';
-    import BrandingPreviewWrapper from '#lib/admin/clients/branding/BrandingPreviewWrapper.svelte';
+    import BrandingPreview from '#lib/admin/clients/branding/BrandingPreview.svelte';
+    import Section from '#lib/Section.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import { genKey } from '#utils/helpers.ts';
     import InputFile from '#lib/form/InputFile.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import IconTrash from '#icons/IconTrash.svelte';
+    import { type UnsavedField } from '#utils/unsaved.ts';
+    import type { ThemeCss } from '#api/types/themes.ts';
 
     let {
         client,
+        fields = $bindable([]),
+        reset = $bindable(() => {}),
     }: {
         client: ClientResponse;
+        // the parent owns the `<UnsavedGuard>`, so it gets the watched values
+        fields?: UnsavedField[];
+        // the parent's guard calls this to drop local edits
+        reset?: () => void;
     } = $props();
-
-    const inputWidth = '13rem';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -29,6 +38,14 @@
     let success = $state(false);
     let err = $state('');
     let theme: ThemeRequestResponse | undefined = $state();
+    const branding = ta.clients.branding;
+    const modes = [branding.light, branding.dark];
+    let selected = $state(modes[0]);
+    const mode = $derived(selected === modes[0] ? 'light' : 'dark');
+    let confirmReset = $state(false);
+    let closeReset: (() => void) | undefined = $state();
+    let pending = $state(false);
+    const formId = genKey();
 
     let logoKey = $state(genKey());
     let logoUrl = $derived(`/auth/v1/clients/${client.id}/logo?${logoKey}`);
@@ -41,14 +58,90 @@
         fetchTheme();
     });
 
+    // the theme's HSL fields are arrays, the CSS value fields are strings
+    type ColorKey = 'text' | 'text_high' | 'bg' | 'bg_high' | 'action' | 'accent' | 'error';
+    type TextKey = 'btn_text' | 'theme_sun' | 'theme_moon';
+    const COLOR_KEYS: ColorKey[] = [
+        'text',
+        'text_high',
+        'bg',
+        'bg_high',
+        'action',
+        'accent',
+        'error',
+    ];
+    const TEXT_KEYS: TextKey[] = ['btn_text', 'theme_sun', 'theme_moon'];
+
+    // the theme object is edited in place, so the baseline has to be a deep copy
+    let themeOrig = $state<ThemeRequestResponse | undefined>(undefined);
+
+    function cloneTheme(t: ThemeRequestResponse): ThemeRequestResponse {
+        let light = {} as ThemeCss;
+        let dark = {} as ThemeCss;
+        for (let key of COLOR_KEYS) {
+            light[key] = [...t.light[key]];
+            dark[key] = [...t.dark[key]];
+        }
+        for (let key of TEXT_KEYS) {
+            light[key] = t.light[key];
+            dark[key] = t.dark[key];
+        }
+        return {
+            client_id: t.client_id,
+            border_radius: t.border_radius,
+            light,
+            dark,
+        };
+    }
+
     async function fetchTheme() {
         let res = await fetchPost<ThemeRequestResponse>(url);
         if (res.body) {
             theme = res.body;
+            themeOrig = cloneTheme(res.body);
         } else {
             err = res.error?.message || 'Error';
         }
     }
+
+    function resetForm() {
+        if (!theme || !themeOrig) {
+            return;
+        }
+        theme.border_radius = themeOrig.border_radius;
+        for (let key of COLOR_KEYS) {
+            theme.light[key] = [...themeOrig.light[key]];
+            theme.dark[key] = [...themeOrig.dark[key]];
+        }
+        for (let key of TEXT_KEYS) {
+            theme.light[key] = themeOrig.light[key];
+            theme.dark[key] = themeOrig.dark[key];
+        }
+    }
+
+    let watched = $derived.by(() => {
+        if (!theme || !themeOrig) {
+            return [];
+        }
+        let fields: UnsavedField[] = [
+            { value: theme.border_radius, original: themeOrig.border_radius },
+        ];
+        for (let key of COLOR_KEYS) {
+            fields.push({ value: theme.light[key], original: themeOrig.light[key] });
+            fields.push({ value: theme.dark[key], original: themeOrig.dark[key] });
+        }
+        for (let key of TEXT_KEYS) {
+            fields.push({ value: theme.light[key], original: themeOrig.light[key] });
+            fields.push({ value: theme.dark[key], original: themeOrig.dark[key] });
+        }
+        return fields;
+    });
+
+    // the parent owns navigation guards, so it needs to know about the form state
+    $effect(() => {
+        fields = watched;
+        reset = resetForm;
+    });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         if (!theme) {
@@ -60,10 +153,15 @@
         // this could be `rauthy` the default has been used before
         payload.client_id = client.id;
 
+        pending = true;
+        err = '';
         let res = await fetchPut(url, payload);
+        pending = false;
         if (res.error) {
             err = res.error.message;
         } else {
+            // `payload` is the live theme object, so the baseline becomes what was just saved
+            themeOrig = cloneTheme(theme);
             success = true;
             setTimeout(() => {
                 success = false;
@@ -71,46 +169,21 @@
         }
     }
 
-    async function reset() {
-        let res = await fetchDelete(url);
+    async function resetTheme() {
+        pending = true;
+        err = '';
+        const res = await fetchDelete(url);
         if (res.error) {
             err = res.error.message;
         } else {
-            await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
-            await fetchDelete(`/auth/v1/clients/${client.id}/favicon`);
-
+            closeReset?.();
             await fetchTheme();
-            logoKey = genKey();
-            faviconLoaded = false;
-            faviconKey = genKey();
-            success = true;
-            setTimeout(() => {
-                success = false;
-            }, 2000);
         }
+        pending = false;
     }
 
-    async function onUploadSuccess() {
+    function onUploadSuccess() {
         logoKey = genKey();
-    }
-
-    async function onLogoDelete() {
-        let res = await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            logoKey = genKey();
-        }
-    }
-
-    async function onFaviconDelete() {
-        let res = await fetchDelete(`/auth/v1/clients/${client.id}/favicon`);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            faviconLoaded = false;
-            faviconKey = genKey();
-        }
     }
 
     function onFaviconUploadSuccess() {
@@ -119,148 +192,228 @@
     }
 </script>
 
-<Form action={url} {onSubmit}>
-    <div class="container">
-        {#if theme}
-            <div class="values">
-                <p>{@html ta.clients.branding.descVariables}</p>
-
-                <Input
-                    label="--border-radius"
-                    placeholder="--border-radius"
-                    errMsg={ta.validation.css}
-                    width={inputWidth}
-                    bind:value={theme.border_radius}
-                    required
-                    pattern={PATTERN_CSS_VALUE_LOOSE}
-                />
-
-                <h1>Light Theme</h1>
-                <BrandingMode bind:values={theme.light} />
-
-                <br />
-                <h1>Dark Theme</h1>
-                <BrandingMode bind:values={theme.dark} />
-            </div>
-            <div class="preview">
-                {#key logoKey}
-                    <BrandingPreviewWrapper {logoUrl} {theme} />
-                {/key}
-
-                <hr />
-
-                <p>Logo Upload</p>
-                <div class="logo">
-                    <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/logo`}
-                        fileName="logo"
-                        width="100%"
-                        onSuccess={onUploadSuccess}
-                    />
-                    <Button ariaLabel={t.common.delete} invisible onclick={onLogoDelete}>
-                        <IconTrash width="1.25rem" />
-                    </Button>
-                </div>
-
-                <p>{ta.clients.branding.faviconUpload}</p>
-                <div class="favicon">
-                    {#key faviconKey}
-                        <img
-                            class:loaded={faviconLoaded}
-                            src={faviconUrl}
-                            alt={ta.clients.branding.faviconPreviewAlt}
-                            onload={() => (faviconLoaded = true)}
-                            onerror={() => (faviconLoaded = false)}
+<div class="branding-layout">
+    <div class="assets">
+        <Section title={branding.assets}>
+            <p>{branding.assetsImmediate}</p>
+            <div class="asset-grid">
+                <div>
+                    <h4>{branding.logo}</h4>
+                    <div class="upload">
+                        <InputFile
+                            url={`/auth/v1/clients/${client.id}/logo`}
+                            ariaLabel={branding.logo}
+                            fileName="logo"
+                            width="100%"
+                            onSuccess={onUploadSuccess}
                         />
-                    {/key}
-                    <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/favicon`}
-                        fileName="favicon"
-                        width="100%"
-                        onSuccess={onFaviconUploadSuccess}
-                    />
-                    <Button ariaLabel={t.common.delete} invisible onclick={onFaviconDelete}>
-                        <IconTrash width="1.25rem" />
-                    </Button>
-                </div>
-
-                <div class="buttons">
-                    <Button type="submit">
-                        {t.common.save}
-                    </Button>
-                    <Button level={-2} onclick={reset}>
-                        {ta.common.reset}
-                    </Button>
-
-                    {#if success}
-                        <IconCheck />
-                    {/if}
-                </div>
-
-                {#if err}
-                    <div class="err">
-                        {err}
+                        <EntityDelete
+                            url={`/auth/v1/clients/${client.id}/logo`}
+                            label={`${t.common.delete} · ${branding.logo}`}
+                            name={client.id}
+                            iconOnly
+                            onDelete={onUploadSuccess}
+                        />
                     </div>
-                {/if}
+                </div>
+                <div>
+                    <h4>{branding.faviconUpload}</h4>
+                    <div class="upload">
+                        {#key faviconKey}
+                            <img
+                                class:loaded={faviconLoaded}
+                                src={faviconUrl}
+                                alt={branding.faviconPreviewAlt}
+                                onload={() => (faviconLoaded = true)}
+                                onerror={() => (faviconLoaded = false)}
+                            />
+                        {/key}
+                        <InputFile
+                            url={`/auth/v1/clients/${client.id}/favicon`}
+                            ariaLabel={branding.faviconUpload}
+                            fileName="favicon"
+                            width="100%"
+                            onSuccess={onFaviconUploadSuccess}
+                        />
+                        <EntityDelete
+                            url={`/auth/v1/clients/${client.id}/favicon`}
+                            label={`${t.common.delete} · ${branding.faviconUpload}`}
+                            name={client.id}
+                            iconOnly
+                            onDelete={onFaviconUploadSuccess}
+                        />
+                    </div>
+                </div>
             </div>
-        {/if}
+        </Section>
     </div>
-</Form>
+
+    {#if theme}
+        <Form id={formId} action={url} {onSubmit}>
+            <div class="theme-editor">
+                <div class="preview">
+                    <Section title={branding.preview}>
+                        {#key mode}
+                            <BrandingPreview
+                                {logoUrl}
+                                borderRadius={theme.border_radius}
+                                theme={theme[mode]}
+                                typ={mode}
+                            />
+                        {/key}
+                    </Section>
+                </div>
+
+                <div class="settings">
+                    <Section title={branding.theme}>
+                        <Input
+                            label="--border-radius"
+                            placeholder="--border-radius"
+                            errMsg={ta.validation.css}
+                            width="min(12rem, 100%)"
+                            bind:value={theme.border_radius}
+                            required
+                            pattern={PATTERN_CSS_VALUE_LOOSE}
+                        />
+                        <Tabs tabs={modes} bind:selected />
+                        {#if mode === 'light'}
+                            <BrandingMode bind:values={theme.light} />
+                        {:else}
+                            <BrandingMode bind:values={theme.dark} />
+                        {/if}
+                    </Section>
+                </div>
+            </div>
+        </Form>
+
+        <div class="save-bar">
+            <Button type="submit" form={formId} isLoading={pending}>{t.common.save}</Button>
+            <Button level={2} onclick={() => (confirmReset = true)} isDisabled={pending}>
+                {branding.resetTheme}
+            </Button>
+            {#if success}<IconCheck />{/if}
+            {#if err && !confirmReset}<span class="err" role="alert">{err}</span>{/if}
+        </div>
+
+        <Modal
+            bind:showModal={confirmReset}
+            bind:closeModal={closeReset}
+            ariaLabel={branding.resetTheme}
+            strict
+        >
+            <div class="reset">
+                <h3>{branding.resetTheme}</h3>
+                <p>{branding.resetThemeConfirm}</p>
+                {#if err}<p class="err" role="alert">{err}</p>{/if}
+                <div class="reset-actions">
+                    <Button level={2} onclick={() => closeReset?.()}>{t.common.cancel}</Button>
+                    <Button level={-1} onclick={resetTheme} isLoading={pending}
+                        >{branding.resetTheme}</Button
+                    >
+                </div>
+            </div>
+        </Modal>
+    {:else if err}
+        <div class="err" role="alert">{err}</div>
+    {/if}
+</div>
 
 <style>
-    .buttons {
-        margin: 1rem 0;
+    .branding-layout {
+        container-type: inline-size;
+        margin-bottom: calc(-1 * var(--admin-detail-padding-bottom, 0px));
+    }
+
+    .theme-editor {
+        display: grid;
+        gap: var(--ui-space);
+        grid-template-areas: 'preview' 'settings';
+        align-items: start;
+    }
+
+    .preview {
+        grid-area: preview;
+    }
+
+    .settings {
+        grid-area: settings;
+        --ui-tabs-margin: 0;
+        --ui-field-margin: 0;
+    }
+
+    .save-bar {
+        position: sticky;
+        bottom: calc(-1 * var(--admin-detail-padding-bottom, 0px));
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: var(--ui-space);
+        padding: 0.75rem 0;
+        border-top: 1px solid var(--ui-outline);
+        background: var(--ui-surface);
+    }
+
+    .assets {
+        margin-bottom: var(--ui-space);
+    }
+
+    .assets p,
+    .assets h4,
+    .reset h3 {
+        margin: 0;
+    }
+
+    .assets h4 {
+        margin-bottom: 0.5rem;
+        font-size: var(--ui-control-font-size);
+    }
+
+    .asset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+        gap: var(--ui-space);
+    }
+
+    .upload {
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
 
-    .logo,
-    .favicon {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .favicon {
-        grid-template-columns: 2rem minmax(0, 1fr) auto;
-    }
-
-    .favicon img {
+    .upload img {
+        display: none;
         width: 2rem;
         height: 2rem;
-        visibility: hidden;
         object-fit: contain;
     }
 
-    .favicon img.loaded {
-        visibility: visible;
+    .upload img.loaded {
+        display: block;
     }
 
-    .container {
-        max-height: calc(100dvh - 4.5rem);
-        display: grid;
-        grid-template-columns: 1fr 17rem;
+    .reset {
+        width: min(24rem, calc(100dvw - 4rem));
+    }
+
+    .reset-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
         gap: 0.5rem;
+        margin-top: var(--ui-space);
     }
 
-    .values {
-        max-height: calc(100dvh - 5.5rem);
-        margin-top: 1rem;
-        padding-right: 0.5rem;
-        overflow: auto;
-    }
-
-    @media (max-width: 88rem) {
-        .container {
-            grid-template-columns: 1fr;
+    @container (width >= 45rem) {
+        .theme-editor {
+            grid-template-areas: 'settings preview';
+            grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
         }
 
-        .values {
-            max-height: inherit;
+        .preview {
+            position: sticky;
+            top: 0;
         }
     }
 </style>

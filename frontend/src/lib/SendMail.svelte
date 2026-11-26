@@ -1,5 +1,7 @@
 <script lang="ts">
     import IconEnvelope from '#icons/IconEnvelope.svelte';
+    import IconChevronDown from '#icons/IconChevronDown.svelte';
+    import IconUserGroup from '#icons/IconUserGroup.svelte';
     import Button from '#lib/button/Button.svelte';
     import Modal from '#lib/Modal.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
@@ -11,10 +13,10 @@
     import type { EmailJobRequest } from '#api/types/email.ts';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
     import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
-    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { fetchPost } from '#api/fetch.ts';
     import IconCheck from '#icons/IconCheck.svelte';
     import { useSession } from '#state/session.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         groups,
@@ -25,6 +27,7 @@
     } = $props();
 
     let ta = useI18nAdmin();
+    let t = useI18n();
     let session = useSession('admin');
 
     // A delegated group admin may only email users of a single group it manages, so
@@ -36,21 +39,24 @@
         isGroupAdmin ? groups.filter(g => session.managesGroup(g.name)) : groups,
     );
 
+    const deliveryId = $props.id();
     let showModal = $state(false);
+    let expanded = $state(false);
     let closeModal: undefined | (() => void) = $state();
 
-    let editorMode: 'Text' | 'Markdown' | 'HTML' = $state('Markdown');
+    let editorMode: 'Text' | 'Markdown' = $state('Markdown');
 
     let filter = $state(ta.email.filterType[0]);
     let group = $state('');
     let role = $state('');
 
     let scheduled = $state(false);
-    let schedDate = $state(fmtDateInput());
-    let schedTime = $state(fmtTimeInput());
+    const defaultDispatch = new Date(Date.now() + 5 * 60_000);
+    let schedDate = $state(fmtDateInput(defaultDispatch));
+    let schedTime = $state(fmtTimeInput(defaultDispatch));
+    let scheduledAt = $derived(unixTsFromLocalDateTime(schedDate, schedTime));
 
     let subject = $state('');
-    let body = $state('');
     let bodyRaw = $state('');
 
     let success = $state(false);
@@ -63,6 +69,8 @@
     let isFilterRole = $derived(
         filter === ta.email.filterType[3] || filter === ta.email.filterType[4],
     );
+    let recipientFilter = $derived(isGroupAdmin ? ta.email.filterType[1] : filter);
+    let recipientValue = $derived(isGroupAdmin || isFilterGroup ? group : role);
 
     $effect(() => {
         // default to the first selectable group, and keep `group` valid if the list narrows
@@ -73,22 +81,35 @@
     });
 
     $effect(() => {
-        if (roles.length > 0) {
+        if (roles.length > 0 && !roles.some(r => r.name === role)) {
             role = roles[0].name;
         }
     });
 
+    function openComposer() {
+        if (!scheduled) {
+            const dispatch = new Date(Date.now() + 5 * 60_000);
+            schedDate = fmtDateInput(dispatch);
+            schedTime = fmtTimeInput(dispatch);
+        }
+        showModal = true;
+    }
+
     async function submit() {
+        if (scheduled && (!scheduledAt || scheduledAt <= Date.now() / 1000)) {
+            error = t.common.invalidInput;
+            return;
+        }
+        error = '';
         let payload: EmailJobRequest = {
-            // scheduled: number;
             filter_type: 'none',
             content_type: editorMode === 'Text' ? 'text' : 'markdown',
             subject,
-            body: editorMode === 'HTML' ? body : bodyRaw,
+            body: bodyRaw,
         };
 
         if (scheduled) {
-            payload.scheduled = unixTsFromLocalDateTime(schedDate, schedTime);
+            payload.scheduled = scheduledAt;
         }
         if (isGroupAdmin) {
             // group admins are locked to an "In Group" filter for a group they manage
@@ -125,167 +146,235 @@
 
     function reset() {
         scheduled = false;
+        editorMode = 'Markdown';
         filter = ta.email.filterType[0];
         subject = '';
         bodyRaw = '';
-        body = '';
         success = false;
         error = '';
     }
 </script>
 
-<Button ariaLabel={ta.email.sendMail} onclick={() => (showModal = true)} invisible>
+<Button ariaLabel={ta.email.sendMail} onclick={openComposer} invisible>
     <IconEnvelope />
 </Button>
 
-<Modal bind:showModal bind:closeModal>
-    <div class="options">
-        <div class="scheduled">
-            <InputCheckbox ariaLabel={ta.email.scheduled} bind:checked={scheduled}>
-                {ta.email.scheduled}
-            </InputCheckbox>
-
-            {#if scheduled}
-                <InputDateTimeCombo
-                    bind:value={schedDate}
-                    bind:timeValue={schedTime}
-                    min={fmtDateInput()}
-                    withTime
-                />
-            {/if}
-        </div>
-
-        <div class="filter">
-            <div class="label">
-                {ta.email.userFilter}
-                <span style:margin=".25rem 0">:</span>
-            </div>
-
-            {#if isGroupAdmin}
-                <!-- a group admin is locked to "In Group" for a group it manages -->
-                <div class="ms-05">{ta.email.filterType[1]}:</div>
-                <Options
-                    ariaLabel={ta.email.userFilter}
-                    options={availableGroups.map(g => g.name)}
-                    bind:value={group}
-                    borderless
-                    withSearch={availableGroups.length > 7}
-                />
-            {:else}
-                <Options
-                    ariaLabel={ta.email.userFilter}
-                    options={ta.email.filterType}
-                    bind:value={filter}
-                    borderless
-                />
-
-                {#if filter !== ta.email.filterType[0]}
-                    <div class="ms-05">:</div>
-                    {#if isFilterGroup}
+<Modal
+    bind:showModal
+    bind:closeModal
+    ariaLabel={ta.email.sendMail}
+    bind:expanded
+    onClose={() => (expanded = false)}
+    --dialog-padding="clamp(14px, 3vw, 24px)"
+>
+    <EditorInteractive
+        bind:mode={editorMode}
+        {expanded}
+        bind:contentRaw={bodyRaw}
+        title={ta.email.sendMail}
+    >
+        {#snippet fields()}
+            <div class="delivery-fields">
+                {#if !isGroupAdmin}
+                    <div class="delivery-field admin-field-select">
+                        <span class="admin-field-label">{ta.email.userFilter}</span>
                         <Options
                             ariaLabel={ta.email.userFilter}
-                            options={groups.map(g => g.name)}
-                            bind:value={group}
-                            borderless
-                            withSearch={groups.length > 7}
+                            options={ta.email.filterType}
+                            bind:value={filter}
                         />
-                    {:else if isFilterRole}
+                    </div>
+                {/if}
+                {#if isGroupAdmin || isFilterGroup}
+                    <div class="delivery-field admin-field-select">
+                        <span class="admin-field-label">{ta.nav.groups}</span>
                         <Options
-                            ariaLabel={ta.email.userFilter}
-                            options={roles.map(g => g.name)}
+                            ariaLabel={ta.nav.groups}
+                            options={availableGroups.map(g => g.name)}
+                            bind:value={group}
+                            withSearch={availableGroups.length > 7}
+                        />
+                    </div>
+                {:else if isFilterRole}
+                    <div class="delivery-field admin-field-select">
+                        <span class="admin-field-label">{ta.nav.roles}</span>
+                        <Options
+                            ariaLabel={ta.nav.roles}
+                            options={roles.map(r => r.name)}
                             bind:value={role}
-                            borderless
                             withSearch={roles.length > 7}
                         />
-                    {/if}
+                    </div>
                 {/if}
-            {/if}
-        </div>
-    </div>
+                <div class="delivery-field">
+                    <label class="admin-field-label" for={deliveryId}
+                        >{ta.email.delivery ?? 'Delivery'}</label
+                    >
+                    <div class="delivery-select">
+                        <select
+                            id={deliveryId}
+                            class="ui-text-input"
+                            bind:value={
+                                () => (scheduled ? 'scheduled' : 'immediate'),
+                                value => (scheduled = value === 'scheduled')
+                            }
+                        >
+                            <option value="immediate">{ta.email.immediate}</option>
+                            <option value="scheduled">
+                                {ta.email.scheduledDelivery ?? ta.email.scheduled}
+                            </option>
+                        </select>
+                        <span class="delivery-chevron" aria-hidden="true">
+                            <IconChevronDown width=".8rem" />
+                        </span>
+                    </div>
+                </div>
+                {#if scheduled}
+                    <div class="schedule-fields">
+                        <InputDateTimeCombo
+                            label={ta.common.date}
+                            labelTime={ta.common.time}
+                            bind:value={schedDate}
+                            bind:timeValue={schedTime}
+                            min={fmtDateInput()}
+                            required
+                            withTime
+                        />
+                    </div>
+                {/if}
+            </div>
+        {/snippet}
+        {#snippet beforeEditor()}
+            <Input
+                label={ta.email.subject}
+                placeholder={ta.email.subject}
+                bind:value={subject}
+                width="100%"
+                maxLength={1024}
+                required
+            />
+        {/snippet}
+        {#snippet footer()}
+            <div class="send">
+                <div class="recipient-summary" role="status" aria-atomic="true">
+                    <span class="recipient-icon" aria-hidden="true">
+                        <IconUserGroup width="1.125rem" />
+                    </span>
+                    <div class="recipient-copy">
+                        {#if isGroupAdmin || !isFilterNone}
+                            <span>{ta.email.recipients ?? ta.email.sendAllUsersFiltered}</span>
+                            <span class="recipient-filter">
+                                <span>{recipientFilter}</span>
+                                {#if recipientValue}
+                                    <strong>{recipientValue}</strong>
+                                {/if}
+                            </span>
+                        {:else}
+                            <span>{ta.email.sendAllUsers}</span>
+                        {/if}
+                    </div>
+                </div>
 
-    <div class="editor">
-        <Input
-            label={ta.email.subject}
-            placeholder={ta.email.subject}
-            bind:value={subject}
-            width="min(40rem, 90dvw)"
-            maxLength={1024}
-            required
-        />
-        <EditorInteractive
-            bind:mode={editorMode}
-            bind:contentRaw={bodyRaw}
-            bind:sanitizedValue={body}
-            height="min(60dvh, 40rem)"
-        />
-    </div>
+                <div class="flex gap-10">
+                    <Button
+                        onclick={submit}
+                        isDisabled={!bodyRaw.trim() ||
+                            !subject.trim() ||
+                            ((isGroupAdmin || isFilterGroup) && !group) ||
+                            (isFilterRole && !role)}>Send</Button
+                    >
 
-    <div class="send">
-        <p>
-            {#if isGroupAdmin}
-                {ta.email.sendAllUsersFiltered}
-                <b>{`${ta.email.filterType[1]} ${group}`}</b>
-            {:else if isFilterNone}
-                {ta.email.sendAllUsers}
-            {:else if isFilterGroup}
-                {ta.email.sendAllUsersFiltered}
-                <b>{`${filter} ${group}`}</b>
-            {:else if isFilterRole}
-                {ta.email.sendAllUsersFiltered}
-                <b>{`${filter} ${role}`}</b>
-            {/if}
-        </p>
-
-        <div class="flex gap-10">
-            <Button onclick={submit} isDisabled={!(body || bodyRaw) || !subject}>Send</Button>
-
-            {#if success}
-                <IconCheck />
-            {:else if error}
-                <span class="err">
-                    {error}
-                </span>
-            {/if}
-        </div>
-    </div>
+                    {#if success}
+                        <IconCheck />
+                    {:else if error}
+                        <span class="err">
+                            {error}
+                        </span>
+                    {/if}
+                </div>
+            </div>
+        {/snippet}
+    </EditorInteractive>
 </Modal>
 
 <style>
-    .editor {
-        min-width: min(40rem, 93dvw);
-    }
-
-    .err {
-        margin-top: 0.25rem;
-    }
-
-    .filter {
-        margin-top: -0.1rem;
-        margin-bottom: 0.5rem;
+    .delivery-fields {
         display: flex;
-        align-items: center;
-        font-size: 0.98rem;
         flex-wrap: wrap;
-    }
-
-    .options {
-        display: flex;
         align-items: flex-start;
-        gap: 1rem;
+        gap: 0.5rem 0.75rem;
+    }
+
+    .delivery-field {
+        flex: 1 1 8.5rem;
+        min-width: 0;
+    }
+
+    .delivery-select {
+        position: relative;
+    }
+
+    .delivery-select select {
+        appearance: none;
+        height: var(--ui-field-height);
+        padding-block: 0;
+        padding-inline-end: 2.5rem;
+        cursor: pointer;
+        text-overflow: ellipsis;
+    }
+
+    .delivery-chevron {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 15px;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        color: var(--ui-text);
+    }
+
+    .schedule-fields {
+        flex: 2 1 18rem;
+        min-width: 0;
+    }
+
+    .recipient-summary {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: baseline;
+        gap: 0.5rem;
+        min-height: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--ui-muted);
+        font-size: 0.8125rem;
+    }
+
+    .recipient-icon {
+        display: inline-flex;
+        color: var(--ui-primary);
+    }
+
+    .recipient-copy {
+        display: flex;
         flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.25rem 0.5rem;
     }
 
-    .scheduled {
-        min-width: 15rem;
+    .recipient-filter {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.125rem 0.375rem;
+        max-width: 100%;
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--border-radius);
+        background: var(--ui-tonal);
+        overflow-wrap: anywhere;
     }
 
-    .send {
-        margin-top: 1rem;
-    }
-
-    @media (min-width: 1440px) {
-        .editor {
-            min-width: 80rem;
-        }
+    .recipient-filter strong {
+        min-width: 0;
+        color: var(--ui-text);
     }
 </style>

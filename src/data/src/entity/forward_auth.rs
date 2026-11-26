@@ -12,6 +12,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use std::str::FromStr;
 use tracing::{debug, warn};
 
 /// Prefix for the session id inside the forward-auth cookie. The upstream app sees that cookie, so
@@ -139,7 +140,7 @@ impl ForwardAuthSession {
                 ErrorResponseType::BadRequest,
                 "CSRF Token mismatch",
             ));
-        };
+        }
 
         if let Some(site) = req.headers().get("sec-fetch-site") {
             let site = site.to_str().unwrap_or_default();
@@ -183,11 +184,11 @@ pub struct ForwardAuthCallbackState {
     pub danger_cookie_insecure: bool,
 }
 
-impl TryFrom<&str> for ForwardAuthCallbackState {
-    type Error = ErrorResponse;
+impl FromStr for ForwardAuthCallbackState {
+    type Err = ErrorResponse;
 
     #[inline]
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let decoded = base64_url_no_pad_decode(s)?;
         let decrypted = EncValue::try_from_bytes(decoded)?.decrypt()?;
         deserialize(decrypted.as_ref())
@@ -260,7 +261,7 @@ mod tests {
 
         let fwd = ForwardAuthSession {
             client_id: "my_client".to_string(),
-            inner: Session::new(std::time::Duration::from_secs(60), None),
+            inner: Session::new(std::time::Duration::from_mins(1), None),
         };
         let (cookie, _) = fwd.build_cookies(true).unwrap();
         let value = ApiCookie::cookie_into_value(Some(cookie)).unwrap();

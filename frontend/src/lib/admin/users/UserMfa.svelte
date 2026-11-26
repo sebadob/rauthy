@@ -1,4 +1,8 @@
 <script lang="ts">
+    import Modal from '#lib/Modal.svelte';
+    import MfaMethod from '#lib/MfaMethod.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import type { UserResponse } from '#api/types/user.ts';
     import { fetchDelete, fetchGet } from '#api/fetch.ts';
     import type { PasskeyResponse } from '#api/types/webauthn.ts';
@@ -9,6 +13,27 @@
     import { TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
     import { deleteOtp } from '#mfa/otp/mod.ts';
     import UserOtp from '#lib/UserOtp.svelte';
+
+    const t = useI18n();
+    let showConfirm = $state(false);
+    let closeConfirm: (() => void) | undefined = $state();
+    let target: { kind: 'passkey' | 'otp'; id: string; name: string } | undefined = $state();
+    let deleting = $state(false);
+
+    function ask(kind: 'passkey' | 'otp', id: string, name: string) {
+        err = '';
+        target = { kind, id, name };
+        showConfirm = true;
+    }
+
+    async function remove() {
+        if (!target) return;
+        deleting = true;
+        if (target.kind === 'passkey') await onDelete(target.id);
+        else await onDeleteOtp(target.id);
+        deleting = false;
+        if (!err) closeConfirm?.();
+    }
 
     let {
         user,
@@ -22,8 +47,12 @@
 
     let err = $state('');
     let passkeys: PasskeyResponse[] = $state([]);
+    let loadingPasskeys = $state(true);
+    let passkeyError = $state<string>();
 
     let otps: OtpResponse[] = $state([]);
+    let loadingOtps = $state(true);
+    let otpError = $state<string>();
     let isOtpEnabled = $state(false);
 
     $effect(() => {
@@ -38,11 +67,9 @@
 
     async function fetchPasskeys() {
         let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${user.id}/webauthn`);
-        if (res.body) {
-            passkeys = res.body;
-        } else {
-            err = res.error?.message || 'Error';
-        }
+        loadingPasskeys = false;
+        passkeyError = res.body ? undefined : res.error?.message || 'Error';
+        if (res.body) passkeys = res.body;
     }
 
     async function onDelete(name: string) {
@@ -67,11 +94,9 @@
 
     async function fetchOtps() {
         let res = await fetchGet<OtpResponse[]>(`/auth/v1/users/${user.id}/otp`);
-        if (res.body) {
-            otps = res.body;
-        } else {
-            err = res.error?.message || 'Error';
-        }
+        loadingOtps = false;
+        otpError = res.body ? undefined : res.error?.message || 'Error';
+        if (res.body) otps = res.body;
     }
 
     async function onDeleteOtp(id: string) {
@@ -86,45 +111,63 @@
 
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
-{#if isOtpEnabled}
-    <b>{ta.users.mfa.webauthn.title}</b>
-{/if}
-{#if passkeys.length === 0}
-    <p>{ta.users.mfa.webauthn.noMfaKeys}</p>
-{:else}
-    <p>{ta.users.mfa.webauthn.mfaDelete1}</p>
-    <p>{@html ta.users.mfa.webauthn.mfaDelete2}</p>
-
-    <div class="keysContainer">
+<div class="methods">
+    <MfaMethod
+        title={ta.users.mfa.webauthn.title}
+        loading={loadingPasskeys}
+        error={passkeyError}
+        empty={passkeys.length === 0 ? ta.users.mfa.webauthn.noMfaKeys : undefined}
+    >
         {#each passkeys as passkey (passkey.name)}
-            <UserPasskey {passkey} showDelete {onDelete} />
+            <UserPasskey {passkey} showDelete onDelete={name => ask('passkey', name, name)} />
         {/each}
-    </div>
-{/if}
-<b>{ta.users.mfa.otp.title}</b>
-{#if otps.length === 0}
-    <p>{ta.users.mfa.otp.noMfaOtps}</p>
-{:else}
-    <p>{ta.users.mfa.otp.mfaDelete1}</p>
-    <p>{@html ta.users.mfa.otp.mfaDelete2}</p>
+    </MfaMethod>
 
-    <div class="keysContainer">
-        {#each otps as otp}
-            <UserOtp {otp} showInactive={true} onDelete={onDeleteOtp} />
-        {/each}
-    </div>
-{/if}
+    {#if isOtpEnabled}
+        <MfaMethod
+            title={ta.users.mfa.otp.title}
+            loading={loadingOtps}
+            error={otpError}
+            empty={otps.length === 0 ? ta.users.mfa.otp.noMfaOtps : undefined}
+        >
+            {#each otps as otp (otp.id)}
+                <UserOtp {otp} showInactive onDelete={(id, name) => ask('otp', id, name)} />
+            {/each}
+        </MfaMethod>
+    {/if}
+</div>
 
-{#if err}
-    <div class="err">
-        {err}
+<Modal
+    bind:showModal={showConfirm}
+    bind:closeModal={closeConfirm}
+    ariaLabel={t.common.delete}
+    strict
+>
+    <h3>{t.common.delete}</h3>
+    <p><strong>{target?.name}</strong></p>
+    {#if target}
+        <p class="warning">
+            {@html (target.kind === 'passkey' ? ta.users.mfa.webauthn : ta.users.mfa.otp)
+                .mfaDelete2}
+        </p>
+    {/if}
+    {#if err}<p class="err" role="alert">{err}</p>{/if}
+    <div class="flex gap-10">
+        <Button level={2} onclick={() => closeConfirm?.()} isDisabled={deleting}
+            >{t.common.cancel}</Button
+        >
+        <Button level={-1} onclick={remove} isLoading={deleting}>{t.common.delete}</Button>
     </div>
-{/if}
+</Modal>
 
 <style>
-    .keysContainer {
-        margin-top: 1rem;
-        max-height: 30rem;
-        overflow-y: auto;
+    .methods {
+        display: grid;
+        gap: var(--ui-space);
+    }
+
+    .warning {
+        max-width: 38ch;
+        margin-block: 0.5rem 1rem;
     }
 </style>

@@ -25,6 +25,21 @@ export const PATTERN_CONTACT = '^[a-zA-Z0-9+.@\\/:\\-]{0,48}$';
 export const PATTERN_CSS_VALUE_LOOSE = '^[a-z0-9\\-,.#\\(\\)%\\/\\s]+$';
 // export const PATTERN_FLOW = '^(authorization_code|client_credentials|password|refresh_token)$';
 export const PATTERN_GROUP = '^[a-zA-Z0-9\\-_\\/,:*\\p{Zs}]{2,64}$';
+// An auth provider claim mapping path: the charset of PATTERN_URI plus the JSONPath structural
+// characters `[ ] { } " < > | ;` and a space. Shape only: the backend parser
+// `rauthy_common::json_path` is the real validator at config save. Matches the backend `RE_JSON_PATH`.
+export const PATTERN_JSON_PATH =
+    '^[a-zA-Z0-9,.:\\/\_\\-&?=~#!$\'\\(\\)*+%@\\[\\]\\{\\}\\<\\>"\\|; ]{1,256}$';
+// An auth provider claim mapping value: PATTERN_URI's charset plus `^` and a space. A leading
+// `^` is a prefix match, a leading `~` a regex, a leading `^^` a literal `^`. Matches
+// the backend `RE_CLAIM_VALUE`.
+export const PATTERN_CLAIM_VALUE = "^[a-zA-Z0-9,.:\\/\_\\-&?=~#!$'\\(\\)*+%@\\^ ]{1,128}$";
+// The local role a claim mapping targets: the role name rule without the `,` that separates the
+// entries of a user's role / group lists. Matches the backend `RE_ROLES_SCOPES`.
+export const PATTERN_CLAIM_TARGET_ROLE = '^[a-zA-Z0-9\\-_\\/:*.]{2,64}$';
+// The local group a claim mapping targets: the group name rule without the `,`, groups allow
+// spaces. Matches the backend `RE_GROUPS`.
+export const PATTERN_CLAIM_TARGET_GROUP = '^[a-zA-Z0-9\\-_\\/:*\\p{Zs}]{2,64}$';
 export const PATTERN_KV_KEY = '^[a-zA-Z0-9\\-\\._\\~]{2,64}$';
 export const PATTERN_ROLE_SCOPE = '^[a-zA-Z0-9\\-_\\/,:*.]{2,64}$';
 // export const PATTERN_IPV4 = '^(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}$';
@@ -40,4 +55,9 @@ export const PATTERN_URI = "^[a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*+%@]*$";
 // Like PATTERN_URI but without `#`: an RFC 8707 resource indicator must be an absolute URI
 // without a fragment (RFC 8707 §2). Matches the backend `RE_RESOURCE`.
 export const PATTERN_RESOURCE = "^[a-zA-Z0-9,.:\\/_\\-&?=~!$'\\(\\)*+%@]*$";
+// A client consent source URL, mirrors the backend `validate_consent_source_url`: like
+// PATTERN_RESOURCE, but https only, no userinfo (`@` before the first `/` or `?`) and no `lang`
+// query key, which Rauthy appends on each fetch. Use it together with `maxLength=1024`.
+export const PATTERN_CONSENT_URL =
+    "^(?![^?]*\\?(?:[^&]*&)*lang(?:[=&]|$))https:\\/\\/[a-zA-Z0-9,.:_\\-&=~!$'\\(\\)*+%]+(?:[\\/?][a-zA-Z0-9,.:\\/_\\-&?=~!$'\\(\\)*+%@]*)?$";
 export const PATTERN_USER_NAME = "^[\\p{L}\\p{M}\\p{N}\\p{Zs}'.\\-]{1,32}$";

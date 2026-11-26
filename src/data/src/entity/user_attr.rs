@@ -8,13 +8,14 @@ use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigTyp, UserAttrConfigValueResponse, UserAttrValueResponse,
     UserAttrValuesUpdateRequest,
 };
-use rauthy_common::constants::{CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_ATTR_CONFIG};
+use rauthy_common::constants::{CACHE_TTL_APP, CACHE_TTL_USER, IDX_SCOPES, IDX_USER_ATTR_CONFIG};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{csv_remove, csv_rename};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 // Additional custom attributes for users. These can be set for every user and then mapped to a
@@ -36,11 +37,6 @@ impl UserAttrConfigEntity {
         format!("{IDX_USER_ATTR_CONFIG}_{name}")
     }
 
-    pub async fn clear_cache_all() -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, IDX_USER_ATTR_CONFIG).await?;
-        Ok(())
-    }
-
     pub async fn create(new_attr: UserAttrConfigRequest) -> Result<Self, ErrorResponse> {
         if Self::find(new_attr.name.clone()).await.is_ok() {
             return Err(ErrorResponse::new(
@@ -49,7 +45,7 @@ impl UserAttrConfigEntity {
             ));
         }
 
-        let typ = new_attr.typ.as_ref().map(|t| t.as_str());
+        let typ = new_attr.typ.as_ref().map(UserAttrConfigTyp::as_str);
         let user_editable = new_attr.user_editable.unwrap_or(false);
         let default_value = if let Some(bytes) = &new_attr.default_value {
             Some(serde_json::to_vec(bytes)?)
@@ -60,9 +56,9 @@ impl UserAttrConfigEntity {
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
+                    r"
 INSERT INTO user_attr_config (name, desc, default_value, typ, user_editable)
-VALUES ($1, $2, $3, $4, $5)"#,
+VALUES ($1, $2, $3, $4, $5)",
                     params!(
                         &new_attr.name,
                         &new_attr.desc,
@@ -86,9 +82,9 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 ],
             )
             .await?;
-        };
+        }
 
-        Self::clear_cache_all().await?;
+        DB::cache_delete_delayed([(Cache::App, Some(Cow::from(IDX_USER_ATTR_CONFIG)))]).await?;
 
         Ok(Self {
             name: new_attr.name,
@@ -184,17 +180,19 @@ VALUES ($1, $2, $3, $4, $5)"#,
             txn.commit().await?;
         }
 
-        for key in user_attr_cache_cleanup_keys {
-            UserAttrValueEntity::clear_cache(key).await?;
-        }
-
-        client
-            .delete(Cache::App, Self::cache_idx(&slf.name))
-            .await?;
-        Self::clear_cache_all().await?;
-
-        // There might be scope mappings inside the cache
-        Scope::clear_cache().await?;
+        // The entries this write invalidates: the list, this attr's own entry, the scope
+        // mappings that referenced it, and every user that had a value for it.
+        let user_value_keys = user_attr_cache_cleanup_keys
+            .into_iter()
+            .map(|key| (Cache::User, Some(Cow::from(key))));
+        let cache_entries = [
+            (Cache::App, Some(Cow::from(IDX_USER_ATTR_CONFIG))),
+            (Cache::App, Some(Cow::from(Self::cache_idx(&slf.name)))),
+            (Cache::App, Some(Cow::from(IDX_SCOPES))),
+        ]
+        .into_iter()
+        .chain(user_value_keys);
+        DB::cache_delete_delayed(cache_entries).await?;
 
         Ok(())
     }
@@ -338,7 +336,26 @@ VALUES ($1, $2, $3, $4, $5)"#,
             Vec::default()
         };
 
-        let typ = &slf.typ.as_ref().map(|t| t.as_str());
+        let typ = &slf.typ.as_ref().map(UserAttrConfigTyp::as_str);
+
+        // The entries this write invalidates. `name` is the previous and `slf.name` the new
+        // name, both can have a cached entry, and the scope cache holds the attr mappings.
+        let old_idx = Some(Cow::from(Self::cache_idx(&name)));
+        let new_idx = Some(Cow::from(Self::cache_idx(&slf.name)));
+        let user_value_keys = user_attr_ids_cleanup.iter().map(|user_id| {
+            (
+                Cache::User,
+                Some(Cow::from(UserAttrValueEntity::cache_idx(user_id))),
+            )
+        });
+        let cache_entries = [
+            (Cache::App, Some(Cow::from(IDX_USER_ATTR_CONFIG))),
+            (Cache::App, old_idx),
+            (Cache::App, new_idx),
+            (Cache::App, Some(Cow::from(IDX_SCOPES))),
+        ]
+        .into_iter()
+        .chain(user_value_keys);
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(scope_updates.len() + 1);
@@ -353,10 +370,10 @@ VALUES ($1, $2, $3, $4, $5)"#,
             }
 
             txn.push((
-                r#"
+                r"
 UPDATE user_attr_config
 SET name  = $1, desc = $2, default_value = $3, typ = $4, user_editable = $5
-WHERE name = $6"#,
+WHERE name = $6",
                 params!(
                     &slf.name,
                     &slf.desc,
@@ -396,12 +413,7 @@ WHERE name = $6"#,
             txn.commit().await?;
         }
 
-        for user_id in user_attr_ids_cleanup {
-            let key = UserAttrValueEntity::cache_idx(&user_id);
-            UserAttrValueEntity::clear_cache(key).await?;
-        }
-        Self::clear_cache_all().await?;
-        Scope::clear_cache().await?;
+        DB::cache_delete_delayed(cache_entries).await?;
 
         Ok(slf)
     }
@@ -453,12 +465,12 @@ pub struct UserAttrValueEntity {
 
 impl UserAttrValueEntity {
     pub async fn clear_cache(cache_idx: String) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::User, cache_idx).await?;
+        DB::cache_delete_delayed([(Cache::User, Some(Cow::from(cache_idx)))]).await?;
         Ok(())
     }
 
-    /// You MUST `UserAttrValueEntity::clear_cache()` for returned UserCacheKeys
-    /// after successful txn commit!
+    /// You MUST invalidate the returned cache keys with
+    /// `DB::cache_delete_delayed` after a successful txn commit!
     pub async fn delete_all_by_key(
         key: &str,
         txn: &deadpool_postgres::Transaction<'_>,
@@ -481,8 +493,8 @@ impl UserAttrValueEntity {
         Ok(cache_idxs)
     }
 
-    /// You MUST `UserAttrValueEntity::clear_cache()` for returned UserCacheKeys
-    /// after successful txn commit!
+    /// You MUST invalidate the returned cache keys with
+    /// `DB::cache_delete_delayed` after a successful txn commit!
     pub async fn delete_all_by_key_append(
         key: &str,
         txn: &mut Vec<(&str, Params)>,
@@ -624,10 +636,10 @@ impl UserAttrValueEntity {
                 } else {
                     let v = serde_json::to_vec(&value.value)?;
                     txn.push((
-                        r#"
+                        r"
 INSERT INTO user_attr_values (user_id, key, value)
 VALUES ($1, $2, $3)
-ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
+ON CONFLICT(user_id, key) DO UPDATE SET value = $3",
                         params!(user_id, value.key, v),
                     ));
                 }
@@ -656,10 +668,10 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                     let v = serde_json::to_vec(&value.value)?;
                     DB::pg_txn_append(
                         &txn,
-                        r#"
+                        r"
     INSERT INTO user_attr_values (user_id, key, value)
     VALUES ($1, $2, $3)
-    ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
+    ON CONFLICT(user_id, key) DO UPDATE SET value = $3",
                         &[&user_id, &value.key, &v],
                     )
                     .await?;
@@ -697,5 +709,212 @@ impl From<UserAttrValueEntity> for UserAttrValueResponse {
             key: value.key,
             value: val,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::database::init_test_hiqlite;
+    use std::time::Duration;
+
+    // The user that `2_init_data.sql` seeds, needed for the `user_attr_values` FKs.
+    const SEED_USER: &str = "m4PJ3TnyP32LA8hzY23deme3";
+    // The time a racing fill sleeps before it puts its snapshot: inside the write's
+    // `CACHE_INVALIDATION_DELAY`, which is exactly the window the delay must cover.
+    const RACE_FILL_DELAY: Duration = Duration::from_millis(10);
+
+    /// Serializes the tests on the shared hiqlite node, which share the user attr tables.
+    static ATTR_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+    fn req(name: &str) -> UserAttrConfigRequest {
+        UserAttrConfigRequest {
+            name: name.to_string(),
+            desc: None,
+            default_value: None,
+            typ: None,
+            user_editable: Some(true),
+        }
+    }
+
+    /// The list cache the way `find_all` fills it: read the DB, then put the snapshot.
+    async fn list_snapshot() -> Vec<UserAttrConfigEntity> {
+        DB::hql()
+            .query_as("SELECT * FROM user_attr_config", params!())
+            .await
+            .unwrap()
+    }
+
+    async fn cached_list() -> Option<Vec<UserAttrConfigEntity>> {
+        DB::hql()
+            .get(Cache::App, IDX_USER_ATTR_CONFIG)
+            .await
+            .unwrap()
+    }
+
+    async fn cached_attr(name: &str) -> Option<UserAttrConfigEntity> {
+        DB::hql()
+            .get(Cache::App, UserAttrConfigEntity::cache_idx(name))
+            .await
+            .unwrap()
+    }
+
+    /// A fill whose snapshot is put [`RACE_FILL_DELAY`] after the spawn, into the window of a
+    /// write's invalidation delay.
+    fn racing_list_fill(snapshot: Vec<UserAttrConfigEntity>) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            tokio::time::sleep(RACE_FILL_DELAY).await;
+            DB::hql()
+                .put(Cache::App, IDX_USER_ATTR_CONFIG, &snapshot, CACHE_TTL_APP)
+                .await
+                .unwrap();
+        })
+    }
+
+    /// The list a `find_all` filled before a `create` is gone once that `create` returned, and
+    /// the created attr is served.
+    #[tokio::test]
+    async fn create_invalidates_a_stale_list_fill() {
+        let _lock = ATTR_LOCK.lock().await;
+        init_test_hiqlite();
+
+        let stale = list_snapshot().await;
+        let fill = racing_list_fill(stale);
+
+        UserAttrConfigEntity::create(req("race_attr_create"))
+            .await
+            .unwrap();
+        fill.await.unwrap();
+
+        assert!(
+            cached_list().await.is_none(),
+            "the create must invalidate the list a racing fill put back"
+        );
+        let names = UserAttrConfigEntity::find_all()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|a| a.name)
+            .collect::<Vec<_>>();
+        assert!(names.iter().any(|i| i == "race_attr_create"), "{names:?}");
+    }
+
+    /// The list a `find_all` filled before a `delete` is gone once that `delete` returned, and
+    /// the deleted attr is not served.
+    #[tokio::test]
+    async fn delete_invalidates_a_stale_list_fill() {
+        let _lock = ATTR_LOCK.lock().await;
+        init_test_hiqlite();
+
+        UserAttrConfigEntity::create(req("race_attr_delete"))
+            .await
+            .unwrap();
+
+        let stale = list_snapshot().await;
+        let fill = racing_list_fill(stale);
+
+        UserAttrConfigEntity::delete("race_attr_delete".to_string())
+            .await
+            .unwrap();
+        fill.await.unwrap();
+
+        assert!(
+            cached_list().await.is_none(),
+            "the delete must invalidate the list a racing fill put back"
+        );
+        let names = UserAttrConfigEntity::find_all()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|a| a.name)
+            .collect::<Vec<_>>();
+        assert!(!names.iter().any(|i| i == "race_attr_delete"), "{names:?}");
+    }
+
+    /// A rename clears the cache entry of the previous name, which the row no longer has, and
+    /// the new name is served.
+    #[tokio::test]
+    async fn rename_invalidates_the_old_attr_key() {
+        let _lock = ATTR_LOCK.lock().await;
+        init_test_hiqlite();
+
+        UserAttrConfigEntity::create(req("race_attr_old"))
+            .await
+            .unwrap();
+        // `find` is what fills the single entry of a name
+        UserAttrConfigEntity::find("race_attr_old".to_string())
+            .await
+            .unwrap();
+        assert!(cached_attr("race_attr_old").await.is_some());
+
+        UserAttrConfigEntity::update(
+            "race_attr_old".to_string(),
+            UserAttrConfigRequest {
+                name: "race_attr_new".to_string(),
+                ..req("race_attr_new")
+            },
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            cached_attr("race_attr_old").await.is_none(),
+            "the entry of the previous name must be gone"
+        );
+        assert_eq!(
+            "race_attr_new",
+            UserAttrConfigEntity::find("race_attr_new".to_string())
+                .await
+                .unwrap()
+                .name
+        );
+    }
+
+    /// The values cached for a user are gone once the config of one of its keys was deleted,
+    /// also when a fill put a pre-delete snapshot back.
+    #[tokio::test]
+    async fn delete_invalidates_a_stale_user_value_fill() {
+        let _lock = ATTR_LOCK.lock().await;
+        init_test_hiqlite();
+
+        UserAttrConfigEntity::create(req("race_value_delete"))
+            .await
+            .unwrap();
+        DB::hql()
+            .execute(
+                "INSERT INTO user_attr_values (user_id, key, value) VALUES ($1, $2, $3)",
+                params!(SEED_USER, "race_value_delete", br#"{"v":1}"#.to_vec()),
+            )
+            .await
+            .unwrap();
+
+        let stale: Vec<UserAttrValueEntity> = DB::hql()
+            .query_as(
+                "SELECT * FROM user_attr_values WHERE user_id = $1",
+                params!(SEED_USER),
+            )
+            .await
+            .unwrap();
+        let idx = UserAttrValueEntity::cache_idx(SEED_USER);
+        let fill = tokio::spawn(async move {
+            tokio::time::sleep(RACE_FILL_DELAY).await;
+            DB::hql()
+                .put(Cache::User, idx, &stale, CACHE_TTL_USER)
+                .await
+                .unwrap();
+        });
+
+        UserAttrConfigEntity::delete("race_value_delete".to_string())
+            .await
+            .unwrap();
+        fill.await.unwrap();
+
+        let keys = UserAttrValueEntity::find_for_user(SEED_USER)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|v| v.key)
+            .collect::<Vec<_>>();
+        assert!(!keys.iter().any(|i| i == "race_value_delete"), "{keys:?}");
     }
 }

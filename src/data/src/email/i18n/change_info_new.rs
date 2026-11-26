@@ -14,14 +14,17 @@ pub struct I18nEmailChangeInfoNew<'a> {
 impl I18nEmailChangeInfoNew<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -31,11 +34,22 @@ impl I18nEmailChangeInfoNew<'_> {
 }
 
 impl I18nEmailChangeInfoNew<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Žádost o změnu e-mailu",
+            header: "Žádost o změnu e-mailu –",
+            click_link: "Kliknutím na odkaz níže potvrdíte svou e-mailovou adresu.",
+            validity: "Z bezpečnostních důvodů platí odkaz jen krátkou dobu.",
+            expires: "Odkaz platí do:",
+            button_text: "Potvrdit e-mail",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel Anfrage",
             header: "E-Mail Wechsel angefordert für",
-            click_link: "Klicken Sie auf den unten stehenden Link die E-Mail Adresse zu bestätigen.",
+            click_link: "Zum Bestätigen der E-Mail Adresse den unten stehenden Link nutzen.",
             validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.",
             expires: "Link gültig bis:",
             button_text: "E-Mail Bestätigen",
@@ -72,6 +86,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Ce lien n'est valable que pendant une courte période pour des raisons de sécurité.",
             expires: "Le lien expire :",
             button_text: "Confirmer l'e-mail",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "Richiesta di cambio indirizzo email",
+            header: "Richiesta di cambio indirizzo email per",
+            click_link: "Apri il link qui sotto per confermare il tuo indirizzo email.",
+            validity: "Per motivi di sicurezza, il link è valido solo per un breve periodo.",
+            expires: "Il link scade il:",
+            button_text: "Conferma indirizzo email",
         }
     }
 
@@ -116,6 +141,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Deze link is om veiligheidsredenen slechts korte tijd geldig.",
             expires: "Link vervalt:",
             button_text: "E-Mail bevestigen",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            subject: "Prośba o zmianę adresu e-mail",
+            header: "Prośba o zmianę adresu e-mail dla",
+            click_link: "Kliknij poniższy link, aby potwierdzić swój adres e-mail.",
+            validity: "Ze względów bezpieczeństwa ten link jest ważny tylko przez krótki czas.",
+            expires: "Link wygasa:",
+            button_text: "Potwierdź adres e-mail",
         }
     }
 

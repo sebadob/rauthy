@@ -6,6 +6,12 @@ authors.workspace = true
 license.workspace = true
 description.workspace = true
 default-run = "rauthy"
+rust-version = "1.95.0"
+
+# One test binary for the whole integration suite: every test file on its own builds the whole
+# dependency graph again, and Cargo runs test binaries one after another. `ip_blacklist` keeps its
+# own target because it blacklists the source address every other test connects from.
+autotests = false
 
 [features]
 default = ["jemalloc"]
@@ -37,12 +43,11 @@ chrono-tz = { workspace = true }
 cidr = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }
+cron = { workspace = true }
 cryptr = { workspace = true }
 dotenvy = { workspace = true }
 flume = { workspace = true }
 num_cpus = { workspace = true }
-openssl = { workspace = true }
-openssl-sys = { workspace = true }
 prometheus = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
@@ -55,22 +60,67 @@ spow = { workspace = true }
 time = { workspace = true }
 tls-hot-reload = { workspace = true }
 tracing = { workspace = true }
+tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 validator = { workspace = true }
 zeroize = { workspace = true }
 
-# jemalloc does not work properly on msvc targets
-[target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd")))'.dependencies]
+[target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd"), not(target_os = "linux")))'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+tikv-jemallocator = { workspace = true, optional = true, features = [
+  "unprefixed_malloc_on_supported_platforms",
+] }
 
 [dev-dependencies]
 rauthy-api-types = { path = "../api_types" }
 
 ed25519-compact = { workspace = true }
-josekit = "0.8"
+futures = { workspace = true }
 pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
-tokio-test = "*"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[[test]]
+name = "ip_blacklist"
+path = "tests/ip_blacklist.rs"
+
+[lints.rust]
+warnings = { level = "deny", priority = -2 }
+unknown_lints = { level = "allow", priority = -1 } # allow nightly lints
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+redundant_clone = "deny"
+
+# Permanently allowed (intentional disagreement with pedantic)
+assert_is_empty = "allow"
+manual_assert = "allow"
+missing_errors_doc = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+uninlined_format_args = "allow"
+
+# Temporarily allowed (to be reviewed and enabled incrementally)
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+deprecated_attributes_without_since = "allow"
+doc_markdown = "allow"
+large_futures = "allow"
+map_unwrap_or = "allow"
+match_same_arms = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+redundant_else = "allow"
+struct_excessive_bools = "allow"
+struct_field_names = "allow"
+wildcard_imports = "allow"

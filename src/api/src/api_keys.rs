@@ -58,7 +58,7 @@ pub async fn post_api_key(
     principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Create)?;
     payload.validate()?;
 
-    let access = payload.access.into_iter().map(|a| a.into()).collect();
+    let access = payload.access.into_iter().map(Into::into).collect();
     let secret = ApiKeyEntity::create(payload.name, payload.exp, access).await?;
 
     Ok(HttpResponse::Ok()
@@ -98,7 +98,7 @@ pub async fn put_api_key(
         ));
     }
 
-    let access = payload.access.into_iter().map(|a| a.into()).collect();
+    let access = payload.access.into_iter().map(Into::into).collect();
     ApiKeyEntity::update(&name, payload.exp, access).await?;
 
     Ok(HttpResponse::Ok().finish())

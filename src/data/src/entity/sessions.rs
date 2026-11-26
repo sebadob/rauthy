@@ -1,3 +1,12 @@
+//! The `Session` entity and the MFA assurance of a session.
+//!
+//! `Session::is_mfa` means: a second factor has completed on this exact session, for this exact
+//! session's principal. It is only ever written together with an [`MfaAssurance`] —
+//! [`Session::set_authenticated`] at the end of a login, [`Session::set_mfa`] when a ceremony
+//! completes outside of it — and it is read via [`Session::is_mfa_completed`]. `NoFactor` resets
+//! it, `Ceremony` and `Provider` set it, `SamePrincipal` keeps what the session has earned.
+//! Lifetime and state rules live in [`Session::is_valid`] and [`Session::set_authenticated`].
+
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
@@ -33,6 +42,9 @@ pub struct Session {
     pub user_id: Option<String>,
     pub roles: Option<String>,
     pub groups: Option<String>,
+    /// A second factor has completed on this exact session, for this exact principal. Only
+    /// [`Session::set_mfa`] and the `MfaAssurance` of a [`Session::set_authenticated`] ever write it,
+    /// read it via [`Session::is_mfa_completed`].
     pub is_mfa: bool,
     #[column(parse)]
     pub state: SessionState,
@@ -116,6 +128,33 @@ impl SessionState {
     }
 }
 
+/// The provenance of the `is_mfa` flag that gets written when a session is authenticated.
+///
+/// `Session::is_mfa` means: a second factor has completed on this exact session, for this exact
+/// session's principal. Only `Ceremony` and `Provider` ever set it, and `SamePrincipal` carries
+/// over an assurance that the session has already earned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MfaAssurance {
+    /// No second factor was involved: the flag is reset to `false`, always.
+    NoFactor,
+    /// An OTP / Webauthn / passkey ceremony completed on this session.
+    Ceremony,
+    /// A trusted upstream IdP asserted MFA for this login (`ProviderMfaLogin::Yes`).
+    Provider,
+    /// Re-authentication of the session's own principal: keep the current value.
+    SamePrincipal,
+}
+
+impl MfaAssurance {
+    fn apply_to(self, current: bool) -> bool {
+        match self {
+            MfaAssurance::NoFactor => false,
+            MfaAssurance::Ceremony | MfaAssurance::Provider => true,
+            MfaAssurance::SamePrincipal => current,
+        }
+    }
+}
+
 // CRUD
 impl Session {
     pub async fn delete(self) -> Result<(), ErrorResponse> {
@@ -126,7 +165,7 @@ impl Session {
             DB::pg_execute(sql, &[&self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -150,9 +189,7 @@ impl Session {
             ids
         };
 
-        for id in sids {
-            DB::hql().delete(Cache::Session, id).await?;
-        }
+        DB::cache_delete_delayed(sids.into_iter().map(|id| (Cache::Session, Some(id)))).await?;
 
         Ok(())
     }
@@ -207,13 +244,13 @@ impl Session {
 
         if let Some(token) = continuation_token {
             if backwards {
-                let sql = r#"
+                let sql = r"
 SELECT *
 FROM sessions
 WHERE exp >= $1 AND id != $2 AND state = $3
 ORDER BY exp ASC
 LIMIT $4
-OFFSET $5"#;
+OFFSET $5";
 
                 let mut rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
@@ -234,13 +271,13 @@ OFFSET $5"#;
                 }
                 res = Some(rows);
             } else {
-                let sql = r#"
+                let sql = r"
 SELECT *
 FROM sessions
 WHERE exp <= $1 AND id != $2 AND state = $3
 ORDER BY exp DESC
 LIMIT $4
-OFFSET $5"#;
+OFFSET $5";
 
                 let rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
@@ -259,17 +296,17 @@ OFFSET $5"#;
                     latest_ts = s.exp;
                 }
                 res = Some(rows);
-            };
+            }
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let sql = r#"
+            let sql = r"
 SELECT *
 FROM sessions
 WHERE state = $1
 ORDER BY exp ASC
 LIMIT $2
-OFFSET $3"#;
+OFFSET $3";
 
             let mut rows: Vec<Self> = if is_hiqlite() {
                 DB::hql()
@@ -285,13 +322,13 @@ OFFSET $3"#;
             }
             res = Some(rows);
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT *
 FROM sessions
 WHERE state = $1
 ORDER BY exp DESC
 LIMIT $2
-OFFSET $3"#;
+OFFSET $3";
 
             let rows: Vec<Self> = if is_hiqlite() {
                 DB::hql()
@@ -305,7 +342,7 @@ OFFSET $3"#;
                 latest_ts = s.exp;
             }
             res = Some(rows);
-        };
+        }
 
         let res = res
             .expect("sessions paginated should always be at least an empty Vec<_> at this point");
@@ -329,7 +366,7 @@ OFFSET $3"#;
         // at least the session used to invalidate all will always exist
         debug_assert!(rows_affected > 0);
 
-        DB::hql().clear_cache(Cache::Session).await?;
+        DB::cache_delete_delayed([(Cache::Session, None::<String>)]).await?;
 
         Ok(())
     }
@@ -354,10 +391,16 @@ OFFSET $3"#;
             ids
         };
 
-        let client = DB::hql();
+        let mut cache_keys: Vec<String> = Vec::with_capacity(sids.len());
         for sid in &sids {
-            client.delete(Cache::Session, sid.clone()).await?;
+            cache_keys.push(sid.clone());
         }
+        DB::cache_delete_delayed(
+            cache_keys
+                .into_iter()
+                .map(|key| (Cache::Session, Some(key))),
+        )
+        .await?;
 
         Ok(sids)
     }
@@ -372,14 +415,14 @@ OFFSET $3"#;
             ));
         }
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
     remote_ip = $10
-WHERE sessions.exp > $11"#;
+WHERE sessions.exp > $11";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -464,16 +507,20 @@ WHERE sessions.exp > $11"#;
         let q = format!("%{q}%");
 
         let size_hint = max(limit as usize, 1);
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let sql = match idx {
             SearchParamsIdx::UserId => {
-                "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE user_id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
-                "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Ip => {
-                "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!(
+                    "SELECT * FROM sessions WHERE remote_ip {like} $1 ORDER BY exp DESC LIMIT $2"
+                )
             }
             _ => {
                 return Err(ErrorResponse::new(
@@ -486,14 +533,18 @@ WHERE sessions.exp > $11"#;
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(q, limit)).await?
         } else {
-            DB::pg_query(sql, &[&q, &limit], size_hint).await?
+            DB::pg_query(&sql, &[&q, &limit], size_hint).await?
         };
 
         Ok(res)
     }
 
     #[inline]
-    pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
+    pub async fn set_authenticated(
+        &mut self,
+        user: &User,
+        assurance: MfaAssurance,
+    ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         // An expired session must never be resurrected
         if self.exp <= now {
@@ -514,14 +565,15 @@ WHERE sessions.exp > $11"#;
         self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
-        self.groups = user.groups.clone();
+        self.groups.clone_from(&user.groups);
+        self.is_mfa = assurance.apply_to(self.is_mfa);
 
         // This function MUST NOT use `self.upsert()`, because it might insert
         // a new session during a race-condition.
-        let sql = r#"
+        let sql = r"
 UPDATE sessions
-SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5
-WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
+SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5, is_mfa = $6
+WHERE id = $7 AND exp > $8 AND (state = $9 OR state = $10)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -533,6 +585,7 @@ WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
                         &self.user_id,
                         &self.roles,
                         &self.groups,
+                        self.is_mfa,
                         &self.id,
                         self.last_seen,
                         SessionState::Init.as_str(),
@@ -549,6 +602,7 @@ WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
                     &self.user_id,
                     &self.roles,
                     &self.groups,
+                    &self.is_mfa,
                     &self.id,
                     &self.last_seen,
                     &SessionState::Init.as_str(),
@@ -617,12 +671,12 @@ impl Session {
                 ));
             } else {
                 let target = now
-                    .add(chrono::Duration::seconds(exp_in as i64))
+                    .add(chrono::Duration::seconds(i64::from(exp_in)))
                     .timestamp();
                 if ts < target { ts } else { target }
             }
         } else {
-            now.add(chrono::Duration::seconds(exp_in as i64))
+            now.add(chrono::Duration::seconds(i64::from(exp_in)))
                 .timestamp()
         };
 
@@ -649,7 +703,7 @@ impl Session {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),
-            RauthyConfig::get().vars.fedcm.session_lifetime as i64,
+            i64::from(RauthyConfig::get().vars.fedcm.session_lifetime),
             SameSite::None,
         )
     }
@@ -697,7 +751,7 @@ impl Session {
             DB::pg_execute(sql, &[&now, &state, &self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -732,6 +786,7 @@ impl Session {
         };
 
         // Init sessions are valid only on the explicit login endpoints.
+        // `/auth/v1/keep_alive` is the login page's idle ticker and belongs to that group.
         let init_allowed = match state {
             SessionState::Auth => true,
             SessionState::Init => {
@@ -741,6 +796,7 @@ impl Session {
                     "/auth/v1/dev/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
@@ -757,6 +813,7 @@ impl Session {
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/users/otp_start",
@@ -800,13 +857,13 @@ impl Session {
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
         if self.groups.is_none() {
             return Ok(Vec::default());
-        };
+        }
         let mut res = Vec::new();
         self.groups
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|g| g.trim())
+            .map(str::trim)
             .for_each(|g| res.push(g));
         Ok(res)
     }
@@ -823,14 +880,20 @@ impl Session {
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|r| r.to_string())
+            .map(ToString::to_string)
             .collect())
     }
 
     #[inline]
-    pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
-        self.is_mfa = value;
+    pub async fn set_mfa(&mut self, assurance: MfaAssurance) -> Result<(), ErrorResponse> {
+        self.is_mfa = assurance.apply_to(self.is_mfa);
         self.upsert().await
+    }
+
+    /// True when a second factor has completed on this session for its current principal.
+    #[inline]
+    pub fn is_mfa_completed(&self) -> bool {
+        self.is_mfa
     }
 
     #[inline(always)]
@@ -893,7 +956,7 @@ mod tests {
 
     #[test]
     fn test_validate_csrf() {
-        let s = Session::new(Duration::from_secs(3600), None);
+        let s = Session::new(Duration::from_hours(1), None);
 
         let ok = TestRequest::default()
             .insert_header((CSRF_HEADER, s.csrf_token.clone()))
@@ -911,7 +974,7 @@ mod tests {
 
     #[test]
     fn test_session_validation() -> Result<(), ErrorResponse> {
-        let mut s = Session::new(Duration::from_secs(3600), None);
+        let mut s = Session::new(Duration::from_hours(1), None);
 
         let path_exep_1 = "/auth/v1/oidc/authorize";
         let path_exep_2 = "/auth/v1/oidc/token";
@@ -934,21 +997,21 @@ mod tests {
 
     #[test]
     fn test_init_session_needs_exception_path_without_ip_validation() {
-        let s = Session::new(Duration::from_secs(3600), None);
+        let s = Session::new(Duration::from_hours(1), None);
         assert!(!s.is_valid(600, None, "/"));
         assert!(!s.is_valid(600, None, "/auth/v1/users"));
 
         assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
         assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
 
-        let mut a = Session::new(Duration::from_secs(3600), None);
+        let mut a = Session::new(Duration::from_hours(1), None);
         a.state = SessionState::Auth;
         assert!(a.is_valid(600, None, "/"));
 
-        let mut l = Session::new(Duration::from_secs(3600), None);
+        let mut l = Session::new(Duration::from_hours(1), None);
         l.state = SessionState::LoggedOut;
         assert!(!l.is_valid(600, None, "/"));
-        let mut u = Session::new(Duration::from_secs(3600), None);
+        let mut u = Session::new(Duration::from_hours(1), None);
         u.state = SessionState::Unknown;
         assert!(!u.is_valid(600, None, "/"));
     }

@@ -35,7 +35,7 @@ use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPi
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
@@ -49,7 +49,7 @@ use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
 use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::entity::webauthn::passkey::PasskeyEntity;
 use rauthy_data::entity::webids::WebId;
-use rauthy_data::events::event::{ConsentRevokedBy, Event};
+use rauthy_data::events::event::{ConsentRevokedBy, ConsentTarget, Event};
 use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
@@ -67,6 +67,7 @@ use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::task;
 use tracing::{debug, error, info, warn};
@@ -106,12 +107,12 @@ pub async fn get_users(
 
     let user_count = User::count().await?;
     let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    if user_count >= ssp_threshold as i64 {
-        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
-        let offset = params.offset.unwrap_or(0) as i64;
+    if user_count >= i64::from(ssp_threshold) {
+        let page_size = i64::from(max(params.page_size.unwrap_or(20), ssp_threshold));
+        let offset = i64::from(params.offset.unwrap_or(0));
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
-            Some(ContinuationToken::try_from(token.as_str())?)
+            Some(ContinuationToken::from_str(token.as_str())?)
         } else {
             None
         };
@@ -167,7 +168,7 @@ pub async fn post_users(
     payload.validate()?;
     // A group admin may create users too, but only without any role and into at least
     // one group it manages, so the new account stays within its scope.
-    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
+    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_deref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
     // and an admin may have good reason to not set some values, like e.g. the preferred username.
@@ -223,7 +224,7 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 
     UserAttrConfigEntity::find_all().await.map(|values| {
         HttpResponse::Ok().json(UserAttrConfigResponse {
-            values: values.into_iter().map(|v| v.into()).collect(),
+            values: values.into_iter().map(Into::into).collect(),
         })
     })
 }
@@ -360,7 +361,7 @@ pub async fn get_user_picture_config(
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
         upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: RauthyConfig::get().vars.user_pictures.upload_limit_mb as u32
+        content_len_limit: u32::from(RauthyConfig::get().vars.user_pictures.upload_limit_mb)
             * 1024
             * 1024,
     }))
@@ -399,6 +400,7 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
     request_body = NewUserRegistrationRequest,
     responses(
         (status = 204, description = "NoContent"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
@@ -414,7 +416,7 @@ pub async fn post_users_register(
 #[inline(always)]
 pub async fn post_users_register_handle(
     req: HttpRequest,
-    payload: NewUserRegistrationRequest,
+    mut payload: NewUserRegistrationRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
@@ -428,29 +430,31 @@ pub async fn post_users_register_handle(
         given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         preferred_username: payload.preferred_username.as_deref(),
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate()?;
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
-    if let Some(restriction) = &reg.domain_restriction {
-        if !payload.email.ends_with(restriction) {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Domain for the open registration are restricted to '@{restriction}'"),
-            ));
-        }
-    } else if !reg.domain_blacklist.is_empty() {
-        for blacklisted in &reg.domain_blacklist {
-            if payload.email.ends_with(blacklisted) {
+    reg.validate_email_domain(&payload.email)?;
+    reg.validate_email_name(&payload.email)?;
+
+    // Only the deployment config can initialize an account from a password. A password from the
+    // request is dropped when the flag is off, which keeps the Magic Link the only proof of control
+    // over an E-Mail address for every deployment that did not harden itself.
+    let init_pwd = if reg.danger_reg_acc_init_immediate {
+        match payload.password.take() {
+            Some(pwd) => Some(pwd),
+            None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Domain is blacklisted",
+                    "The user registration requires a password",
                 ));
             }
         }
-    }
+    } else {
+        None
+    };
 
     // Note: Always keep the PoW validation BEFORE any other expensive checks with DB access.
     let challenge = Pow::validate(&payload.pow)?;
@@ -464,7 +468,7 @@ pub async fn post_users_register_handle(
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let email = payload.email.clone();
-    let user = match User::create_from_reg(payload, lang).await {
+    let user = match User::create_from_reg(payload, lang, init_pwd).await {
         Ok(u) => u,
         Err(err) => {
             // email is probably registered already.
@@ -1191,10 +1195,12 @@ pub async fn get_user_consents(
     Ok(HttpResponse::Ok().json(resp))
 }
 
-/// DELETE a consent and all refresh tokens of this user for the client
+/// DELETE a consent, the refresh tokens of this user for the client, and all its sessions
 ///
-/// `resource` is left out for a consent without a resource. Refresh tokens are revoked
-/// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
+/// `resource` is left out for a consent without a resource. All sessions of the user are deleted,
+/// with a backchannel logout, whoever revokes and whether or not there was anything to revoke, so
+/// the user signs in again everywhere. Refresh tokens are revoked for the client as a whole,
+/// independent of `resource`. With `consent.enable` on, the user's
 /// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
 /// kept. Only the access token of each deleted refresh token, the one issued with its latest
 /// rotation, is revoked. Access tokens from earlier rotations and access tokens issued without a
@@ -1233,43 +1239,125 @@ pub async fn delete_user_consent(
     params.validate()?;
 
     let user = User::find(user_id).await?;
-    // an API key authorized the request even with a session, see `validate_consent_access`
-    let admin_email = match (&principal.api_key, principal.user_id()) {
-        (None, Ok(id)) if id != user.id => Some(User::find(id.to_string()).await?.email),
-        _ => None,
-    };
-    let revoked_by = match (&principal.api_key, &admin_email) {
-        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
-        (None, Some(email)) => ConsentRevokedBy::Admin(email),
-        (None, None) => ConsentRevokedBy::User,
-    };
+    let admin_email = find_consent_revoker_email(&principal, &user).await?;
+    let revoked_by = consent_revoked_by(&principal, admin_email.as_deref());
 
-    let ip = real_ip_from_req(&req)?;
-    let resource = params.resource.as_deref();
+    let target = ConsentTarget {
+        client_id: &params.client_id,
+        resource: params.resource.as_deref(),
+    };
     let ConsentRevoked {
         consent_deleted,
         refresh_tokens_deleted,
-    } = UserConsent::revoke(&user.id, &params.client_id, resource).await?;
+    } = delete_consent(&user, target, revoked_by, real_ip_from_req(&req)?).await?;
 
-    // the revoke is committed at this point, a failing event must not turn it into an error
-    if (consent_deleted || refresh_tokens_deleted > 0)
-        && let Err(err) = Event::consent_revoked(
-            &user.email,
-            &params.client_id,
-            resource.unwrap_or_default(),
-            revoked_by,
-            ip,
-        )
-        .send()
-        .await
-    {
-        error!(?err, "Cannot send the consent revoked event");
-    }
+    Session::invalidate_for_user(&user.id).await?;
+    logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Ok(HttpResponse::Ok().json(UserConsentDeleteResponse {
         consent_deleted,
         refresh_tokens_deleted,
     }))
+}
+
+/// DELETE all consents of this user, the refresh tokens of the user for each of their clients, and
+/// all sessions of the user
+///
+/// Each consent is revoked like with `DELETE /users/{id}/consents`, with its own event. All
+/// sessions of the user are deleted, with a backchannel logout, also when the user has no consent.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - a group admin, for a user it manages
+/// - the user itself
+/// - an API key with `users: delete`
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/consents/all",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = UserConsentsDeleteResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/consents/all")]
+pub async fn delete_user_consents_all(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    validate_consent_access(&principal, &user_id, AccessRights::Delete).await?;
+
+    let user = User::find(user_id).await?;
+    let admin_email = find_consent_revoker_email(&principal, &user).await?;
+    let revoked_by = consent_revoked_by(&principal, admin_email.as_deref());
+
+    let ip = real_ip_from_req(&req)?;
+    let mut resp = UserConsentsDeleteResponse {
+        consents_deleted: 0,
+        refresh_tokens_deleted: 0,
+    };
+    for consent in UserConsent::find_for_user(&user.id, None).await? {
+        let target = ConsentTarget {
+            client_id: &consent.client_id,
+            resource: (!consent.resource.is_empty()).then_some(consent.resource.as_str()),
+        };
+        let revoked = delete_consent(&user, target, revoked_by, ip).await?;
+        resp.consents_deleted += usize::from(revoked.consent_deleted);
+        resp.refresh_tokens_deleted += revoked.refresh_tokens_deleted;
+    }
+
+    Session::invalidate_for_user(&user.id).await?;
+    logout::execute_backchannel_logout(None, Some(user.id)).await?;
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// The email of the admin or group admin session that revokes the consents of `user`, `None` for
+/// the user itself and for an API key, which authorized the request even with a session, see
+/// `validate_consent_access`.
+async fn find_consent_revoker_email(
+    principal: &Principal,
+    user: &User,
+) -> Result<Option<String>, ErrorResponse> {
+    match (&principal.api_key, principal.user_id()) {
+        (None, Ok(id)) if id != user.id => Ok(Some(User::find(id.to_string()).await?.email)),
+        _ => Ok(None),
+    }
+}
+
+fn consent_revoked_by<'a>(
+    principal: &'a Principal,
+    admin_email: Option<&'a str>,
+) -> ConsentRevokedBy<'a> {
+    match (&principal.api_key, admin_email) {
+        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
+        (None, Some(email)) => ConsentRevokedBy::Admin(email),
+        (None, None) => ConsentRevokedBy::User,
+    }
+}
+
+/// Revokes a consent with [`UserConsent::revoke`] and sends the event when it deleted anything.
+async fn delete_consent(
+    user: &User,
+    target: ConsentTarget<'_>,
+    revoked_by: ConsentRevokedBy<'_>,
+    ip: IpAddr,
+) -> Result<ConsentRevoked, ErrorResponse> {
+    let revoked = UserConsent::revoke(&user.id, target.client_id, target.resource).await?;
+
+    // the revoke is committed at this point, a failing event must not turn it into an error
+    if (revoked.consent_deleted || revoked.refresh_tokens_deleted > 0)
+        && let Err(err) = Event::consent_revoked(&user.email, target, revoked_by, ip)
+            .send()
+            .await
+    {
+        error!(?err, "Cannot send the consent revoked event");
+    }
+    Ok(revoked)
 }
 
 /// An API key with `rights` on users, else the user itself, an admin session or a group admin
@@ -1512,7 +1600,7 @@ pub async fn get_user_revoke(
         .unwrap_or_default();
 
     let html = match user_revoke_handle(user_id, code, params.ip).await {
-        Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
+        Ok(()) => UserRevokeHtml::build(&lang, theme_ts),
         Err(err) => {
             debug!("Error during user revoke: {err}");
             Error3Html::build(&lang, theme_ts, err.status_code(), "Code not found")
@@ -1544,10 +1632,12 @@ async fn user_revoke_handle(
     let user = User::find(revoke.user_id).await?;
     UserRevoke::delete(user.id).await?;
 
-    let location = ipgeo::get_location_from_db(bad_ip)?;
-    Event::user_login_revoke(&user.email, bad_ip, location)
-        .send()
-        .await?;
+    {
+        let location = ipgeo::get_location_from_db(bad_ip)?;
+        Event::user_login_revoke(&user.email, bad_ip, location.as_deref())
+    }
+    .send()
+    .await?;
 
     Ok(())
 }
@@ -1705,7 +1795,7 @@ pub async fn put_user_otp(
     token.validate(principal.user_id()?, ip)?;
 
     let mut otp = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await?;
-    otp.validate(&payload.otp_code).await?;
+    otp.validate(&payload.otp_code)?;
     otp.activate().await?;
     Ok(HttpResponse::Ok().finish())
 }
@@ -2001,9 +2091,9 @@ pub async fn post_webauthn_auth_start(
                             ErrorResponseType::BadRequest,
                             "Malformed magic link binding cookie".to_string(),
                         ));
-                    };
+                    }
                 }
-            };
+            }
 
             id.into_inner()
         }
@@ -2353,9 +2443,9 @@ pub async fn post_webauthn_reg_finish(
         // this point, so a flow that gets here without a session (during an initial account setup,
         // for instance) must never have its successful registration turned into an error.
         if let Some(mut session) = principal.into_inner().session
-            && !session.is_mfa
+            && !session.is_mfa_completed()
         {
-            session.set_mfa(true).await?;
+            session.set_mfa(MfaAssurance::Ceremony).await?;
         }
 
         Ok(HttpResponse::Created().finish())
@@ -2534,7 +2624,7 @@ pub async fn post_user_password_request_reset(
         Ok(user) => user
             .request_password_reset(payload.redirect_uri)
             .await
-            .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
+            .map(|()| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {
             // always return OK, no matter what, for username enumeration prevention
             Ok(HttpResponse::Ok().status(StatusCode::OK).finish())
@@ -2603,7 +2693,7 @@ pub async fn put_user_by_id(
         family_name: payload.family_name.as_deref(),
         // has its own endpoint for updates
         preferred_username: None,
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate()?;
 
@@ -2775,6 +2865,8 @@ async fn handle_put_user_by_id(
     request_body = UpdateUserSelfRequest,
     responses(
         (status = 200, description = "Ok", body = UserResponse),
+        (status = 202, description = "E-Mail change accepted", body = UserResponse),
+        (status = 400, description = "E-Mail change denied", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -2791,6 +2883,19 @@ pub async fn put_user_self(
     // make sure the logged-in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
+
+    // the payload replaces the stored values, omitted `user_values` delete them
+    let (stored, preferred_username) = User::upd_req_from_db(id.clone()).await?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: preferred_username.as_deref(),
+        user_values: payload.user_values.as_ref(),
+    }
+    .validate_update(&UserValuesValidator::from_update_req(
+        &stored,
+        preferred_username.as_deref(),
+    ))?;
 
     let (user, user_values, email_updated) = User::update_self_req(id, payload).await?;
 
@@ -3130,7 +3235,7 @@ mod tests {
                 remote_ip: None,
             }),
             api_key: None,
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
         }
     }
 

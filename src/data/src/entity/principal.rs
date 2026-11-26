@@ -290,8 +290,8 @@ impl Principal {
         }
         if self.group_admin_can_manage(current_roles, current_groups)
             || self.group_admin_can_manage(
-                new_roles.iter().map(|r| r.as_str()),
-                new_groups.iter().map(|g| g.as_str()),
+                new_roles.iter().map(String::as_str),
+                new_groups.iter().map(String::as_str),
             )
         {
             return Ok(());
@@ -300,8 +300,8 @@ impl Principal {
         // group admin, so the resulting roles classify the failure the same as the current
         // ones would: an admin target yields the clearer message.
         match self.group_admin_access(
-            new_roles.iter().map(|r| r.as_str()),
-            new_groups.iter().map(|g| g.as_str()),
+            new_roles.iter().map(String::as_str),
+            new_groups.iter().map(String::as_str),
         ) {
             GroupAdminAccess::TargetIsAdmin => Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -382,7 +382,7 @@ impl Principal {
         let new_roles: BTreeSet<&str> = new_roles
             .iter()
             .filter(|r| !r.is_empty())
-            .map(|r| r.as_str())
+            .map(String::as_str)
             .collect();
         if current_roles != new_roles {
             return Err(ErrorResponse::new(
@@ -398,7 +398,7 @@ impl Principal {
         let new_groups: BTreeSet<&str> = new_groups
             .iter()
             .filter(|g| !g.is_empty())
-            .map(|g| g.as_str())
+            .map(String::as_str)
             .collect();
         for changed in current_groups.symmetric_difference(&new_groups) {
             if !self.group_admin_matches(changed) {
@@ -420,7 +420,7 @@ impl Principal {
     pub fn validate_group_admin_user_create(
         &self,
         new_roles: &[String],
-        new_groups: Option<&Vec<String>>,
+        new_groups: Option<&[String]>,
     ) -> Result<(), ErrorResponse> {
         if self.api_key.is_some() || self.is_admin() {
             return Ok(());
@@ -438,7 +438,7 @@ impl Principal {
             .map(|g| {
                 g.iter()
                     .filter(|s| !s.is_empty())
-                    .map(|s| s.as_str())
+                    .map(String::as_str)
                     .collect()
             })
             .unwrap_or_default();
@@ -473,7 +473,10 @@ impl Principal {
 
     #[inline(always)]
     pub fn has_mfa_active(&self) -> bool {
-        self.session.as_ref().map(|s| s.is_mfa).unwrap_or(false)
+        self.session
+            .as_ref()
+            .map(Session::is_mfa_completed)
+            .unwrap_or(false)
     }
 
     /// Returns the `user_id` linked to this session. Will `Err` if this principal does not
@@ -496,7 +499,7 @@ impl Principal {
     ) -> Result<(), ErrorResponse> {
         if let Some(api_key) = &self.api_key {
             match api_key.validate_access(&access_group, &access_rights) {
-                Ok(_) => Ok(()),
+                Ok(()) => Ok(()),
                 Err(_) => Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     format!(
@@ -561,7 +564,7 @@ impl Principal {
         access_rights: AccessRights,
     ) -> Result<(), ErrorResponse> {
         match self.validate_api_key(access_group, access_rights) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
 
             Err(err) => {
                 if err.error == ErrorResponseType::Forbidden {
@@ -642,7 +645,7 @@ impl Principal {
         } else {
             trace!("Validating the session failed - no session found");
             Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
+                ErrorResponseType::NoSession,
                 "No valid session",
             ))
         }
@@ -662,7 +665,7 @@ mod tests {
 
     fn principal(roles: &[&str]) -> Principal {
         Principal {
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
             ..Default::default()
         }
     }
@@ -771,7 +774,7 @@ mod tests {
     }
 
     fn s(v: &[&str]) -> Vec<String> {
-        v.iter().map(|x| x.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     #[test]
@@ -1021,15 +1024,15 @@ mod tests {
         // user is in the unmanaged "ops"; admin submits only the managed "dev"
         // -> "ops" is preserved, "dev" added
         let out = p.group_admin_scoped_groups(["ops"], &s(&["dev"]));
-        assert!(out.contains(&"ops".to_string()));
-        assert!(out.contains(&"dev".to_string()));
+        assert!(out.iter().any(|i| i == "ops"));
+        assert!(out.iter().any(|i| i == "dev"));
         assert_eq!(out.len(), 2);
 
         // a submitted group outside the admin's scope is ignored
         let out = p.group_admin_scoped_groups(["ops"], &s(&["dev", "sales"]));
-        assert!(out.contains(&"ops".to_string()));
-        assert!(out.contains(&"dev".to_string()));
-        assert!(!out.contains(&"sales".to_string()));
+        assert!(out.iter().any(|i| i == "ops"));
+        assert!(out.iter().any(|i| i == "dev"));
+        assert!(!out.iter().any(|i| i == "sales"));
 
         // group-less user, single managed group submitted
         let out = p.group_admin_scoped_groups(std::iter::empty::<&str>(), &s(&["dev"]));

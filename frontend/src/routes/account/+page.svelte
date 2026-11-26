@@ -2,7 +2,6 @@
     import AccMain from '#lib/account/AccMain.svelte';
     import { redirectToLogin } from '#utils/helpers.ts';
     import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { type UserResponse } from '#api/types/user.ts';
     import { fetchGet } from '#api/fetch.ts';
@@ -65,9 +64,7 @@
 </svelte:head>
 
 <Main>
-    <ContentCenter>
-        {#if isReady && session && user}
-            <AccMain bind:user bind:webIdData />
-        {/if}
-    </ContentCenter>
+    {#if isReady && session && user}
+        <AccMain bind:user bind:webIdData />
+    {/if}
 </Main>

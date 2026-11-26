@@ -116,5 +116,5 @@ pub async fn delete_scope(
 
     Scope::delete(path.as_str())
         .await
-        .map(|_| HttpResponse::Ok().finish())
+        .map(|()| HttpResponse::Ok().finish())
 }

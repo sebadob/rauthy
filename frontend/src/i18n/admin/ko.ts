@@ -36,12 +36,26 @@ export let I18nAdminKo: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        settings: { general: '일반', tokens: '토큰', integrations: '통합' },
         allowedResources: '허용된 리소스',
         defaultAud: '기본 대상(Audience)',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `이 클라이언트가 요청할 수 있는 선택적 RFC 8707 리소스 인디케이터입니다. 목록이 비어 있으면 모든 'resource' 요청 파라미터를 'invalid_target'으로 거부합니다.`,
         descDefaultAud: `'resource' 요청 파라미터와 무관하게 이 클라이언트의 토큰에 항상 추가되는 대상(audience)입니다.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: '디자인',
+            theme: '테마',
+            light: '라이트 테마',
+            dark: '다크 테마',
+            preview: '미리 보기',
+            assets: '로고 및 파비콘',
+            logo: '로고',
+            advanced: '고급 CSS',
+            resetTheme: '테마 재설정',
+            resetThemeConfirm: '기본 색상과 모서리 반경을 복원할까요?',
+            assetsImmediate: '파일 변경은 즉시 적용됩니다.',
             descHsl: `HSL 값으로 입력해야 합니다. 기본 색상만 제공하면 알파 채널 및 기타 값은
                 테마에 의해 동적으로 설정됩니다.`,
             descFullCss: `다음 값은 완전히 유효한 <code>CSS 색상</code> 값이어야 합니다. 복잡한 계산이나 위에
@@ -62,6 +76,11 @@ export let I18nAdminKo: I18nAdmin = {
         confidential: '기밀',
         confidentialNoSecret: '이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.',
         config: '클라이언트 설정',
+        consent: {
+            builtIn: '내장',
+            desc: `'consent.enable'이 설정된 경우 동의 화면의 내용을 가져오는 위치입니다. 내장은 요청된 스코프를 표시합니다. URL은 동의 내용을 JSON으로 제공해야 합니다. 요청된 리소스에 대한 '[[consent.sources]]' 항목이 우선합니다.`,
+            source: '동의 소스',
+        },
         delete1: '이 클라이언트를 삭제하시겠습니까?',
         descAuthCode: `보안을 강화하기 위해 인증 코드의 유효 기간을 조정할 수 있습니다. 인증 코드는
             한 번만 사용할 수 있으며 기본적으로 60초 동안 유효합니다. 클라이언트가 로그인 절차를
@@ -129,6 +148,20 @@ export let I18nAdminKo: I18nAdmin = {
         },
     },
     common: {
+        about: '정보',
+        date: '날짜',
+        time: '시간',
+        preferences: '환경 설정',
+        profile: '프로필',
+        contactDetails: '연락처 정보',
+        access: '접근 권한',
+        activity: '활동',
+
+        compactNavigation: '간결한 탐색',
+        administration: '관리',
+        selectEntry: '항목 선택',
+        selectEntryHint: '목록에서 항목을 선택하여 세부 정보를 확인하고 관리하세요.',
+
         account: '계정',
         addNew: '생성',
         back: '뒤로',
@@ -137,6 +170,7 @@ export let I18nAdminKo: I18nAdmin = {
         copiedToClip: '클립보드로 복사되었습니다.',
         details: '자세히',
         edit: '편집',
+        discard: '포기',
         enabled: '활성화',
         filter: '필터',
         from: '부터',
@@ -150,6 +184,8 @@ export let I18nAdminKo: I18nAdmin = {
         noEntries: '비어 있음',
         preview: 'Preview',
         reset: '초기화',
+        unsavedChanges: '저장되지 않은 변경 사항',
+        unsavedChangesDesc: '저장되지 않은 변경 사항이 있습니다. 계속하여 버리시겠습니까?',
         searchOptions: '검색 옵션',
         until: '까지',
     },
@@ -225,9 +261,9 @@ export let I18nAdminKo: I18nAdmin = {
                 맞게 조정해야 합니다.`,
         },
         openapi: '외부 애플리케이션을 통합하기 위한 Rauthy의 API 사용 방법:',
-        openapiNote: `기본 구성에서는 위 링크를 통해 Swagger UI가 활성화되지 않습니다. 그건 
-            'server.swagger_ui_enable' 및 가능하다면 'server.swagger_ui_public' 설정을 통해 활성화할 수 
-            있습니다.`,
+        openapiNote: '기본 구성에서는 위 링크를 통해 Swagger UI가 활성화되지 않습니다.',
+        openapiEnable:
+            "그건 'server.swagger_ui_enable' 및 가능하다면 'server.swagger_ui_public' 설정을 통해 활성화할 수 있습니다.",
         source: 'Rauthy의 소스코드',
     },
     editor: {
@@ -267,12 +303,22 @@ export let I18nAdminKo: I18nAdmin = {
             활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`,
     },
     events: {
+        searchContent: '내용',
+        timestamp: '시각',
+        level: '수준',
+        type: '유형',
+        allLevels: '모든 수준',
+        sendTest: '테스트 이벤트 보내기',
         eventLevel: '이벤트 레벨',
         eventType: '이벤트 타입',
     },
     groups: {
         delete1: '이 그룹을 삭제하시겠습니까?',
         name: '그룹 이름',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: '알고리즘',
@@ -286,6 +332,7 @@ export let I18nAdminKo: I18nAdmin = {
         rotateKeys: '키 회전',
     },
     kv: {
+        limit: '한도',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -323,6 +370,7 @@ export let I18nAdminKo: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 저장소',
         apiKeys: 'API 키',
         attributes: '속성',
         blacklist: '블랙리스트',
@@ -394,6 +442,10 @@ export let I18nAdminKo: I18nAdmin = {
             autoLinkDesc2: `CAUTION: This option can be very dangerous and lead to account takeover if the provider
                 does not fully validate E-Mail addresses for users and therefore makes it possible to add a foreign
                 address for a user! MUST NEVER be used in such a case!`,
+            hideLogin: '로그인 버튼 숨기기',
+            hideLoginDesc: `이 제공자의 로그인 버튼은 로그인 및 등록 페이지에 표시되지 않습니다. 쿼리 파라미터
+                "idp_hint"를 사용한 로그인은 그대로 가능하며, 이를 이용해 이 제공자를 위한 전용 로그인 버튼을
+                추가할 수 있습니다.`,
             clientName: '클라이언트 이름',
             custRootCa: '사용자 지정 Root CA PEM 사용',
             descAuthMethod: `<code>/token</code> 엔드포인트에서 사용할 인증 방법입니다.<br>
@@ -418,7 +470,26 @@ export let I18nAdminKo: I18nAdmin = {
                     할 수 있습니다.`,
                 p6: `<code>$.roles.*</code> 는 <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>
                     과 같이 객체 또는 배열 내부의 값을 목표로 할 수 있습니다.`,
+                p7: '<code>value</code>는 정확히 일치합니다. 단, <code>^</code> (접두사), <code>~</code> (정규식), <code>^^</code> (리터럴 <code>^</code>)로 시작하면 다릅니다',
+                p8: "<code>a-z A-Z 0-9 _ -</code> 밖의 문자가 포함된 키는 따옴표가 필요합니다: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                '업스트림 ID 토큰의 값을 기존 로컬 역할과 그룹에 매핑합니다. 규칙은 <code>path</code>의 클레임이 <code>value</code>와 일치하면 대상을 추가하고, 어떤 규칙도 일치하지 않으면 제거합니다. 여기서 설정한 대상만 제거되며, 여기서 설정한 대상은 프로바이더에 속합니다 - 관리자가 그 사용자에게 수동으로 부여한 역할과 그룹도 어떤 규칙도 일치하지 않는 로그인에서는 함께 제거됩니다.',
+            addMapping: '매핑 추가',
+            removeMapping: '매핑 제거',
+            mappingTyp: '유형',
+            typRole: '역할',
+            typGroup: '그룹',
+            pathClaim: '클레임 경로',
+            valueClaim: '클레임 값',
+            targetClaim: '역할 / 그룹',
+            noTargetSelected: '— 역할 / 그룹 없음 —',
+            targetMissing:
+                '저장된 대상 {{ target }}은(는) 더 이상 역할 / 그룹이 아닙니다. 기존 항목을 선택하거나 이 매핑을 삭제하세요.',
+            groupAdminTarget: '(그룹 관리자)',
+            maxMappings: '인증 공급자는 최대 32개의 클레임 매핑을 지원합니다.',
+            regexCost:
+                '<code>~</code>로 시작하는 <code>value</code>는 정규식으로, 모든 로그인에서 모든 클레임 노드에 대해 평가됩니다. 앵커를 지정하고 가능한 한 간단하게 유지하세요.',
             lookup: '조회',
             pathAdminClaim: '관리자 Claim 경로',
             pathMfaClaim: 'MFA Claim 경로',
@@ -442,6 +513,10 @@ export let I18nAdminKo: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code> 역할은 변경할 수 없습니다.',
         delete1: '이 역할을 삭제하시겠습니까?',
         name: '역할 이름',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
@@ -494,6 +569,16 @@ export let I18nAdminKo: I18nAdmin = {
             rauthyAdmin: 'rauthy_admin rule cannot be removed',
         },
         attributes: '속성',
+        consents: {
+            title: '동의',
+            desc: '이 사용자가 애플리케이션에 제공한 동의입니다. 시간은 로컬 시간대로 표시되며, 시간 위에 마우스를 올리면 UTC로 표시됩니다.',
+            none: '이 사용자는 아직 어떤 애플리케이션에도 동의하지 않았습니다.',
+            revokeDesc:
+                '취소하면 동의가 삭제되고 애플리케이션은 이 사용자에 대한 접근 권한을 더 이상 갱신할 수 없습니다. 애플리케이션은 사용자에게 다시 동의를 요청해야 합니다.',
+            revokeAllDesc:
+                '이 사용자의 모든 동의를 취소합니다. 각 애플리케이션은 사용자에게 다시 동의를 요청해야 합니다.',
+            sessionsWarning: '사용자의 모든 세션도 삭제되며, 사용자는 모든 곳에서 로그아웃됩니다.',
+        },
         deleteUser: '이 사용자를 삭제하시겠습니까?',
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,

@@ -132,7 +132,7 @@ impl EventNotifier {
                         panic!("{msg}");
                     }
                 }
-            };
+            }
         }
 
         Ok(())

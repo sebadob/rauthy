@@ -37,12 +37,26 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        settings: { general: '常规', tokens: '令牌', integrations: '集成' },
         allowedResources: '允许的资源',
         defaultAud: '默认受众 (aud)',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `此客户端可以请求的可选 RFC 8707 资源指示符。空列表将以 'invalid_target' 拒绝任何 'resource' 请求参数。`,
         descDefaultAud: `无论是否提供 'resource' 请求参数，始终添加到此客户端令牌中的受众 (aud)。`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
+            title: '外观',
+            theme: '主题',
+            light: '浅色主题',
+            dark: '深色主题',
+            preview: '预览',
+            assets: '徽标和网站图标',
+            logo: '徽标',
+            advanced: '高级 CSS',
+            resetTheme: '重置主题',
+            resetThemeConfirm: '恢复默认颜色和圆角半径？',
+            assetsImmediate: '文件更改会立即生效。',
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。
             透明度通道和其他值由主题动态调整。`,
             descFullCss: `以下值必须是完全有效的CSS <code>color</code>值。
@@ -63,6 +77,11 @@ export let I18nAdminZh: I18nAdmin = {
         confidential: '机密',
         confidentialNoSecret: '这是一个非机密客户端，因此没有密钥。',
         config: '客户端配置',
+        consent: {
+            builtIn: '内置',
+            desc: `设置 'consent.enable' 时同意页面内容的来源。内置显示请求的 scopes。URL 必须以 JSON 形式提供同意内容。针对所请求资源的 '[[consent.sources]]' 条目优先。`,
+            source: '同意来源',
+        },
         delete1: '您确定要删除此客户端吗？',
         descAuthCode: `可以调整认证码的有效性以提高安全性。认证码
             只能使用一次，默认有效时间为60秒。只要客户端能够足够快地执行登录过程，
@@ -130,6 +149,20 @@ export let I18nAdminZh: I18nAdmin = {
         },
     },
     common: {
+        about: '关于',
+        date: '日期',
+        time: '时间',
+        preferences: '偏好设置',
+        profile: '个人资料',
+        contactDetails: '联系信息',
+        access: '访问权限',
+        activity: '活动',
+
+        compactNavigation: '紧凑导航',
+        administration: '管理',
+        selectEntry: '选择条目',
+        selectEntryHint: '从列表中选择一个条目以查看和管理其详细信息。',
+
         account: '账户',
         addNew: '新增',
         back: '返回',
@@ -138,6 +171,7 @@ export let I18nAdminZh: I18nAdmin = {
         copiedToClip: '值已复制到剪贴板',
         details: '详情',
         edit: '编辑',
+        discard: '放弃',
         enabled: '已启用',
         filter: '筛选',
         from: '从',
@@ -151,6 +185,8 @@ export let I18nAdminZh: I18nAdmin = {
         noEntries: '无条目',
         preview: '预览',
         reset: '重置',
+        unsavedChanges: '未保存的更改',
+        unsavedChangesDesc: '您有未保存的更改。要继续并放弃它们吗？',
         searchOptions: '搜索选项',
         until: '直到',
     },
@@ -224,8 +260,9 @@ export let I18nAdminZh: I18nAdmin = {
             必须针对每个部署进行调整。`,
         },
         openapi: '如果您想集成外部应用程序并使用Rauthy的API，请查看',
-        openapiNote: `在默认配置中，Swagger UI不会通过上面的链接激活。它 
-            可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。`,
+        openapiNote: '在默认配置中，Swagger UI不会通过上面的链接激活。',
+        openapiEnable:
+            '它 可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。',
         source: '源代码可以在这里找到',
     },
     editor: {
@@ -265,12 +302,22 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
+        searchContent: '内容',
+        timestamp: '时间戳',
+        level: '级别',
+        type: '类型',
+        allLevels: '所有级别',
+        sendTest: '发送测试事件',
         eventLevel: '事件级别',
         eventType: '事件类型',
     },
     groups: {
         delete1: '您确定要删除此组吗？',
         name: '组名',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: '算法',
@@ -284,6 +331,7 @@ export let I18nAdminZh: I18nAdmin = {
         rotateKeys: '轮换密钥',
     },
     kv: {
+        limit: '上限',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -321,6 +369,7 @@ export let I18nAdminZh: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 存储',
         apiKeys: 'API密钥',
         attributes: '属性',
         blacklist: '黑名单',
@@ -389,6 +438,9 @@ export let I18nAdminZh: I18nAdmin = {
             autoLinkDesc2: `注意：如果提供商不对用户完全验证邮箱地址，
                 从而使用户可能添加外来地址，则此选项非常危险并可能导致帐户接管！
                 在这种情况下绝不能使用！`,
+            hideLogin: '隐藏登录按钮',
+            hideLoginDesc: `此提供商的登录按钮在登录页和注册页上被隐藏。仍然可以通过查询参数 "idp_hint"
+                进行登录，并可为它添加专用的登录按钮。`,
             clientName: '客户端名称',
             custRootCa: '自定义根CA PEM',
             descAuthMethod: `在<code>/token</code>端点使用的身份验证方法。<br>
@@ -411,7 +463,26 @@ export let I18nAdminZh: I18nAdmin = {
                 p5: '<code>$.roles</code>将定位<code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code>可以定位对象或数组中的值，如<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: '<code>value</code> 为精确匹配，除非以 <code>^</code>（前缀）、<code>~</code>（正则）或 <code>^^</code>（字面 <code>^</code>）开头',
+                p8: "包含 <code>a-z A-Z 0-9 _ -</code> 之外字符的键需要引号：<code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                '将上游提供方 ID 令牌中的值映射到已存在的本地角色与组。当 <code>path</code> 处的声明匹配 <code>value</code> 时，规则添加其目标；当其所有规则都不匹配时移除目标。只有此处配置的目标会被移除，而此处配置的目标属于该提供方：管理员手动授予该用户的角色与组，在没有任何规则匹配的登录中同样会被移除。',
+            addMapping: '添加映射',
+            removeMapping: '移除映射',
+            mappingTyp: '类型',
+            typRole: '角色',
+            typGroup: '组',
+            pathClaim: '声明路径',
+            valueClaim: '声明值',
+            targetClaim: '角色 / 组',
+            noTargetSelected: '— 无角色 / 组 —',
+            targetMissing:
+                '保存的目标 {{ target }} 不再是角色或组。请选择一个现有的目标，或移除此映射。',
+            groupAdminTarget: '(组管理员)',
+            maxMappings: '一个认证提供方最多支持 32 条声明映射。',
+            regexCost:
+                '以 <code>~</code> 开头的 <code>value</code> 是正则表达式，会在每次登录时对每个声明节点求值：请加上锚点并尽量保持简单。',
             lookup: '查找',
             pathAdminClaim: '管理员声明路径',
             pathMfaClaim: 'MFA声明路径',
@@ -435,6 +506,10 @@ export let I18nAdminZh: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code>角色是不可变的。',
         delete1: '您确定要删除此角色吗？',
         name: '角色名称',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
@@ -485,6 +560,15 @@ export let I18nAdminZh: I18nAdmin = {
             rauthyAdmin: '无法移除rauthy_admin规则',
         },
         attributes: '属性',
+        consents: {
+            title: '同意',
+            desc: '此用户向应用授予的同意。时间以您的本地时区显示；将鼠标悬停在时间上可查看 UTC 时间。',
+            none: '此用户尚未向任何应用授予同意。',
+            revokeDesc:
+                '撤销将删除该同意，应用将无法再续期其对此用户的访问权限。应用需要重新请求用户的同意。',
+            revokeAllDesc: '撤销此用户的所有同意。每个应用都需要重新请求用户的同意。',
+            sessionsWarning: '该用户的所有会话也会被删除，用户将在所有地方退出登录。',
+        },
         deleteUser: '您确定要删除此用户吗？',
         descAttr: `设置自定义用户属性。所有键/值对将作为字符串/JSON值处理。`,
         forceLogout: `您确定要使此用户的所有现有会话无效并删除所有刷新令牌吗？`,

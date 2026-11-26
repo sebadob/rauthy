@@ -1,4 +1,4 @@
-use rauthy_api_types::users::UserValuesRequest;
+use rauthy_api_types::users::{UpdateUserRequest, UserValuesRequest};
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue, VarsUserValuesConfig};
@@ -12,12 +12,109 @@ pub struct UserValuesValidator<'a> {
     pub given_name: Option<&'a str>,
     pub family_name: Option<&'a str>,
     pub preferred_username: Option<&'a str>,
-    pub user_values: &'a Option<UserValuesRequest>,
+    pub user_values: Option<&'a UserValuesRequest>,
 }
 
-impl UserValuesValidator<'_> {
+impl<'a> UserValuesValidator<'a> {
+    /// `preferred_username` has its own endpoint, so pass the stored one.
+    pub fn from_update_req(
+        req: &'a UpdateUserRequest,
+        preferred_username: Option<&'a str>,
+    ) -> Self {
+        Self {
+            given_name: req.given_name.as_deref(),
+            family_name: req.family_name.as_deref(),
+            preferred_username,
+            user_values: req.user_values.as_ref(),
+        }
+    }
+
     pub fn validate(&self) -> Result<(), ErrorResponse> {
         self.validate_with(&RauthyConfig::get().vars.user_values)
+    }
+
+    /// Rejects an update that clears a required value which is set in the stored values. Values
+    /// that are already missing are not enforced, so an incomplete user can still be edited,
+    /// `revalidate_during_login` is the way to make them complete it.
+    pub fn validate_update(&self, stored: &Self) -> Result<(), ErrorResponse> {
+        self.validate_update_with(stored, &RauthyConfig::get().vars.user_values)
+    }
+
+    fn validate_update_with(
+        &self,
+        stored: &Self,
+        config: &VarsUserValuesConfig,
+    ) -> Result<(), ErrorResponse> {
+        fn uv(
+            values: Option<&UserValuesRequest>,
+            field: fn(&UserValuesRequest) -> &Option<String>,
+        ) -> Option<&str> {
+            values.and_then(|v| field(v).as_deref())
+        }
+        let (old, new) = (stored.user_values, self.user_values);
+        let fields = [
+            (
+                "given_name",
+                &config.given_name,
+                stored.given_name,
+                self.given_name,
+            ),
+            (
+                "family_name",
+                &config.family_name,
+                stored.family_name,
+                self.family_name,
+            ),
+            (
+                "preferred_username",
+                &config.preferred_username.preferred_username,
+                stored.preferred_username,
+                self.preferred_username,
+            ),
+            (
+                "birthdate",
+                &config.birthdate,
+                uv(old, |v| &v.birthdate),
+                uv(new, |v| &v.birthdate),
+            ),
+            (
+                "street",
+                &config.street,
+                uv(old, |v| &v.street),
+                uv(new, |v| &v.street),
+            ),
+            ("zip", &config.zip, uv(old, |v| &v.zip), uv(new, |v| &v.zip)),
+            (
+                "city",
+                &config.city,
+                uv(old, |v| &v.city),
+                uv(new, |v| &v.city),
+            ),
+            (
+                "country",
+                &config.country,
+                uv(old, |v| &v.country),
+                uv(new, |v| &v.country),
+            ),
+            (
+                "phone",
+                &config.phone,
+                uv(old, |v| &v.phone),
+                uv(new, |v| &v.phone),
+            ),
+            ("tz", &config.tz, uv(old, |v| &v.tz), uv(new, |v| &v.tz)),
+        ];
+        let missing = |v: Option<&str>| v.is_none_or(str::is_empty);
+        for (name, required, before, after) in fields {
+            if *required == UserValueConfigValue::Required && !missing(before) && missing(after) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("'{name}' is required"),
+                ));
+            }
+        }
+
+        self.validate_tz()
     }
 
     fn validate_with(&self, config: &VarsUserValuesConfig) -> Result<(), ErrorResponse> {
@@ -55,13 +152,13 @@ impl UserValuesValidator<'_> {
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::NotAccepted,
-                format!("username '{username}' is not available",),
+                format!("username '{username}' is not available"),
             ));
         }
 
         // Run the required checks even when `user_values` is omitted entirely.
         let default_uv = UserValuesRequest::default();
-        let uv = self.user_values.as_ref().unwrap_or(&default_uv);
+        let uv = self.user_values.unwrap_or(&default_uv);
         if config.birthdate == UserValueConfigValue::Required
             && (uv.birthdate.is_none() || uv.birthdate.as_deref() == Some(""))
         {
@@ -119,7 +216,12 @@ impl UserValuesValidator<'_> {
                 "'tz' is required",
             ));
         }
-        if let Some(tz) = &uv.tz
+
+        self.validate_tz()
+    }
+
+    fn validate_tz(&self) -> Result<(), ErrorResponse> {
+        if let Some(tz) = self.user_values.and_then(|uv| uv.tz.as_deref())
             && chrono_tz::Tz::from_str(tz).is_err()
         {
             return Err(ErrorResponse::new(
@@ -127,7 +229,6 @@ impl UserValuesValidator<'_> {
                 "'tz' cannot be parsed",
             ));
         }
-
         Ok(())
     }
 
@@ -155,7 +256,7 @@ impl UserValuesValidator<'_> {
                 given_name: Some(&user.given_name),
                 family_name: user.family_name.as_deref(),
                 preferred_username: uv.preferred_username.as_deref(),
-                user_values: &user_values,
+                user_values: user_values.as_ref(),
             }
             .validate()
             .is_err();
@@ -182,9 +283,135 @@ mod tests {
             given_name: Some("A"),
             family_name: None,
             preferred_username: None,
-            user_values: &None,
+            user_values: None,
         };
 
         assert!(validator.validate_with(&config).is_err());
+    }
+
+    #[test]
+    fn required_value_cleared_to_empty_string_is_rejected() {
+        let mut config = Vars::default().user_values;
+        config.street = UserValueConfigValue::Required;
+
+        let user_values = Some(UserValuesRequest {
+            street: Some(String::new()),
+            ..Default::default()
+        });
+        let validator = UserValuesValidator {
+            given_name: Some("A"),
+            family_name: None,
+            preferred_username: None,
+            user_values: user_values.as_ref(),
+        };
+
+        assert!(validator.validate_with(&config).is_err());
+    }
+
+    fn values(street: Option<&str>) -> Option<UserValuesRequest> {
+        Some(UserValuesRequest {
+            street: street.map(String::from),
+            ..Default::default()
+        })
+    }
+
+    fn validator<'a>(
+        preferred_username: Option<&'a str>,
+        user_values: Option<&'a UserValuesRequest>,
+    ) -> UserValuesValidator<'a> {
+        UserValuesValidator {
+            given_name: Some("A"),
+            family_name: None,
+            preferred_username,
+            user_values,
+        }
+    }
+
+    #[test]
+    fn required_preferred_username_passes_with_the_stored_one() {
+        let mut config = Vars::default().user_values;
+        config.preferred_username.preferred_username = UserValueConfigValue::Required;
+        let uv = values(Some("Main St"));
+
+        let stored = validator(Some("alfred"), uv.as_ref());
+        let updated = validator(Some("alfred"), uv.as_ref());
+        assert!(updated.validate_update_with(&stored, &config).is_ok());
+        assert!(updated.validate_with(&config).is_ok());
+        assert!(validator(None, uv.as_ref()).validate_with(&config).is_err());
+    }
+
+    #[test]
+    fn valid_user_cannot_clear_a_required_value() {
+        let mut config = Vars::default().user_values;
+        config.street = UserValueConfigValue::Required;
+        let stored_uv = values(Some("Main St"));
+        let cleared = values(Some(""));
+        let deleted = None;
+
+        let stored = validator(None, stored_uv.as_ref());
+        assert!(
+            validator(None, cleared.as_ref())
+                .validate_update_with(&stored, &config)
+                .is_err()
+        );
+        assert!(
+            validator(None, deleted)
+                .validate_update_with(&stored, &config)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn already_invalid_user_can_still_be_updated() {
+        let mut config = Vars::default().user_values;
+        config.street = UserValueConfigValue::Required;
+        let missing = values(None);
+
+        let stored = validator(None, missing.as_ref());
+        assert!(
+            validator(None, missing.as_ref())
+                .validate_update_with(&stored, &config)
+                .is_ok()
+        );
+
+        let bad_tz = Some(UserValuesRequest {
+            tz: Some("Not/AZone".to_string()),
+            ..Default::default()
+        });
+        assert!(
+            validator(None, bad_tz.as_ref())
+                .validate_update_with(&stored, &config)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn incomplete_user_cannot_clear_another_required_value() {
+        let mut config = Vars::default().user_values;
+        config.street = UserValueConfigValue::Required;
+        let missing_street = values(None);
+
+        let stored = validator(None, missing_street.as_ref());
+        let cleared_given_name = UserValuesValidator {
+            given_name: None,
+            family_name: None,
+            preferred_username: None,
+            user_values: missing_street.as_ref(),
+        };
+        assert!(
+            cleared_given_name
+                .validate_update_with(&stored, &config)
+                .is_err()
+        );
+
+        let unrelated_edit = UserValuesValidator {
+            family_name: Some("B"),
+            ..validator(None, missing_street.as_ref())
+        };
+        assert!(
+            unrelated_edit
+                .validate_update_with(&stored, &config)
+                .is_ok()
+        );
     }
 }

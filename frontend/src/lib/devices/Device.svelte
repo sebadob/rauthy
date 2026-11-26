@@ -9,6 +9,7 @@
     import { PATTERN_CLIENT_NAME } from '#utils/patterns.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
     import { fetchDelete, fetchPut } from '#api/fetch.ts';
 
     let {
@@ -22,41 +23,49 @@
     let t = useI18n();
 
     let name = $state(untrack(() => device.name));
+    let error = $state('');
+    let busy = $state(false);
+    let showRevoke = $state(false);
+    let closeRevoke = $state<() => void>();
 
     async function onSaveName() {
-        let payload: DeviceRequest = {
+        if (busy || name === device.name) return;
+        error = '';
+        busy = true;
+        const submittedName = name;
+        const payload: DeviceRequest = {
             device_id: device.id,
-            name,
+            name: submittedName,
         };
         let res = await fetchPut(`/auth/v1/users/${userId}/devices`, payload);
         if (!res.error) {
-            // update the name in memory to blend out the save button
-            device.name = name;
+            device.name = submittedName;
         } else {
-            console.error(res.error);
+            error = res.error.message;
         }
+        busy = false;
     }
 
     async function onRevokeRefresh() {
+        error = '';
+        busy = true;
         let payload: DeviceRequest = {
             device_id: device.id,
         };
         let res = await fetchDelete(`/auth/v1/users/${userId}/devices`, payload);
         if (!res.error) {
             device.refresh_exp = undefined;
+            closeRevoke?.();
         } else {
-            console.error(res.error);
+            error = res.error.message;
         }
+        busy = false;
     }
 </script>
 
 <Expandable>
     {#snippet summary()}
-        <div class="device-header">
-            <div class="device-head font-mono">
-                {device.name}
-            </div>
-        </div>
+        <span class="device-name">{device.name}</span>
     {/snippet}
 
     {#snippet details()}
@@ -69,7 +78,6 @@
                 <Input
                     bind:value={name}
                     autocomplete="off"
-                    width="17rem"
                     label={t.account.deviceName}
                     placeholder={t.account.deviceName}
                     onEnter={onSaveName}
@@ -77,11 +85,7 @@
                     required
                 />
                 {#if name !== device.name}
-                    <div class="saveButton">
-                        <Button onclick={onSaveName}>
-                            {t.common.save}
-                        </Button>
-                    </div>
+                    <Button onclick={onSaveName} isLoading={busy}>{t.common.save}</Button>
                 {/if}
             </div>
 
@@ -99,10 +103,15 @@
                         {formatDateFromTs(device.refresh_exp)}
                     </div>
                     {#snippet button()}
-                        <Button ariaLabel={t.common.delete} invisible onclick={onRevokeRefresh}>
-                            <div title={t.common.delete}>
-                                <IconStop />
-                            </div>
+                        <Button
+                            ariaLabel={t.account.accessRenewDelete}
+                            level={-3}
+                            onclick={() => {
+                                error = '';
+                                showRevoke = true;
+                            }}
+                        >
+                            <IconStop width="1rem" />
                         </Button>
                     {/snippet}
                 </LabeledValue>
@@ -111,33 +120,63 @@
             <LabeledValue label={t.account.regIp}>
                 {device.peer_ip}
             </LabeledValue>
+            {#if error && !showRevoke}
+                <p class="err" role="alert">{error}</p>
+            {/if}
         </div>
     {/snippet}
 </Expandable>
 
+<Modal
+    bind:showModal={showRevoke}
+    bind:closeModal={closeRevoke}
+    ariaLabel={t.account.accessRenewDelete}
+    strict
+>
+    <h3>{t.account.accessRenewDelete}</h3>
+    <p>{device.name}</p>
+    {#if error}<p class="err" role="alert">{error}</p>{/if}
+    <div class="confirm-actions">
+        <Button level={2} onclick={() => closeRevoke?.()} isDisabled={busy}
+            >{t.common.cancel}</Button
+        >
+        <Button level={-1} onclick={onRevokeRefresh} isLoading={busy}>{t.common.delete}</Button>
+    </div>
+</Modal>
+
 <style>
     .device {
-        margin: 0 0.5rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+        align-items: start;
+        gap: 0.75rem 1rem;
     }
 
-    .device-header {
-        display: flex;
-        align-items: center;
+    .device :global(.admin-labeled-value) {
+        margin: 0;
     }
 
-    .device-head {
+    .device-name {
+        font-size: var(--ui-control-font-size);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .row,
+    .confirm-actions {
         display: flex;
-        align-items: center;
-        margin: 3px 10px;
+        align-items: end;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .row {
-        display: flex;
-        gap: 0.66rem;
-        flex-wrap: wrap;
+        --ui-field-margin: 0;
+        grid-column: 1 / -1;
     }
 
-    .saveButton {
-        margin-top: 0.5rem;
+    .confirm-actions {
+        justify-content: flex-end;
+        margin-top: var(--ui-space);
     }
 </style>

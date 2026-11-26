@@ -12,6 +12,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Add;
+use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::warn;
@@ -28,14 +29,14 @@ impl TryFrom<&String> for MagicLinkUsage {
     type Error = ErrorResponse;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
+        Self::from_str(value.as_str())
     }
 }
 
-impl TryFrom<&str> for MagicLinkUsage {
-    type Error = ErrorResponse;
+impl FromStr for MagicLinkUsage {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let (ty, v) = value.split_once('$').unwrap_or((value, ""));
         let slf = match ty {
             "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
@@ -136,9 +137,9 @@ impl MagicLink {
             usage: usage.to_string(),
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         if is_hiqlite() {
             DB::hql()
@@ -178,7 +179,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -205,13 +206,33 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         Ok(res)
     }
 
+    /// The newest password reset link of a user. A reset link leaves the backend only via mail,
+    /// so the id of a valid one exists nowhere else.
+    ///
+    /// Note: This is currently only used in integration tests.
+    #[cfg(debug_assertions)]
+    pub async fn find_pwd_reset_for_user(user_id: &str) -> Result<MagicLink, ErrorResponse> {
+        let sql = r"
+SELECT * FROM magic_links
+WHERE user_id = $1 AND usage LIKE 'password_reset%'
+ORDER BY exp DESC
+LIMIT 1";
+        let res = if is_hiqlite() {
+            DB::hql().query_as_one(sql, params!(user_id)).await?
+        } else {
+            DB::pg_query_one(sql, &[&user_id]).await?
+        };
+
+        Ok(res)
+    }
+
     pub async fn invalidate_all_email_change(user_id: &str) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM magic_links WHERE user_id = $1 AND usage LIKE 'email_change$%'";
         if is_hiqlite() {
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }

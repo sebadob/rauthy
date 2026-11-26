@@ -41,3 +41,46 @@ test('client contacts still accept the same values', () => {
         assert.ok(!contact.test(bad), bad);
     }
 });
+
+test('claim mapping paths and values match the backend rules', () => {
+    const path = asBrowser(/** @type {string} */ (patterns.PATTERN_JSON_PATH));
+    for (const ok of [
+        '$',
+        '$.roles',
+        '$.roles.*',
+        '$.groups[*]',
+        "$..['x-groups']",
+        '$.foo.bar[0]',
+        '$.foo..bar',
+    ]) {
+        assert.ok(path.test(ok), ok);
+    }
+    for (const bad of ['', 'x'.repeat(257), '$.groups\t', '$.groups\0']) {
+        assert.ok(!path.test(bad), bad);
+    }
+
+    const value = asBrowser(/** @type {string} */ (patterns.PATTERN_CLAIM_VALUE));
+    for (const ok of ['rauthy_admin', '^tgchat:', '~^admin$', '^^literal', 'a b']) {
+        assert.ok(value.test(ok), ok);
+    }
+    for (const bad of ['', 'x'.repeat(129), 'a\tb']) {
+        assert.ok(!value.test(bad), bad);
+    }
+
+    // A target lands in the comma-separated role / group CSV of a user, so a `,` is out. The role
+    // name rule has no space class and allows a `.`, the group rule has the space and no `.`.
+    const roleTarget = asBrowser(/** @type {string} */ (patterns.PATTERN_CLAIM_TARGET_ROLE));
+    const groupTarget = asBrowser(/** @type {string} */ (patterns.PATTERN_CLAIM_TARGET_GROUP));
+    for (const ok of ['tgchat:admin', 'cm_test_role']) {
+        assert.ok(roleTarget.test(ok), ok);
+        assert.ok(groupTarget.test(ok), ok);
+    }
+    assert.ok(roleTarget.test('dev.read'), 'the role rule allows a `.`');
+    assert.ok(groupTarget.test('My Group 1'), 'the group rule allows spaces');
+    for (const bad of ['', 'a,b', 'x'.repeat(65)]) {
+        assert.ok(!roleTarget.test(bad), bad);
+        assert.ok(!groupTarget.test(bad), bad);
+    }
+    assert.ok(!roleTarget.test('My Role'), 'the role rule has no space class');
+    assert.ok(!groupTarget.test('dev.read'), 'the group rule has no `.` class');
+});

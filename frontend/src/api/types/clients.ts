@@ -22,6 +22,11 @@ export interface NewClientRequest {
     redirect_uris: string[];
     /// Validation: PATTERN_CLIENT_URI
     post_logout_redirect_uris?: string[];
+    /// `local` or an https URL. A `[[consent.sources]]` entry for the requested resource takes
+    /// precedence, unset falls back to `local`.
+    /// Validation: `local` or PATTERN_CONSENT_URL, at most 1024 bytes; the backend applies the
+    /// `validate_consent_source_url` rules (https, no userinfo, no fragment, no `lang` query key)
+    consent?: string;
 }
 
 export interface ScimClientRequestResponse {
@@ -76,6 +81,13 @@ export interface UpdateClientRequest {
     /// Audiences always added to this client's tokens, independent of any request.
     /// Validation: PATTERN_URI
     default_aud?: string[];
+    /// `local` or an https URL. A `[[consent.sources]]` entry for the requested resource takes
+    /// precedence, unset falls back to `local`.
+    /// Validation: `local` or PATTERN_CONSENT_URL, at most 1024 bytes; the backend applies the
+    /// `validate_consent_source_url` rules (https, no userinfo, no fragment, no `lang` query key)
+    consent?: string;
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    actor_same_client?: boolean;
     scim?: ScimClientRequestResponse;
 }
 
@@ -109,6 +121,8 @@ export interface ClientResponse {
     claims_at_root: boolean;
     allowed_resources?: string[];
     default_aud?: string[];
+    consent?: string;
+    actor_same_client: boolean;
     scim?: ScimClientRequestResponse;
 }
 

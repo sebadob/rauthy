@@ -19,7 +19,10 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
+use rauthy_service::oidc::consent_grant::exists_consent_grant;
+use rauthy_service::token_set::{
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, TokenNonce, TokenSet,
+};
 use tracing::{debug, error, warn};
 use validator::Validate;
 
@@ -287,6 +290,12 @@ pub async fn post_fed_cm_token(
         ));
     }
 
+    // FedCM has no consent step: with `consent.enable`, the user must have consented to the
+    // client already, at an authorization request without a `resource`
+    exists_consent_grant(&user.id, &client.id, None)
+        .await
+        .map_err(consent_required_as_www_authenticate)?;
+
     // We are good - issue a TokenSet
     let ts = TokenSet::from_user(
         &user,
@@ -299,8 +308,11 @@ pub async fn post_fed_cm_token(
         None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,
+        // The refresh token is never handed out -> fail closed should that ever change.
+        ConsentCheck::Required,
     )
-    .await?;
+    .await
+    .map_err(consent_required_as_www_authenticate)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_CREDENTIALS)
@@ -343,6 +355,17 @@ fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
             ErrorResponseType::Internal,
             "The FedCM API is disabled on this instance",
         ))
+    }
+}
+
+fn consent_required_as_www_authenticate(err: ErrorResponse) -> ErrorResponse {
+    if err.error == ErrorResponseType::ConsentRequired {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("consent-required".to_string()),
+            err.message,
+        )
+    } else {
+        err
     }
 }
 
@@ -426,16 +449,13 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
             (FedCMLoginStatus::LoggedOut, String::default())
         }
         Some(sid) => {
-            let session = match Session::find(sid).await {
-                Ok(s) => s,
-                Err(_) => {
-                    debug!("FedCM session not found -> user_id is logged-out",);
-                    return (FedCMLoginStatus::LoggedOut, String::default());
-                }
+            let Ok(session) = Session::find(sid).await else {
+                debug!("FedCM session not found -> user_id is logged-out",);
+                return (FedCMLoginStatus::LoggedOut, String::default());
             };
 
             if session.is_valid(
-                RauthyConfig::get().vars.fedcm.session_timeout as i64,
+                i64::from(RauthyConfig::get().vars.fedcm.session_timeout),
                 real_ip_from_req(req).ok(),
                 req.path(),
             ) {
@@ -453,6 +473,33 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
                     session.user_id.unwrap_or_default(),
                 )
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::ResponseError;
+
+    fn assert_consent_required(err: &ErrorResponse) {
+        assert_eq!(
+            err.error,
+            ErrorResponseType::WWWAuthenticate("consent-required".to_string())
+        );
+        assert_eq!(err.status_code(), 401);
+    }
+
+    #[test]
+    fn test_consent_required_as_www_authenticate() {
+        assert_consent_required(&consent_required_as_www_authenticate(ErrorResponse::new(
+            ErrorResponseType::ConsentRequired,
+            "no consent grant for this client",
+        )));
+        for typ in [ErrorResponseType::Database, ErrorResponseType::InvalidGrant] {
+            let err =
+                consent_required_as_www_authenticate(ErrorResponse::new(typ.clone(), "other"));
+            assert_eq!(err.error, typ);
         }
     }
 }

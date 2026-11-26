@@ -11,14 +11,17 @@ pub struct I18nEmailConfirmChange<'a> {
 impl I18nEmailConfirmChange<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -28,10 +31,18 @@ impl I18nEmailConfirmChange<'_> {
 }
 
 impl I18nEmailConfirmChange<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Změna e-mailu potvrzena",
+            msg: "Vaše e-mailová adresa byla úspěšně změněna na:",
+            msg_from_admin: "Změnu provedl správce.",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel bestätigt für",
-            msg: "Ihre E-Mail Adresse wurde erfolgreich geändert zu:",
+            msg: "Die E-Mail Adresse wurde erfolgreich geändert zu:",
             msg_from_admin: "Diese Änderung wurde durch einen Administrator durchgeführt.",
         }
     }
@@ -76,11 +87,27 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
+    fn build_pl() -> Self {
+        Self {
+            subject: "Zmiana adresu e-mail została potwierdzona dla",
+            msg: "Twój adres e-mail został pomyślnie zmieniony na:",
+            msg_from_admin: "Ta czynność została wykonana przez administratora.",
+        }
+    }
+
     fn build_pt() -> Self {
         Self {
             subject: "Alteração de e-mail confirmada para",
             msg: "O seu endereço de e-mail foi alterado com sucesso para:",
             msg_from_admin: "Esta ação foi realizada por um administrador.",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "Cambio di indirizzo email confermato per",
+            msg: "Il tuo indirizzo email è stato cambiato in:",
+            msg_from_admin: "La modifica è stata effettuata da un amministratore.",
         }
     }
 

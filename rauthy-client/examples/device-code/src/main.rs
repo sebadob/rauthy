@@ -2,7 +2,7 @@ use rauthy_client::device_code::DeviceCode;
 use rauthy_client::rauthy_error::RauthyError;
 use rauthy_client::token_set::OidcTokenSet;
 use rauthy_client::{DangerAcceptInvalidCerts, RauthyHttpsOnly};
-use tracing::{subscriber, Level};
+use tracing::{Level, subscriber};
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
@@ -64,7 +64,7 @@ async fn main() -> Result<(), RauthyError> {
     let _id_token = OidcTokenSet::id_token().await?;
 
     println!("Sleeping now to show token refresh.");
-    tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
+    tokio::time::sleep(tokio::time::Duration::from_mins(10)).await;
 
     Ok(())
 }

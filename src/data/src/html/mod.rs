@@ -1,13 +1,14 @@
 use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
+use crate::entity::clients::Client;
 use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigArgon2Html, AdminConfigBackupsHtml, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
-    AdminConfigPolicyHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminKVHtml, AdminPAMHtml,
-    AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml,
-    HtmlTemplate, IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml,
-    UserPasswordResetHtml, UserRegisterHtml,
+    AdminConfigPolicyHtml, AdminConfigToSHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml,
+    AdminKVHtml, AdminPAMHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml,
+    DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml, ProviderCallbackHtml,
+    ProvidersHtml, UserPasswordResetHtml, UserRegisterHtml,
 };
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
@@ -48,6 +49,7 @@ pub enum HtmlCached {
     ConfigEncryption,
     ConfigJwks,
     ConfigPolicy,
+    ConfigToS,
     Device,
     Docs,
     FedCM,
@@ -82,6 +84,7 @@ impl HtmlCached {
             Self::ConfigEncryption => "cfg_encryption",
             Self::ConfigJwks => "cfg_jwks",
             Self::ConfigPolicy => "cfg_policy",
+            Self::ConfigToS => "cfg_tos",
             Self::Device => "device",
             Self::Docs => "docs",
             Self::FedCM => "fed_cm",
@@ -93,7 +96,7 @@ impl HtmlCached {
     }
 
     #[inline]
-    fn cache_key(&self, lang: &Language, encoding: &str) -> String {
+    fn cache_key(&self, lang: Language, encoding: &str) -> String {
         format!("{}_{}_{encoding}", self.as_str(), lang.as_str())
     }
 
@@ -123,7 +126,7 @@ impl HtmlCached {
         debug!(language = ?lang);
         let cache_key = if with_cache {
             if let Some(bytes) = DB::hql()
-                .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
+                .get_bytes(Cache::Html, self.cache_key(lang, encoding))
                 .await?
             {
                 return Ok(HttpResponse::Ok()
@@ -132,7 +135,7 @@ impl HtmlCached {
                     .insert_header(HEADER_HTML)
                     .body(bytes));
             }
-            self.cache_key(&lang, encoding)
+            self.cache_key(lang, encoding)
         } else {
             String::default()
         };
@@ -172,6 +175,7 @@ impl HtmlCached {
             Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
             Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
             Self::ConfigPolicy => AdminConfigPolicyHtml::build(&lang, theme_ts),
+            Self::ConfigToS => AdminConfigToSHtml::build(&lang, theme_ts),
             Self::Device => DeviceHtml::build(&lang, theme_ts),
             Self::Docs => AdminDocsHtml::build(&lang, theme_ts),
             Self::FedCM => FedCMHtml::build(&lang, theme_ts),
@@ -183,7 +187,16 @@ impl HtmlCached {
             }
             Self::UserRegistration => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
-                UserRegisterHtml::build(&lang, theme_ts, HtmlTemplate::AuthProviders(providers))
+                // named by the consent block of a registration with a login
+                let client_name = Client::find("rauthy".to_string()).await?.name;
+                let acc_init = HtmlTemplate::reg_acc_init_immediate().await?;
+                UserRegisterHtml::build(
+                    &lang,
+                    theme_ts,
+                    acc_init,
+                    HtmlTemplate::AuthProviders(providers),
+                    client_name.unwrap_or_default(),
+                )
             }
         };
 

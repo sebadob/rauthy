@@ -1,5 +1,5 @@
 use crate::oidc;
-use crate::oidc::authorize::AuthorizeData;
+use crate::oidc::authorize::{AuthorizeData, FirstFactor};
 use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
@@ -10,11 +10,11 @@ use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, NewFederatedUserCreated,
-    ProviderMfaLogin,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::str::FromStr;
 use tracing::error;
 
 /// The callback is single-use: it is atomically taken out of the cache before anything is
@@ -66,7 +66,7 @@ pub async fn login_finish<'a>(
     // extract a possibly existing provider link cookie for
     // linking an existing account to a provider
     let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
-        .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
+        .and_then(|value| AuthProviderLinkCookie::from_str(value.as_str()).ok());
 
     // deserialize payload and validate the information
     let (user, provider_mfa_login, is_new_user) = if provider.issuer == PROVIDER_ATPROTO {
@@ -92,16 +92,13 @@ pub async fn login_finish<'a>(
 
     // From here on, we deal with a normal login instead of just an account federation.
 
-    let require_webauthn = user.has_webauthn_enabled();
-    let require_otp = user.has_otp_enabled().await;
-    session
-        .set_mfa(provider_mfa_login == ProviderMfaLogin::Yes || require_webauthn || require_otp)
-        .await?;
+    let mfa_methods = user.allowed_mfa_methods().await;
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;
 
     let auth_step = oidc::authorize::finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -113,15 +110,27 @@ pub async fn login_finish<'a>(
             code_challenge: slf.req_code_challenge,
             code_challenge_method: slf.req_code_challenge_method,
             resource: slf.req_resource,
+            consent: slf.req_consent,
+            first_factor: FirstFactor::Proven,
             header_origin,
-            require_webauthn,
-            require_otp,
+            mfa_methods,
             is_forward_auth: slf.is_forward_auth,
         },
         None,
         Some(provider_mfa_login),
     )
-    .await?;
+    .await
+    .map_err(|err| {
+        // the spent callback cannot be retried
+        if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) {
+            ErrorResponse::new(
+                ErrorResponseType::Connection,
+                "The consent content is unavailable, please start the login again",
+            )
+        } else {
+            err
+        }
+    })?;
 
     // callback data deletion cookie
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);

@@ -2,13 +2,14 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::ProviderMfaLogin;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
+use crate::entity::consent_sources::ConsentSource;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::refresh_tokens::PgDeletedJtis;
 use crate::entity::scopes::Scope;
 use crate::entity::user_consents::SQL_CONSENT_DELETE_BY_CLIENT;
 use crate::entity::users::User;
 use crate::http_client::fetch_bounded;
-use crate::rauthy_config::{RauthyConfig, VarsEphemeralClients};
+use crate::rauthy_config::{RauthyConfig, VarsConsent, VarsEphemeralClients};
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -38,30 +39,30 @@ use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
-use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
 
-pub const SQL_INSERT: &str = r#"
+pub const SQL_INSERT: &str = r"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
-default_aud, created_micros)
+default_aud, created_micros, consent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24, $25)"#;
+$18, $19, $20, $21, $22, $23, $24, $25, $26)";
 
-static SQL_SAVE: &str = r#"
+static SQL_SAVE: &str = r"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
-    claims_at_root = $23, allowed_resources = $24, default_aud = $25
-WHERE id = $26"#;
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26,
+    actor_same_client = $27
+WHERE id = $28";
 
 /**
 # OIDC Client
@@ -116,6 +117,14 @@ pub struct Client {
     /// Micros, because a client may be deleted and recreated within the same second.
     /// `None` for clients created before this field existed.
     pub created_micros: Option<i64>,
+    /// Consent source: `local` or an `https://` URL, at most 1024 bytes. A
+    /// `[[consent.sources]]` entry for the requested `resource` takes precedence over this
+    /// value. `None` or an invalid value falls back to `local`, see [`Client::consent_source`].
+    #[serde(default)]
+    pub consent: Option<String>,
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    #[serde(default)]
+    pub actor_same_client: bool,
 }
 
 impl Debug for Client {
@@ -128,7 +137,7 @@ impl Debug for Client {
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
         claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
-        created_micros: {:?} }}",
+        created_micros: {:?}, consent: {:?}, actor_same_client: {} }}",
             self.id,
             self.name,
             self.enabled,
@@ -154,6 +163,8 @@ impl Debug for Client {
             self.allowed_resources,
             self.default_aud,
             self.created_micros,
+            self.consent,
+            self.actor_same_client,
         )
     }
 }
@@ -207,7 +218,8 @@ impl Client {
                         &client.restrict_group_prefix,
                         &client.allowed_resources,
                         &client.default_aud,
-                        client.created_micros
+                        client.created_micros,
+                        &client.consent
                     ),
                 )
                 .await?;
@@ -240,6 +252,7 @@ impl Client {
                     &client.allowed_resources,
                     &client.default_aud,
                     &client.created_micros,
+                    &client.consent,
                 ],
             )
             .await?;
@@ -264,10 +277,10 @@ impl Client {
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        let sql_2 = r#"
+        let sql_2 = r"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
         if is_hiqlite() {
             DB::hql()
@@ -299,7 +312,8 @@ VALUES ($1, $2, $3, $4)"#;
                             &client.restrict_group_prefix,
                             &client.allowed_resources,
                             &client.default_aud,
-                            client.created_micros
+                            client.created_micros,
+                            &client.consent
                         ),
                     ),
                     (
@@ -346,6 +360,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.allowed_resources,
                     &client.default_aud,
                     &client.created_micros,
+                    &client.consent,
                 ],
             )
             .await?;
@@ -362,7 +377,7 @@ VALUES ($1, $2, $3, $4)"#;
             .await?;
 
             txn.commit().await?;
-        };
+        }
         Self::delete_cache_for(&client.id).await?;
 
         let client_dyn = ClientDyn {
@@ -426,26 +441,30 @@ VALUES ($1, $2, $3, $4)"#;
             txn.commit().await?;
         }
 
-        self.delete_cache().await?;
         self.delete_cached_secrets().await?;
         // `clients_dyn` cascades in the database
-        if self.is_dynamic() {
-            ClientDyn::delete_from_cache(&self.id).await?;
-        }
+        let dyn_client = if self.is_dynamic() {
+            Some((Cache::App, Some(ClientDyn::get_cache_entry(&self.id))))
+        } else {
+            None
+        };
+        DB::cache_delete_delayed(
+            [(Cache::App, Some(Self::cache_idx(&self.id)))]
+                .into_iter()
+                .chain(dyn_client),
+        )
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete_cache(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx(&self.id))
-            .await?;
-
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(&self.id)))]).await?;
         Ok(())
     }
 
     pub async fn delete_cache_for(id: &str) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(id)))]).await?;
         Ok(())
     }
 
@@ -453,7 +472,7 @@ VALUES ($1, $2, $3, $4)"#;
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
-        };
+        }
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
@@ -533,7 +552,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Self::find(id).await;
         }
 
-        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, &id).await? {
+        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, id.clone()).await? {
             return Ok(slf);
         }
 
@@ -620,6 +639,8 @@ VALUES ($1, $2, $3, $4)"#;
                 self.claims_at_root,
                 allowed_resources,
                 default_aud,
+                &self.consent,
+                self.actor_same_client,
                 &self.id
             ),
         ));
@@ -671,6 +692,8 @@ VALUES ($1, $2, $3, $4)"#;
                 &self.claims_at_root,
                 &allowed_resources,
                 &default_aud,
+                &self.consent,
+                &self.actor_same_client,
                 &self.id,
             ],
         )
@@ -723,6 +746,8 @@ VALUES ($1, $2, $3, $4)"#;
                         self.claims_at_root,
                         allowed_resources,
                         default_aud,
+                        &self.consent,
+                        self.actor_same_client,
                         self.id.clone()
                     ),
                 )
@@ -756,6 +781,8 @@ VALUES ($1, $2, $3, $4)"#;
                     &self.claims_at_root,
                     &allowed_resources,
                     &default_aud,
+                    &self.consent,
+                    &self.actor_same_client,
                     &self.id,
                 ],
             )
@@ -777,10 +804,10 @@ VALUES ($1, $2, $3, $4)"#;
         new_kid: String,
         old_kid: &str,
     ) -> Result<bool, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 UPDATE clients
 SET secret = $1, secret_kid = $2
-WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
+WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -832,10 +859,10 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             client_dyn.registration_token = registration_token;
         }
 
-        let sql = r#"
+        let sql = r"
 UPDATE clients_dyn
 SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
-WHERE id = $4"#;
+WHERE id = $4";
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -900,7 +927,7 @@ WHERE id = $4"#;
         if let Some(hours) = cache_current_hours
             && let Some(plain) = self.get_secret_cleartext()?
         {
-            let ttl = hours as i64;
+            let ttl = i64::from(hours);
             // Remember the secret under the client id as well, so that `delete()` can remove it.
             // Otherwise, it would authenticate a client recreated with the same id.
             let idx = Self::cached_secrets_idx(&self.id);
@@ -1130,6 +1157,53 @@ impl Client {
         }
     }
 
+    /// Validates a client `consent` value from the API. `None` means unset.
+    pub fn validate_consent(consent: Option<String>) -> Result<Option<String>, ErrorResponse> {
+        let Some(consent) = consent else {
+            return Ok(None);
+        };
+        ConsentSource::parse(&consent).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("invalid `consent`: {err}"),
+            )
+        })?;
+        Ok(Some(consent))
+    }
+
+    /// The consent source for a login to this client with the optional RFC 8707 `resource`.
+    /// `None` only without `consent.enable`. Precedence: `[[consent.sources]]` entry for the
+    /// `resource`, the client's own `consent`, `Local`.
+    pub fn consent_source(&self, resource: Option<&str>) -> Option<ConsentSource> {
+        self.consent_source_with(resource, &RauthyConfig::get().vars.consent)
+    }
+
+    pub(crate) fn consent_source_with(
+        &self,
+        resource: Option<&str>,
+        vars: &VarsConsent,
+    ) -> Option<ConsentSource> {
+        if !vars.enable {
+            return None;
+        }
+
+        if let Some(entry) = resource.and_then(|r| vars.source_for(r)) {
+            return Some(entry.source.clone());
+        }
+
+        match self.consent.as_deref().map(ConsentSource::parse) {
+            Some(Ok(source)) => Some(source),
+            Some(Err(err)) => {
+                warn!(
+                    "Invalid `consent` for client {}, using `local`: {err}",
+                    self.id
+                );
+                Some(ConsentSource::Local)
+            }
+            None => Some(ConsentSource::Local),
+        }
+    }
+
     #[inline]
     pub fn get_challenges(&self) -> Option<Vec<String>> {
         self.challenge.as_ref()?;
@@ -1169,6 +1243,14 @@ impl Client {
         }
     }
 
+    /// The `default_scopes`, trimmed, without empty ones.
+    pub fn default_scope_names(&self) -> impl Iterator<Item = &str> {
+        self.default_scopes
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+    }
+
     #[inline]
     pub fn get_default_scopes(&self) -> Vec<String> {
         let mut res = Vec::new();
@@ -1189,9 +1271,10 @@ impl Client {
     pub fn get_flows(&self) -> Vec<GrantType> {
         self.flows_enabled
             .split(',')
-            .filter_map(|f| match GrantType::from_str(f.trim()) {
-                Ok(flow) => Some(flow),
-                Err(_) => {
+            .filter_map(|f| {
+                if let Ok(flow) = GrantType::from_str(f.trim()) {
+                    Some(flow)
+                } else {
                     warn!(
                         client_id = self.id,
                         flow = f,
@@ -1281,12 +1364,9 @@ impl Client {
     /// Sanitizes the requested scopes on the authorization endpoint and matches them to the
     /// allowed scopes for this client.
     #[inline]
-    pub fn sanitize_login_scopes(
-        &self,
-        scopes: &Option<Vec<String>>,
-    ) -> Result<Vec<String>, ErrorResponse> {
+    pub fn sanitize_login_scopes(&self, scopes: Option<&[String]>) -> Vec<String> {
         let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
-        Ok(self.sanitize_login_scopes_with(scopes.as_deref(), matrix_enabled))
+        self.sanitize_login_scopes_with(scopes, matrix_enabled)
     }
 
     /// Config-free core of [`Self::sanitize_login_scopes`]: default scopes first, then the
@@ -1298,10 +1378,8 @@ impl Client {
     ) -> Vec<String> {
         // Always add the configured default scopes
         let mut res = self
-            .default_scopes
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
+            .default_scope_names()
+            .map(String::from)
             .collect::<Vec<_>>();
 
         let Some(scopes) = scopes else {
@@ -1377,11 +1455,10 @@ impl Client {
         req: &HttpRequest,
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
         let pub_url_with_scheme = RauthyConfig::get().pub_url_with_scheme.as_str();
-        let additional_allowed_origin_schemes = RauthyConfig::get()
+        let additional_allowed_origin_schemes = &*RauthyConfig::get()
             .vars
             .server
-            .additional_allowed_origin_schemes
-            .deref();
+            .additional_allowed_origin_schemes;
         self.get_validated_origin_header_with(
             req,
             pub_url_with_scheme,
@@ -1395,15 +1472,10 @@ impl Client {
         pub_url_with_scheme: &str,
         additional_allowed_origin_schemes: &[String],
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
-        let origin = match extract_external_origin(
-            req,
-            pub_url_with_scheme,
-            additional_allowed_origin_schemes,
-        )? {
-            Some(o) => o,
-            None => {
-                return Ok(None);
-            }
+        let Some(origin) =
+            extract_external_origin(req, pub_url_with_scheme, additional_allowed_origin_schemes)?
+        else {
+            return Ok(None);
         };
 
         let err_msg = || {
@@ -1506,7 +1578,7 @@ impl Client {
                 write!(path_query, "{}?{}", url.path(), q)?;
             } else {
                 write!(path_query, "{}", url.path())?;
-            };
+            }
 
             if is_wildcard_prefix_match(&path_query, &req_path_query)
                 || path_query == req_path_query
@@ -1782,10 +1854,10 @@ pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens_devices
 WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
             true,
         ),
     ];
@@ -1811,34 +1883,34 @@ pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, boo
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
         (
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
 WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens_devices
     WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-)"#,
+)",
             true,
         ),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens_devices
-WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#,
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)",
             true,
         ),
     ];
     if drop_legacy {
         stmts.push((
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#,
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)",
             false,
         ));
         stmts.push(("DELETE FROM refresh_tokens WHERE client_id IS NULL", false));
     }
     stmts.push((
-        r#"
+        r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#,
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)",
         true,
     ));
     stmts.push(("DELETE FROM refresh_tokens WHERE client_id = $1", true));
@@ -1848,7 +1920,7 @@ WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"
 
 /// Validates a dynamic-client redirect URI.
 /// Rejects backchannel callbacks for dynamic clients.
-fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+fn validate_no_backchannel_logout_uri(opt: Option<&str>) -> Result<(), ErrorResponse> {
     if opt.is_some() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -2017,6 +2089,8 @@ impl Client {
             claims_at_root: self.claims_at_root,
             allowed_resources,
             default_aud,
+            consent: self.consent,
+            actor_same_client: self.actor_same_client,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -2108,6 +2182,8 @@ impl Client {
             default_aud: None,
             // never stored, so there is no row that could be deleted and recreated
             created_micros: None,
+            consent: None,
+            actor_same_client: false,
         })
     }
 }
@@ -2152,6 +2228,8 @@ impl Default for Client {
             allowed_resources: None,
             default_aud: None,
             created_micros: None,
+            consent: None,
+            actor_same_client: false,
         }
     }
 }
@@ -2186,6 +2264,8 @@ impl TryFrom<NewClientRequest> for Client {
                 None
             };
 
+        let consent = Self::validate_consent(client.consent)?;
+
         Ok(Self {
             id: client.id,
             secret: client.secret,
@@ -2193,6 +2273,7 @@ impl TryFrom<NewClientRequest> for Client {
             confidential: client.confidential,
             redirect_uris,
             post_logout_redirect_uris,
+            consent,
             ..Default::default()
         })
     }
@@ -2224,6 +2305,8 @@ impl Client {
         self.allowed_resources = current.allowed_resources;
         self.default_aud = current.default_aud;
         self.created_micros = current.created_micros;
+        self.consent = current.consent;
+        self.actor_same_client = current.actor_same_client;
     }
 
     /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
@@ -2235,7 +2318,7 @@ impl Client {
         let added = requested
             .iter()
             .filter(|g| !current.contains(g))
-            .map(|g| g.as_str())
+            .map(GrantType::as_str)
             .collect::<Vec<_>>();
         if added.is_empty() {
             Ok(())
@@ -2309,7 +2392,7 @@ impl Client {
             .join(",");
 
         // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
-        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+        validate_no_backchannel_logout_uri(req.backchannel_logout_uri.as_deref())?;
 
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
         for uri in req.redirect_uris {
@@ -2448,25 +2531,19 @@ pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::rauthy_config::VarsConsentSource;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
 
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
         // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
-        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(validate_no_backchannel_logout_uri(None).is_ok());
         assert!(
-            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
-                .is_err()
+            validate_no_backchannel_logout_uri(Some("https://app.example.com/logout")).is_err()
         );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
-                .is_err()
-        );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
-                .is_err()
-        );
+        assert!(validate_no_backchannel_logout_uri(Some("https://169.254.169.254/")).is_err());
+        assert!(validate_no_backchannel_logout_uri(Some("http://127.0.0.1:8080/")).is_err());
     }
 
     #[test]
@@ -2519,7 +2596,7 @@ pub(crate) mod tests {
         for drop_legacy in [false, true] {
             let mut conn = sqlite_full_schema();
             conn.execute_batch(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -2546,7 +2623,7 @@ VALUES ('rtd_c1', 'd1', 'u1', 1, 2, 'j_d1'),
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
        ('j_d1', 'u1', 2), ('j_d2', 'u1', 2);
-"#,
+",
             )
             .unwrap();
 
@@ -2600,6 +2677,123 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
                 revoked,
                 "drop_legacy: {drop_legacy}"
             );
+        }
+    }
+
+    fn consent_vars(enable: bool) -> VarsConsent {
+        VarsConsent {
+            enable,
+            content_cache_ttl: std::time::Duration::from_hours(1),
+            sources: [
+                VarsConsentSource::new(
+                    "https://api.example.com".to_string(),
+                    "https://consent.example.com/api",
+                    "API".to_string(),
+                )
+                .unwrap(),
+                VarsConsentSource::new(
+                    "https://local.example.com".to_string(),
+                    "local",
+                    "Local".to_string(),
+                )
+                .unwrap(),
+            ]
+            .into_iter()
+            .map(|s| (s.resource.clone(), s))
+            .collect(),
+        }
+    }
+
+    #[test]
+    fn consent_source_precedence() {
+        let remote = |url: &str| ConsentSource::Remote(reqwest::Url::parse(url).unwrap());
+        let client = Client {
+            id: "client".to_string(),
+            consent: Some("https://consent.example.com/client".to_string()),
+            ..Default::default()
+        };
+        let vars = consent_vars(true);
+
+        // registry for the resource
+        assert_eq!(
+            client.consent_source_with(Some("https://api.example.com"), &vars),
+            Some(remote("https://consent.example.com/api"))
+        );
+        assert_eq!(
+            client.consent_source_with(Some("https://local.example.com"), &vars),
+            Some(ConsentSource::Local)
+        );
+        // client column
+        assert_eq!(
+            client.consent_source_with(Some("https://other.example.com"), &vars),
+            Some(remote("https://consent.example.com/client"))
+        );
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(remote("https://consent.example.com/client"))
+        );
+        // default
+        let client = Client::default();
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(ConsentSource::Local)
+        );
+        let client = Client {
+            consent: Some("local".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            client.consent_source_with(Some("https://other.example.com"), &vars),
+            Some(ConsentSource::Local)
+        );
+        // an invalid stored value falls back to `local`
+        let client = Client {
+            consent: Some("http://consent.example.com".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(ConsentSource::Local)
+        );
+
+        // disabled
+        let vars = consent_vars(false);
+        assert_eq!(
+            client.consent_source_with(Some("https://api.example.com"), &vars),
+            None
+        );
+        assert_eq!(Client::default().consent_source_with(None, &vars), None);
+    }
+
+    #[test]
+    fn validate_client_consent() {
+        assert_eq!(Client::validate_consent(None).unwrap(), None);
+        Client::validate_consent(Some(String::new())).unwrap_err();
+        assert_eq!(
+            Client::validate_consent(Some("local".to_string())).unwrap(),
+            Some("local".to_string())
+        );
+        assert_eq!(
+            Client::validate_consent(Some("https://consent.example.com".to_string())).unwrap(),
+            Some("https://consent.example.com".to_string())
+        );
+        let err =
+            Client::validate_consent(Some("http://consent.example.com".to_string())).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        let err = Client::validate_consent(Some("https://consent.example.com?lang=en".to_string()))
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        Client::validate_consent(Some("Local".to_string())).unwrap_err();
+
+        // POST and PUT /clients validate `consent` only here: the error must not echo the URL
+        for v in [
+            "https://user:secret@consent.example.com/x",
+            "https://secret@consent.example.com/x",
+            "https://consent.example.com/x?token=secret&lang=en",
+        ] {
+            let err = Client::validate_consent(Some(v.to_string())).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest);
+            assert!(!format!("{err:?}").contains("secret"), "{v}: {err:?}");
         }
     }
 
@@ -2794,6 +2988,8 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             allowed_resources: None,
             default_aud: None,
             created_micros: None,
+            consent: None,
+            actor_same_client: false,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -3044,9 +3240,9 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             enable_solid_aud: false,
             force_mfa: false,
             allowed_flows: vec!["authorization_code".into()],
-            allowed_scopes: allowed.iter().map(|s| Cow::Owned(s.to_string())).collect(),
-            default_scopes: Some(default.iter().map(|s| Cow::Owned(s.to_string())).collect()),
-            cache_lifetime: std::time::Duration::from_secs(3600),
+            allowed_scopes: allowed.iter().map(|s| Cow::from(s.to_string())).collect(),
+            default_scopes: Some(default.iter().map(|s| Cow::from(s.to_string())).collect()),
+            cache_lifetime: std::time::Duration::from_hours(1),
             danger_allow_unvalidated_resource: false,
             ignore_unknown_auth_flows: false,
             allowed_resources: Vec::default(),
@@ -3056,7 +3252,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
     }
 
     fn strs(v: &[&str]) -> Vec<String> {
-        v.iter().map(|s| s.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     #[test]
@@ -3117,6 +3313,29 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         };
         let res = client.sanitize_login_scopes_with(Some(&strs(&["email", "email"])), false);
         assert_eq!(res, strs(&["openid", "email"]));
+    }
+
+    #[test]
+    fn test_default_scope_names_skip_blank_entries() {
+        for (default_scopes, want) in [
+            ("", strs(&[])),
+            (" , ", strs(&[])),
+            (" openid , ,email", strs(&["openid", "email"])),
+            ("openid, ,email", strs(&["openid", "email"])),
+        ] {
+            let client = Client {
+                scopes: "openid,email".to_string(),
+                default_scopes: default_scopes.to_string(),
+                ..Default::default()
+            };
+            let names = client.default_scope_names().map(String::from);
+            assert_eq!(names.collect::<Vec<_>>(), want, "{default_scopes:?}");
+            assert_eq!(
+                client.sanitize_login_scopes_with(None, false),
+                want,
+                "{default_scopes:?}"
+            );
+        }
     }
 
     #[test]
@@ -3258,6 +3477,8 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             allowed_resources: None,
             default_aud: None,
             created_micros: None,
+            consent: None,
+            actor_same_client: false,
         }
     }
 
@@ -3432,6 +3653,8 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             allowed_resources: Some("https://api.example.com".to_string()),
             default_aud: Some("https://aud.example.com".to_string()),
             created_micros: Some(1),
+            consent: Some("https://consent.example.com/api".to_string()),
+            actor_same_client: true,
         }
     }
 
@@ -3486,6 +3709,8 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         assert_eq!(new_client.allowed_resources, current.allowed_resources);
         assert_eq!(new_client.default_aud, current.default_aud);
         assert_eq!(new_client.created_micros, current.created_micros);
+        assert_eq!(new_client.consent, current.consent);
+        assert_eq!(new_client.actor_same_client, current.actor_same_client);
         // still public -> the admin's PKCE setting is kept
         assert_eq!(new_client.challenge, current.challenge);
 

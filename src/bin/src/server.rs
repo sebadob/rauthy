@@ -19,6 +19,7 @@ use rauthy_data::events::health_watch::watch_health;
 use rauthy_data::events::listener::EventListener;
 use rauthy_data::events::notifier::EventNotifier;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_data::shutdown;
 use rauthy_handlers::openapi::ApiDoc;
 use rauthy_handlers::swagger_ui::{OPENAPI_CONFIG, OPENAPI_JSON};
 use rauthy_handlers::{
@@ -35,25 +36,32 @@ use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
-use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
+
+/// The ASCII art startup banner. It goes to stdout, and into the app log file when
+/// `logging.log_file` is set.
+const BANNER: &str = r#"
+                                                  88
+                                            ,d    88
+                                            88    88
+        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
+        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
+        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
+        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
+        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
+                                                                  d8'
+                                                                 d8'
+            "#;
 
 pub async fn run(
     config_file: String,
     secrets_file: String,
     test_mode: bool,
 ) -> Result<(), Box<dyn Error>> {
-    #[cfg(debug_assertions)]
-    if !RAUTHY_VERSION.starts_with("0.37.") {
-        todo!("Remove the env set var for temporary hiqlite migrations");
-    }
-    // We will set this var automatically. Rauthy does not depend on the cache being persistent.
-    // Only for other people using Hiqlite, this must be an opt-in step, just in case.
-    unsafe { env::set_var("HQL_CACHE_WAL_AUTO_MIGRATE", "true") };
-
     let (tx_email, rx_email) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
@@ -70,27 +78,19 @@ pub async fn run(
     rauthy_config.init_static();
     init_static_vars::trigger().await;
 
+    let log_level = setup_logging();
+
     if !logging::is_log_fmt_json() {
-        println!(
-            r#"
-                                                  88
-                                            ,d    88
-                                            88    88
-        8b,dPPYba, ,adPPYYba, 88       88 MM88MMM 88,dPPYba,  8b       d8
-        88P'   "Y8 ""     `Y8 88       88   88    88P'    "8a `8b     d8'
-        88         ,adPPPPP88 88       88   88    88       88  `8b   d8'
-        88         88,    ,88 "8a,   ,a88   88,   88       88   `8b,d8'
-        88         `"8bbdP"Y8  `"YbbdP'Y8   "Y888 88       88     Y88'
-                                                                  d8'
-                                                                 d8'
-            "#
-        );
-        // On some terminals, the banner gets mixed up
-        // with the first other logs without this short sleep.
-        time::sleep(Duration::from_micros(10)).await;
+        if RauthyConfig::get().vars.logging.log_file.is_some() {
+            info!("{BANNER}");
+        } else {
+            println!("{BANNER}");
+            // On some terminals, the banner gets mixed up
+            // with the first other logs without this short sleep.
+            time::sleep(Duration::from_micros(10)).await;
+        }
     }
 
-    let log_level = setup_logging();
     info!("Starting Rauthy v{RAUTHY_VERSION} ({})", *BUILD_TIME);
     info!("Log Level set to '{log_level}'");
     if test_mode {
@@ -105,9 +105,11 @@ pub async fn run(
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
 
-    DB::init(node_config)
-        .await
-        .expect("Error starting the database / cache layer");
+    // After `DB::init()`, any fatal error must go through `shutdown::fatal()` or be returned to
+    // `main()`, which shuts down the database / cache layer cleanly before the process exits.
+    if let Err(err) = DB::init(node_config).await {
+        shutdown::fatal(format!("Error starting the database / cache layer: {err}")).await;
+    }
 
     debug!("Starting E-Mail handler");
     tokio::spawn(mailer::sender(rx_email));
@@ -126,10 +128,15 @@ pub async fn run(
     }
 
     debug!("Applying database migrations");
-    let previous_db_version = DB::migrate().await.expect("Database migration error");
+    let previous_db_version = match DB::migrate().await {
+        Ok(version) => version,
+        Err(err) => shutdown::fatal(format!("Database migration error: {err}")).await,
+    };
 
     debug!("Starting Events handler");
-    EventNotifier::init_notifiers(tx_email).await.unwrap();
+    if let Err(err) = EventNotifier::init_notifiers(tx_email).await {
+        shutdown::fatal(format!("Cannot initialize the event notifiers: {err}")).await;
+    }
     tokio::spawn(EventListener::listen(
         tx_events_router,
         rx_events_router,
@@ -147,20 +154,23 @@ pub async fn run(
         time::sleep(Duration::from_secs(1)).await;
     }
 
-    UserPicture::test_config().await.unwrap();
+    if let Err(err) = UserPicture::test_config().await {
+        shutdown::fatal(format!("Invalid user picture configuration: {err}")).await;
+    }
 
     // We need to clear some caches
     DB::hql().clear_cache(Cache::Html).await?;
     // whole App cache to make sure config changes are always updated
     DB::hql().clear_cache(Cache::App).await?;
+    // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
+    // anymore. They are rebuilt from their document on the next request.
+    DB::hql().clear_cache(Cache::ClientEphemeral).await?;
 
     #[cfg(debug_assertions)]
     {
         DB::hql().clear_cache(Cache::Atproto).await?;
         DB::hql().clear_cache(Cache::DeviceCode).await?;
-        DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
         DB::hql().clear_cache(Cache::ClientDynamic).await?;
-        DB::hql().clear_cache(Cache::ClientEphemeral).await?;
         DB::hql().clear_cache(Cache::ClientSecret).await?;
         DB::hql().clear_cache(Cache::DPoPNonce).await?;
         DB::hql().clear_cache(Cache::JwksRemote).await?;
@@ -171,8 +181,8 @@ pub async fn run(
         DB::hql().clear_cache(Cache::PoW).await?;
         DB::hql().clear_cache(Cache::ToS).await?;
         DB::hql().clear_cache(Cache::User).await?;
-        DB::hql().clear_cache(Cache::Webauthn).await?;
         DB::hql().clear_cache(Cache::PAM).await?;
+        DB::hql().clear_cache(Cache::ConsentContent).await?;
     }
 
     {
@@ -183,13 +193,10 @@ pub async fn run(
         }
     }
 
-    if RauthyConfig::get().vars.atproto.enable {
-        entity::atproto::Client::init_provider()
-            .await
-            .map_err(|error| {
-                error!(%error, "failed to initialize atproto provider");
-            })
-            .unwrap();
+    if RauthyConfig::get().vars.atproto.enable
+        && let Err(err) = entity::atproto::Client::init_provider().await
+    {
+        shutdown::fatal(format!("Failed to initialize the atproto provider: {err}")).await;
     }
 
     rauthy_schedulers::spawn();
@@ -242,23 +249,23 @@ async fn server_with_metrics() -> std::io::Result<()> {
     thread::spawn(move || {
         let vars = &RauthyConfig::get().vars.server;
         if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {err}");
-            error!(msg);
-            panic!("{}", msg);
+            shutdown::trigger(format!("Error parsing METRICS_ADDR: {err}"));
+            return;
         }
         let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
 
         info!("Metrics available on: http://{addr_full}/metrics");
         // TODO create single threaded runtime specifically -> probably use tokio
-        System::new()
-            .block_on(
-                HttpServer::new(move || App::new().wrap(metrics.clone()))
-                    .workers(1)
-                    .bind(addr_full)
-                    .unwrap()
-                    .run(),
-            )
-            .unwrap();
+        let res = System::new().block_on(async move {
+            HttpServer::new(move || App::new().wrap(metrics.clone()))
+                .workers(1)
+                .bind(addr_full)?
+                .run()
+                .await
+        });
+        if let Err(err) = res {
+            shutdown::trigger(format!("Metrics server error: {err}"));
+        }
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")
@@ -549,6 +556,7 @@ fn api_services() -> actix_web::Scope {
                 .service(events::sse_events)
                 .service(events::post_event_test)
                 .service(dev_only::get_template)
+                .service(dev_only::get_dev_consent)
                 .service(dev_only::post_dev_only_endpoints)
                 .service(html::get_index)
                 .service(html::get_account_html)
@@ -562,6 +570,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_config_encryption_html)
                 .service(html::get_admin_config_jwks_html)
                 .service(html::get_admin_config_policy_html)
+                .service(html::get_admin_config_tos_html)
                 .service(html::get_admin_docs_html)
                 .service(html::get_admin_events_html)
                 .service(html::get_admin_groups_html)
@@ -576,9 +585,11 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_fed_cm_html)
                 .service(generic::get_auth_check)
                 .service(generic::get_auth_check_admin)
+                .service(generic::get_keep_alive)
                 .service(generic::get_timezones)
                 .service(generic::post_update_language)
                 .service(generic::get_version)
+                .service(generic::get_instance_label)
                 .service(generic::get_whoami)
                 .service(kv::get_kv_ns)
                 .service(kv::post_kv_ns)
@@ -695,6 +706,7 @@ fn api_services() -> actix_web::Scope {
                 .service(users::delete_user_device)
                 .service(users::get_user_consents)
                 .service(users::delete_user_consent)
+                .service(users::delete_user_consents_all)
                 .service(users::get_user_webid_data)
                 .service(users::put_user_webid_data)
                 .service(users::get_user_email_confirm)
@@ -736,10 +748,12 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::post_pow)
                 .service(generic::get_search)
                 .service(groups::get_groups)
+                .service(groups::get_group_users)
                 .service(groups::post_group)
                 .service(groups::put_group)
                 .service(groups::delete_group)
                 .service(roles::get_roles)
+                .service(roles::get_role_users)
                 .service(roles::post_role)
                 .service(roles::put_role)
                 .service(roles::delete_role)
@@ -789,7 +803,7 @@ fn workers() -> usize {
             let reserve = if is_hiqlite() { 2 } else { 1 };
             workers = max(
                 2,
-                cores as i64 - vars.hashing.max_hash_threads as i64 - reserve,
+                cores as i64 - i64::from(vars.hashing.max_hash_threads) - reserve,
             ) as usize;
         }
     }

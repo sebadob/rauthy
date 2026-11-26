@@ -144,13 +144,12 @@ bootstrap secret container under `api-key/<name>/token`.
 ]
 ```
 
-```admonish caution
-Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
-that expires after your first-start provisioning is complete, for example after about 10
-minutes. Long-lived bootstrap API keys increase the blast radius if the bootstrap files or
-deployment secrets are leaked. The example timestamp above is intentionally finite; replace it
-with a short-lived value for your deployment.
-```
+> [!WARNING]
+> Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
+> that expires after your first-start provisioning is complete, for example after about 10
+> minutes. Long-lived bootstrap API keys increase the blast radius if the bootstrap files or
+> deployment secrets are leaked. The example timestamp above is intentionally finite; replace it
+> with a short-lived value for your deployment.
 
 The legacy config documentation for bootstrapping a single API key should explain all further
 questions:
@@ -236,11 +235,10 @@ Authorization: API-Key <API Key name>$<API Key secret>
 Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 ```
 
-```admonish caution
-If you bootstrap API keys for production setup, make sure they always auto-expire. Bootstrap
-JSON is only read while initializing an empty production database; changing `api_keys.json`
-later does not reconcile live API keys.
-```
+> [!WARNING]
+> If you bootstrap API keys for production setup, make sure they always auto-expire. Bootstrap
+> JSON is only read while initializing an empty production database; changing `api_keys.json`
+> later does not reconcile live API keys.
 
 ## Generated Bootstrap Secrets
 

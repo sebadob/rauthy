@@ -195,7 +195,7 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
 
         // for maxmind, we will always have a single directory
         if is_first {
-            if path_str.ends_with("/")
+            if path_str.ends_with('/')
                 && let Some(stripped) = path_str.strip_suffix("/")
             {
                 prefix = Some(stripped.to_string());
@@ -209,7 +209,7 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
             entry.unpack(db_file)?;
         } else {
             entry.unpack(format!("{output_dir}/{path_str}"))?;
-        };
+        }
     }
 
     Ok(())

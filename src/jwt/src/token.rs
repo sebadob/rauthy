@@ -150,7 +150,7 @@ impl JwtToken {
                 ErrorResponseType::BadRequest,
                 "Cannot deserialize JWT Token signature",
             ));
-        };
+        }
         if split.next().is_some() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -294,7 +294,7 @@ mod tests {
         let issuing_kp = JwkKeyPair {
             kid: "test-kid".to_string(),
             typ: JwkKeyPairAlg::Ed25519,
-            bytes: kp.sk.to_der().to_vec(),
+            bytes: kp.sk.to_der(),
         };
         let claims = serde_json::json!({
             "iss": "http://localhost:8080/auth/v1",
@@ -318,7 +318,7 @@ mod tests {
         let stored_kp = JwkKeyPair {
             kid: "test-kid".to_string(),
             typ: JwkKeyPairAlg::EdDSA,
-            bytes: kp.sk.to_der().to_vec(),
+            bytes: kp.sk.to_der(),
         };
         assert!(stored_kp.typ.is_compatible_with(&JwkKeyPairAlg::Ed25519));
         buf.clear();
@@ -328,7 +328,7 @@ mod tests {
         let eddsa_issuing_kp = JwkKeyPair {
             kid: "test-kid".to_string(),
             typ: JwkKeyPairAlg::EdDSA,
-            bytes: kp.sk.to_der().to_vec(),
+            bytes: kp.sk.to_der(),
         };
         let token = JwtToken::build(&eddsa_issuing_kp, &claims, JwtHeaderType::AtJwt)?;
         buf.clear();

@@ -54,7 +54,7 @@ pub async fn send_email_notification(
         typ: EmailType::Notification,
         recipient_name,
         address,
-        subject: notification.head.to_string(),
+        subject: notification.head.clone(),
         text: Some(text.render().expect("Template rendering: EMailEventTxt")),
         html: Some(html.render().expect("Template rendering: EMailEventHtml")),
     };
@@ -63,7 +63,7 @@ pub async fn send_email_notification(
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref err) => {
             error!(?err, "sending Event E-Mail notification");
         }

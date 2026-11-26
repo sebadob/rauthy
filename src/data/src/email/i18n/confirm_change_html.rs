@@ -12,14 +12,17 @@ pub struct I18nEmailConfirmChangeHtml<'a> {
 impl I18nEmailConfirmChangeHtml<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -29,11 +32,20 @@ impl I18nEmailConfirmChangeHtml<'_> {
 }
 
 impl I18nEmailConfirmChangeHtml<'_> {
+    fn build_cs() -> Self {
+        Self {
+            title: "Změna e-mailu potvrzena",
+            text_changed: "Vaše e-mailová adresa byla změněna z",
+            text_login: "Nyní se můžete přihlásit novou adresou.",
+            to: "na",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             title: "E-Mail Wechsel bestätigt",
-            text_changed: "Ihre E-Mail Adresse wurde erfolgreich geändert von",
-            text_login: "Sie können sich jetzt mit der neuen Adresse einloggen.",
+            text_changed: "Die E-Mail Adresse wurde erfolgreich geändert von",
+            text_login: "Ein Login mit der neuen Adresse ist jetzt möglich.",
             to: "zu",
         }
     }
@@ -62,6 +74,15 @@ impl I18nEmailConfirmChangeHtml<'_> {
             text_changed: "Votre adresse e-mail a été modifiée",
             text_login: "Vous pouvez maintenant vous connecter en utilisant votre nouvelle adresse.",
             to: "à",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            title: "Cambio di indirizzo email confermato",
+            text_changed: "Il tuo indirizzo email è stato cambiato da",
+            text_login: "Ora puoi accedere con il tuo nuovo indirizzo.",
+            to: "a",
         }
     }
 
@@ -98,6 +119,15 @@ impl I18nEmailConfirmChangeHtml<'_> {
             text_changed: "Uw e-mailadres is gewijzigd van",
             text_login: "U kunt nu inloggen met uw nieuwe adres.",
             to: "naar",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            title: "Zmiana adresu e-mail potwierdzona",
+            text_changed: "Twój adres e-mail został zmieniony z",
+            text_login: "Możesz teraz logować się nowym adresem.",
+            to: "na",
         }
     }
 

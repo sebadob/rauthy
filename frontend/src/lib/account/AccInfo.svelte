@@ -14,7 +14,6 @@
     import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
     import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
     import ButtonAuthProvider from '../ButtonAuthProvider.svelte';
-    import UserPicture from '#lib/UserPicture.svelte';
     import { fetchSolvePow } from '#utils/pow.ts';
     import { generatePKCE } from '#utils/pkce.ts';
     import type { PamUserResponse } from '#api/types/pam.ts';
@@ -27,13 +26,11 @@
         providers,
         authProvider,
         webIdData,
-        viewModePhone,
     }: {
         user: UserResponse;
         pamUser: undefined | PamUserResponse;
         providers: AuthProvidersTemplate;
         authProvider: undefined | AuthProviderTemplate;
-        viewModePhone?: boolean;
         webIdData: undefined | WebIdResponse;
     } = $props();
 
@@ -47,23 +44,7 @@
         isFederated ? `${user.account_type}: ${authProvider?.name || ''}` : user.account_type,
     );
 
-    let classRow: 'rowPhone' | 'row' = $derived(viewModePhone ? 'rowPhone' : 'row');
-    let classLabel: 'labelPhone' | 'label' = $derived(viewModePhone ? 'labelPhone' : 'label');
-
     let isLoading = $state(false);
-
-    let fallbackCharacters = $derived.by(() => {
-        let chars = '';
-        if (user.given_name) {
-            chars = user.given_name[0];
-        } else {
-            chars = user.email[0];
-        }
-        if (user.family_name && user.family_name.length > 0) {
-            chars += user.family_name[0];
-        }
-        return chars;
-    });
 
     let isOtpEnabled = $state(false);
     let hasOtp = $state(false);
@@ -135,50 +116,40 @@
 
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
-<div>
-    <div class={classRow} style:margin=".5rem 0">
-        <div class={classLabel}></div>
-        <UserPicture
-            {fallbackCharacters}
-            userId={user.id}
-            bind:pictureId={user.picture_id}
-            size="large"
-        />
-    </div>
-
-    <div class={classRow}>
-        <div class={classLabel}>{t.common.email}</div>
+<div class="info-grid">
+    <div class="row">
+        <div class="admin-field-label">{t.common.email}</div>
         <span class="value">{user.email}</span>
     </div>
 
     {#if pamUser}
-        <div class={classRow}>
-            <div class={classLabel}>PAM {t.account.user}</div>
+        <div class="row">
+            <div class="admin-field-label">PAM {t.account.user}</div>
             <span class="value">{pamUser.name}</span>
         </div>
     {/if}
 
     {#if user.given_name}
-        <div class={classRow}>
-            <div class={classLabel}>{t.account.givenName}</div>
+        <div class="row">
+            <div class="admin-field-label">{t.account.givenName}</div>
             <span class="value">{user.given_name}</span>
         </div>
     {/if}
 
     {#if user.family_name}
-        <div class={classRow}>
-            <div class={classLabel}>{t.account.familyName}</div>
+        <div class="row">
+            <div class="admin-field-label">{t.account.familyName}</div>
             <span class="value">{user.family_name}</span>
         </div>
     {/if}
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.user} ID</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.user} ID</div>
         <span class="value">{user.id}</span>
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.accType}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.accType}</div>
         <div>
             <div class="value">{accType || ''}</div>
             {#if isFederated}
@@ -215,60 +186,60 @@
         </div>
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.roles}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.roles}</div>
         <span class="value">{user.roles.join(', ') || 'None'}</span>
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.groups}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.groups}</div>
         <span class="value">{user.groups?.join(', ') || 'None'}</span>
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.mfaActivated}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.mfaActivated}</div>
         <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.userEnabled}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.userEnabled}</div>
         <CheckIcon checked={user.enabled} />
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.emailVerified}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.emailVerified}</div>
         <CheckIcon checked={user.email_verified} />
     </div>
 
     {#if user.last_login}
-        <div class={classRow}>
-            <div class={classLabel}>{t.account.lastLogin}</div>
+        <div class="row">
+            <div class="admin-field-label">{t.account.lastLogin}</div>
             <span class="value">{formatDateFromTs(user.last_login)}</span>
         </div>
     {/if}
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.passwordExpiry}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.passwordExpiry}</div>
         <span class="value">
             {(user.password_expires && formatDateFromTs(user.password_expires)) || t.common.never}
         </span>
     </div>
 
-    <div class={classRow}>
-        <div class={classLabel}>{t.account.userCreated}</div>
+    <div class="row">
+        <div class="admin-field-label">{t.account.userCreated}</div>
         <span class="value">{formatDateFromTs(user.created_at)}</span>
     </div>
 
     {#if user.user_expires}
-        <div class={classRow}>
-            <div class={classLabel}>{t.account.userExpiry}</div>
+        <div class="row">
+            <div class="admin-field-label">{t.account.userExpiry}</div>
             <span class="value">{formatDateFromTs(user.user_expires)}</span>
         </div>
     {/if}
 
     {#if webIdData}
-        <div class={classRow}>
-            <div class={classLabel}>WebID:</div>
+        <div class="row">
+            <div class="admin-field-label">WebID:</div>
             <span class="value">
                 <a href={buildWebIdUri(user.id)} target="_blank">
                     {@html buildWebIdUri(user.id).replace('/auth/', '/auth/<wbr/>')}
@@ -279,52 +250,33 @@
 </div>
 
 <style>
-    .label,
-    .labelPhone {
-        color: hsla(var(--text) / 0.66);
-        font-size: 0.9rem;
-    }
-
-    .label {
-        margin-top: -0.05rem;
-        width: 8.5rem;
-    }
-
-    .labelPhone {
-        width: 12rem;
-    }
-
-    .fed-btn {
-        margin-left: -5px;
-    }
-
-    .link-err {
-        margin-left: 5px;
-        color: hsl(var(--error));
-    }
-
-    .providers {
-        margin-top: 1rem;
-        display: flex;
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+        gap: var(--ui-space);
     }
 
     .row {
+        min-width: 0;
+        padding-block: 0.5rem;
+        border-bottom: 1px solid var(--ui-outline);
+    }
+
+    .fed-btn,
+    .providers {
         display: flex;
-        align-items: center;
-        margin-bottom: 0.25rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
     }
 
-    .rowPhone {
-        margin-bottom: 0.25rem;
-    }
-
-    .rowPhone > .labelPhone {
-        margin-bottom: -0.4rem;
+    .link-err {
+        color: hsl(var(--error));
     }
 
     .value {
-        max-width: 18rem;
-        padding-right: 1rem;
-        word-break: break-word;
+        font-size: var(--ui-control-font-size);
+        line-height: var(--ui-control-line-height);
+        overflow-wrap: anywhere;
     }
 </style>

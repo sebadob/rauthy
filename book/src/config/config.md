@@ -16,14 +16,13 @@ order matches their location in the reference config below.
 - `[tls]` if you don't terminate TLS on your reverse proxy
 - !!! `webauthn.rp_id` + `webauthn.rp_origin` + `webauthn.rp_name`
 
-```admonish caution
-When you go into production, make sure that you provide the included secrets / sensitive
-information in this file in an appropriate way. With docker, you can leave them inside this file 
-(with proper access rights!), but when deploying with Kubernetes, either extract these values into 
-Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
-```
+> [!WARNING]
+> When you go into production, make sure that you provide the included secrets / sensitive
+> information in this file in an appropriate way. With docker, you can leave them inside this file
+> (with proper access rights!), but when deploying with Kubernetes, either extract these values into
+> Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
 
-```toml
+````toml
 [access]
 # If set to true, the `/userinfo` endpoint will do additional
 # validations. The non-strict mode will fetch the user by id from
@@ -138,6 +137,8 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # Cloudflare, which adds custom headers in this case. For instance,
 # if your requests are proxied through cloudflare, your would set
 # `CF-Connecting-IP`.
+# Needs a single IP address as its value and is only used with
+# `proxy_mode = true`.
 #
 # overwritten by: PEER_IP_HEADER_NAME
 #peer_ip_header_name = ''
@@ -380,15 +381,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
 #allow_clock_skew = '5s'
 
-# The maximum allowed age for Logout Tokens. This value is
+# The maximum allowed lifetime for Logout Tokens. This value is
 # a security check for upstream auth providers. If Rauthy
-# receives a Logout Token, it will reject it when its `iat` is
-# older than `allowed_token_lifetime` plus `allow_clock_skew`.
-# A token whose `iat` lies more than `allow_clock_skew` in the
-# future is rejected as well. The `exp` claim is only checked
-# for expiry, not against this value, so providers issuing
-# tokens with a longer validity keep working. The RFC
-# recommends a validity of at most 120 seconds.
+# receives a Logout Token, it will check and validate, that the
+# difference between `iat` and `exp` is not greater than
+# `allowed_token_lifetime`. This means Rauthy will reject Logout
+# Tokens from clients with a way too long validity and therefore
+# poor implementations. The RFC states that tokens should be
+# valid for at most 120 seconds.
 #
 # type: duration
 # default: '120s'
@@ -881,20 +881,138 @@ backup_keep_for_local = '3d'
 #HQL_DANGER_RAFT_STATE_RESET=true
 
 [consent]
-# Set to `true` to enable user consent for clients. This feature is
-# still in progress. Currently, it makes a client deletion also delete
-# all legacy refresh tokens (issued before refresh tokens were bound to
-# a client) of all users, and a user's consent revoke also delete that
-# user's legacy refresh tokens.
+# Set to `true` to ask users for their consent to a client on the
+# login page. The consent content comes from `[[consent.sources]]`
+# below, the client's consent source in the Admin UI, or the
+# built-in one, which shows the requested scopes. Without it,
+# configured `[[consent.sources]]` log a warning at startup.
+#
+# While it is enabled:
+# - the login page asks for consent, the Admin UI included: a login
+#   whose user is not proven yet, which includes one forced by
+#   `prompt=login` or an exceeded `max_age`, always shows the
+#   consent block, while a valid session, or a valid MFA cookie for
+#   the user the form signs in, skips it only when the user's
+#   consent grant for the client and `resource` covers the
+#   requested scopes for the current consent content and there is
+#   no `prompt=consent`. With `prompt=none`, an uncovered request is
+#   answered with `consent_required`. The client's `default_scopes`
+#   are always accepted, other requested scopes can be declined.
+#   The grant is stored with the time, IP and user agent of the
+#   login.
+# - the authorization code exchange, FedCM and a refresh require the
+#   user's consent grant for the client (password, device code and
+#   token exchange tokens issued by this version are exempt). FedCM
+#   has no consent screen: it needs a grant from an earlier login
+#   on the login page.
+# - a client deletion also deletes all legacy refresh tokens (issued
+#   before refresh tokens were bound to a client) of all users, and a
+#   user's consent revoke also deletes that user's legacy refresh
+#   tokens.
+# - every non-exempt refresh token without a consent grant is
+#   deleted, and its access token revoked, on its next refresh.
+#   Turning the flag off again does not restore them.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
 #enable = false
 
+# Lifetime of cached consent content fetched from a remote consent
+# source (see `[[consent.sources]]` below and the per-client
+# consent source in the Admin UI). Accepts Durations like '60s',
+# '10m', '1h', or an Integer as seconds. Only the TOML value takes
+# a bare Integer, the env var needs a unit, e.g. `3600s`.
+# Must be at least 1s.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60s)`,
+# so an unavailable source is not requested on every lookup.
+#
+# default: 1h
+# overwritten by: CONSENT_CONTENT_CACHE_TTL
+#content_cache_ttl = '1h'
+
+# Remote consent sources are configured by an admin, so the source
+# itself may resolve to a loopback, private or otherwise non-public
+# address, unlike ephemeral client documents, and may redirect to
+# another one. A redirect from a source on a public address into
+# the internal network is refused. Consent source fetches follow
+# redirects only to https, never use system proxies and time out
+# after 3 seconds.
+
+#[[consent.sources]]
+# The consent source per RFC 8707 resource indicator, with
+# precedence over the client's own consent source.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different resources. Each `resource` may only exist
+# once.
+#
+# The resource indicator, an absolute URI without a fragment.
+# It is matched verbatim against the requested `resource` and
+# must only contain the characters allowed there:
+# [a-zA-Z0-9,.:/_\-&?=~!$'()*+%@]
+#resource = 'https://api.example.com'
+# Either `local` for the built-in consent content (the requested
+# scopes), or an `https://` URL of at most 1024 bytes of the
+# `resource` characters above, without userinfo, fragment or a
+# `lang` query key in any case or form (`LANG`, `lang[]`,
+# `lang.x`, `l%61ng`, ...). Rauthy fetches
+# `GET <url>?lang=<BCP47 language>` and expects:
+# {
+#   "name": "Example API",
+#   "scopes": {
+#     "data.read": {
+#       "title": "Read your data",
+#       "description": "...",
+#       "warning": false
+#     }
+#   },
+#   "intro": "...",
+#   "terms_url": "https://example.com/terms"
+# }
+# The `lang=en` response is required and the default: the
+# response for the user's language is used, the `lang=en` one
+# if that is unavailable.
+# All fields are shown as plain text: HTML in a scope
+# `description` is not rendered, only its text is shown.
+# The version of the consent content is the hash of the content
+# as shown: the name, intro, terms_url and the requested scopes
+# with their title, description and warning (the warnings of
+# the `lang=en` response are shown in every language). The hash
+# covers the field values as received, HTML markup included, so
+# an edit that only changes the markup asks for consent again.
+# Any edit to a shown field asks for consent again, an edit to a
+# scope that was not requested does not. A user who switches the
+# language may be asked again.
+# If the `lang=en` response is unavailable or invalid, the
+# built-in content is used instead.
+# These fallbacks change the version as well and may ask again:
+# the built-in content while `lang=en` is unavailable or
+# invalid, and the `lang=en` content while the translation is
+# unavailable.
+#source = 'local'
+# The name of the resource shown on the consent screen. It wins
+# over the `name` of a remote consent document, which is only
+# used for a client's own consent source from the Admin UI.
+#name = 'Example API'
+
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing
 ## detection algorithm. In most cases the defaults should be
 ## fine.
+
+# Switches the detector on or off. It records every login
+# attempt with a password against a non-existing email or a
+# wrong password per source IP, and it blacklists that IP for
+# `blacklist_duration` once `blacklist_threshold` different
+# combinations appear inside `scan_window`. Set this to
+# `false` when a big group of users shares one source address,
+# like a corporate NAT gateway, where the detector would
+# blacklist all of them. A blacklist lives in the database, so
+# it survives restarts until it expires.
+#
+# default: true
+# overwritten by: CRED_STUFF_ENABLE
+#enable = true
 
 # The duration for how long an IP will be blacklisted after
 # it was considered harmful, doing credential stuffing.
@@ -1423,6 +1541,9 @@ smtp_url = 'localhost'
 # You can generally use all options from
 # https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
 #
+# default: '%-d. %-m. %Y %T (%Z)'
+# overwritten by: TZ_FMT_CS
+#cs = '%-d. %-m. %Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_DE
 #de = '%d.%m.%Y %T (%Z)'
@@ -1435,6 +1556,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_IT
+#it = '%d/%m/%Y %T (%Z)'
 # default: '%Y/%m/%d %T (%Z)'
 # overwritten by: TZ_FMT_JA
 #ja = '%Y/%m/%d %T (%Z)'
@@ -1840,6 +1964,12 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user gave
+# consent to a client on the login page.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_GRANTED
+level_consent_granted = 'notice'
 # The level for the generated Event after a user consent
 # for a client has been revoked, either by the user
 # themselves, by an admin or through an API key.
@@ -2048,13 +2178,13 @@ argon2_t_cost = 4
 # overwritten by: ARGON2_P_COST
 argon2_p_cost = 8
 
-# Limits the maximum amount of parallel password hashes at 
-# the exact same time to never exceed system memory while 
-# still allowing a good amount of memory for the Argon2ID 
+# Limits the maximum amount of parallel password hashes at
+# the exact same time to never exceed system memory while
+# still allowing a good amount of memory for the Argon2ID
 # algorithm
 #
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory 
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory
 # of your deployment available.
 #
 # default: 2
@@ -2159,13 +2289,17 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans',
+]
 # Languages for the Admin UI.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans',
+]
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2355,6 +2489,40 @@ filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru',
 # overwritten by: LOG_LEVEL_ACCESS
 level_access = 'modifying'
 
+# If you want Rauthy to log into a file instead of stdout, set the
+# path to that log file here. The file is rolled over every day into
+# `<file_name>.<YYYY-MM-DD>` files and stdout will get no logs at all,
+# including the ASCII banner.
+# The parent directory is created if it does not exist.
+#
+# default: None - logs go to stdout
+# overwritten by: LOG_FILE
+#log_file = './rauthy.log'
+
+# When the rolling log file cleanup task runs.
+# Accepts cron syntax:
+# "sec min hour day_of_month month day_of_week year"
+#
+# default: "0 0 3 * * * *" - every day at 03:00
+# overwritten by: LOG_FILE_CLEANUP
+#log_file_cleanup = "0 0 3 * * * *"
+
+# How long rolling log files are kept before the cleanup task deletes
+# them. Accepts Durations like '60s', '10h', '7d', ...
+# '0' disables the cleanup task entirely, including compression.
+#
+# default: 30d
+# overwritten by: LOG_FILE_KEEP_FOR
+#log_file_keep_for = '30d'
+
+# Rolling log files older than this Duration are compressed into a
+# `.gz` file before the cleanup deletes them, for instance '3d'.
+# Needs `log_file` to be set.
+#
+# default: None - log files are never compressed
+# overwritten by: LOG_FILE_ARCHIVE_AFTER
+#log_file_archive_after = '3d'
+
 # You can change the log output format to JSON, if you set:
 # `log_fmt=json`.
 # Keep in mind, that some logs will include escaped values,
@@ -2384,6 +2552,28 @@ level_access = 'modifying'
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
 
+# If 'true', users with both WebAuthn passkeys and OTP configured
+# will see a selection screen where they can choose their preferred
+# MFA method. If 'false', the original behavior is used where
+# WebAuthn is forced and OTP is only shown if no WebAuthn exists.
+#
+# For admin users this option has no effect if 'admin_passkey_only =
+# true'.
+#
+# default: false
+# overwritten by: OPTIONAL_SELECT_MFA
+#optional_select_mfa = false
+
+# If 'true', forces the WebAuthn-first policy for admin users.
+# This means admins with both WebAuthn and OTP configured will be
+# forced to use WebAuthn and won't see the selection screen, even if
+# 'optional_select_mfa = true'.  This provides additional security for
+# the admin interface.
+#
+# default: true
+# overwritten by: ADMIN_PASSKEY_ONLY
+#admin_passkey_only = true
+
 [otp]
 # Enable E-Mail or HMAC-based One Time Passwords as 2FA.
 #
@@ -2401,7 +2591,7 @@ enable = false
 # overwritten by: OTP_LENGTH
 #length = 6
 
-# The lifetime for OTP requests. Within this time, an OTP 
+# The lifetime for OTP requests. Within this time, an OTP
 # request must have been validated.
 #
 # default: '5m'
@@ -2411,7 +2601,7 @@ enable = false
 # Default digest algorithm's length, HMAC using SHA-X.
 # SHA-1 is forbidden.
 #
-# NOTE: This value currently has no effect. It's a 
+# NOTE: This value currently has no effect. It's a
 # preparation for future support for TOTP. At the time
 # of writing, only E-Mail-based OTP is implemented.
 #
@@ -2637,10 +2827,9 @@ pub_url = 'localhost:8080'
 proxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests with a
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -2714,6 +2903,17 @@ swagger_ui_enable = false
 # overwritten by: SSP_THRESHOLD
 #ssp_threshold = 1000
 
+# An optional label for this Rauthy instance.
+# If set, it will be displayed in the Admin UI in the bottom left
+# corner next to the version number.  This can be useful when you have
+# multiple Rauthy instances (e.g. staging, production, or in a HA
+# cluster) to quickly identify which one you are currently working
+# with.
+#
+# default: not set
+# overwritten by: INSTANCE_LABEL
+#instance_label = 'Production'
+
 [suspicious_requests]
 # The "catch all" route handler on `/` will compare the request
 # path against a hardcoded list of common scan targets from bots
@@ -2769,7 +2969,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de es fr ja ko nb nl pt ru uk zh_hans
+# one of: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset
@@ -2982,6 +3182,48 @@ storage_type = 'db'
 # overwritten by: USER_REG_OPEN_REDIRECT
 #allow_open_redirect = false
 
+# The default redirect target for a browser after a user has
+# successfully reset their password via a magic link, or completed  the
+# initial setup of a new account. It can be a relative path, like
+# '/auth/v1/account', or a full URL to your own application.
+#
+# Only used when the magic link itself did not carry a 'redirect_uri',
+# which can be set during a user registration, or with a password reset
+# request from a client. Such a 'redirect_uri' always has priority.
+#
+# If this is not set, no 'Location' header will be returned, and the
+# frontend redirects to the account dashboard, which keeps the current
+# behavior.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+#post_reset_redirect_uri = 'https://example.com'
+
+# Reject any E-Mail address which contains a `+` in its local part,
+# for the open registration and for a self-service E-Mail change.
+#
+# default: false
+# overwritten by: USER_REG_REJECT_PLUS_SUBADDRESSING
+#reject_plus_subaddressing = false
+
+# The local parts of an E-Mail address that are blocked for the open
+# registration and for a self-service E-Mail change. The match is exact
+# and case-insensitive.
+#
+# default: [ 'abuse', 'admin', 'administrator', 'daemon', 'ftp',
+#   'hostmaster', 'mailnull', 'mailer-daemon', 'noc', 'no-reply',
+#   'noreply', 'null', 'operator', 'postmaster', 'proxy', 'root',
+#   'security', 'support', 'uucp', 'usenet', 'webmaster', 'www'
+# ]
+# overwritten by: USER_REG_RESERVED_NAMES - single String, \n separated values
+#reserved_names = ['ceo', 'root']
+
+# Ask for the password in the open registration form and init the account
+# right away, instead of sending out the password reset Magic Link.
+#
+# default: false
+# overwritten by: USER_REG_DANGER_REG_ACC_INIT_IMEDIATE
+#danger_reg_acc_init_immediate = false
+
 [user_values]
 # In this section, you can configure the requirements for different
 # user values to adjust them to your needs. The `preferred_username`
@@ -3050,6 +3292,14 @@ storage_type = 'db'
 # default: 5
 # overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
 #password_reset_redirect_timeout = 5
+
+# Deny any self-service E-Mail address change. The account dashboard
+# will disable the E-Mail field. Changing the address of a user is an
+# admin only action.
+#
+# default: false
+# overwritten by: USER_VALUES_SELF_SERVICE_EMAIL_CHANGE_DENY
+#self_service_email_change_deny = false
 
 [user_values.preferred_username]
 
@@ -3357,4 +3607,4 @@ rp_origin = 'http://localhost:8080'
 # value type: [String]
 # overwritten by: WEBAUTHN_PK_ATT (`\n` separated values)
 #force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
-```
+````

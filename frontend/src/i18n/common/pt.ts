@@ -157,10 +157,15 @@ export const I18nPt: I18n = {
             connectedApps: 'Aplicações ligadas',
             connectedAppsDesc: 'Aplicações às quais deu consentimento para aceder à sua conta.',
             granted: 'Concedido',
+            logoutWarning:
+                'Isto também termina todas as suas sessões em todos os dispositivos. Terá de iniciar sessão novamente.',
             noConnectedApps: 'Ainda não foi concedido acesso a nenhuma aplicação.',
             privacy: 'Privacidade',
             resource: 'Recurso',
             revoke: 'Revogar acesso',
+            revokeAll: 'Revogar todos os acessos',
+            revokeAllDesc:
+                'Revoga o seu consentimento para todas as aplicações listadas aqui. Cada aplicação terá de pedir novamente o seu consentimento.',
             revokeDesc:
                 'A revogação remove o consentimento e a aplicação deixa de poder renovar o seu acesso. Os Access Tokens emitidos com os Refresh Tokens eliminados são revogados no userinfo e na introspection. As aplicações que validam os seus tokens por si próprias podem continuar a aceitá-los até expirarem. A aplicação terá de pedir novamente o seu consentimento.',
             scopes: 'Scopes',
@@ -196,9 +201,32 @@ export const I18nPt: I18n = {
         zip: 'Código postal',
     },
     authorize: {
+        busy: 'O servidor está ocupado neste momento. Tente novamente dentro de momentos.',
         clientForceMfa: `Este início de sessão exige MFA para garantir uma segurança reforçada.\nPara
             obter acesso, tem de iniciar sessão na sua conta e adicionar pelo menos uma Passkey`,
         clientGroupPrefixForbidden: 'Falta a atribuição de grupo para este início de sessão',
+        consent: {
+            agree: 'Concordo com a [transmissão dos meus dados]',
+            changed: 'O conteúdo do consentimento mudou, verifique-o novamente.',
+            continue: 'Continuar',
+            details: 'Detalhes',
+            intro: '{{ CLIENT }} pede acesso a:',
+            introResource: '{{ CLIENT }} pede acesso a {{ RESOURCE }}:',
+            required: 'sempre',
+            scopes: {
+                address: 'O seu endereço postal',
+                email: 'O seu endereço de e-mail',
+                groups: 'Os seus grupos',
+                openid: 'O seu ID de utilizador e as suas funções para iniciar sessão',
+                phone: 'O seu número de telefone',
+                profile:
+                    'O seu nome, nome de utilizador (pode ser o seu endereço de e-mail), imagem, idioma, data de nascimento e fuso horário',
+                webid: 'O seu WebID',
+            },
+            terms: 'Termos',
+            title: 'Consentimento',
+            warning: 'Leia com atenção',
+        },
         email: 'E-mail',
         emailBadFormat: 'Formato de e-mail inválido',
         emailRequired: 'O e-mail é obrigatório',
@@ -211,6 +239,10 @@ export const I18nPt: I18n = {
         login: 'Iniciar sessão',
         mfaAck: 'Confirmado',
         mfaOpenApp: 'Abra o aplicativo para continuar',
+        mfaSelectionDesc: 'Escolha o seu método de verificação:',
+        usePasskey: 'Usar chave de acesso',
+        useEmailCode: 'Usar código por e-mail',
+        emailCodeDesc: 'Receba um código de utilização única por e-mail',
         navigateToAccount: 'Painel da conta',
         needsUserUpdate: `Faltam algumas informações nesta conta. Tem de atualizar estes dados
             antes de continuar com o início de sessão.`,

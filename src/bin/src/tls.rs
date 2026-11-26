@@ -1,6 +1,9 @@
 use rauthy_data::entity::ca_self_signed::SelfSignedCA;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_data::shutdown;
 use rauthy_error::ErrorResponse;
+use rustls::pki_types::pem::PemObject;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::fs;
@@ -48,6 +51,11 @@ pub async fn load_tls() -> rustls::ServerConfig {
 
 /// Loads a hot-reloading TLS config, with the poll watcher if `tls.poll_watch_interval` is set.
 pub async fn load_server_config(key_path: String, cert_path: String) -> rustls::ServerConfig {
+    // `tls_hot_reload` panics if it cannot load the files, which would skip the clean shutdown.
+    if let Err(err) = check_tls_files(&key_path, &cert_path).await {
+        shutdown::fatal(err).await;
+    }
+
     if let Some(interval) = RauthyConfig::get().vars.tls.poll_watch_interval {
         tracing::warn!(
             "Starting TLS hot-reload with the PollWatcher backend and interval {:?}",
@@ -59,12 +67,32 @@ pub async fn load_server_config(key_path: String, cert_path: String) -> rustls::
     }
 }
 
+async fn check_tls_files(key_path: &str, cert_path: &str) -> Result<(), String> {
+    let key = fs::read(key_path)
+        .await
+        .map_err(|err| format!("Cannot read TLS key {key_path}: {err}"))?;
+    PrivateKeyDer::from_pem_slice(&key)
+        .map_err(|err| format!("Invalid PEM private key in {key_path}: {err}"))?;
+
+    let cert = fs::read(cert_path)
+        .await
+        .map_err(|err| format!("Cannot read TLS certificate {cert_path}: {err}"))?;
+    match CertificateDer::pem_slice_iter(&cert).collect::<Result<Vec<_>, _>>() {
+        Ok(chain) if !chain.is_empty() => Ok(()),
+        Ok(_) => Err(format!("No certificate found in {cert_path}")),
+        Err(err) => Err(format!(
+            "Invalid PEM certificate chain in {cert_path}: {err}"
+        )),
+    }
+}
+
 async fn check_generate_tls() {
     info!("Generating self-signed TLS certificates");
 
-    let mut exp = create_end_entity()
-        .await
-        .expect("Cannot generate TLS certificates");
+    let mut exp = match create_end_entity().await {
+        Ok(exp) => exp,
+        Err(err) => shutdown::fatal(format!("Cannot generate TLS certificates: {err}")).await,
+    };
 
     task::spawn(async move {
         loop {
@@ -72,12 +100,16 @@ async fn check_generate_tls() {
             if secs > 0 {
                 tokio::time::sleep(Duration::from_secs(secs as u64)).await;
             } else {
-                panic!("too short lifetime for self-signed end-entity TLS certificates");
+                shutdown::fatal("too short lifetime for self-signed end-entity TLS certificates")
+                    .await;
             }
 
-            exp = create_end_entity()
-                .await
-                .expect("Cannot generate TLS certificates");
+            exp = match create_end_entity().await {
+                Ok(exp) => exp,
+                Err(err) => {
+                    shutdown::fatal(format!("Cannot renew the TLS certificates: {err}")).await
+                }
+            };
         }
     });
 }

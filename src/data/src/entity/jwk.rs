@@ -21,6 +21,7 @@ use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use rsa::traits::PublicKeyParts;
 use rsa::{BigUint, sha2};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
@@ -54,9 +55,9 @@ impl Debug for Jwk {
 impl Jwk {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()
@@ -178,7 +179,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS256,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -199,7 +200,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS384,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -220,7 +221,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS512,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -234,46 +235,31 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::EdDSA,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
 
-        // clear all latest_jwk from cache
-        let client = DB::hql();
-        client
-            .delete(
+        // clear all latest_jwk from cache, plus the all_certs / JWKS cache
+        //
+        // The explicit `Cow<'static, str>` is what pins the keys to `'static`, which the
+        // `jwks_auto_rotate` scheduler task needs for its spawned future.
+        let mut cache_entries: Vec<(Cache, Option<Cow<'static, str>>)> = Vec::with_capacity(6);
+        cache_entries.push((Cache::App, Some(Cow::Borrowed(IDX_JWKS))));
+        for alg in [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+            JwkKeyPairAlg::EdDSA,
+            JwkKeyPairAlg::Ed25519,
+        ] {
+            let alg = alg.as_str();
+            cache_entries.push((
                 Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS256.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS384.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS512.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::EdDSA.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::Ed25519.as_str()),
-            )
-            .await?;
-
-        // clear the all_certs / JWKS cache
-        client.delete(Cache::App, IDX_JWKS).await?;
+                Some(Cow::Owned(format!("{IDX_JWK_LATEST}{alg}"))),
+            ));
+        }
+        DB::cache_delete_delayed(cache_entries).await?;
 
         info!("Finished JWKS rotation");
 
@@ -368,7 +354,7 @@ impl JWKSPublicKey {
                 let pubkey = key.to_public_key();
                 Self {
                     kty: JwkKeyPairType::RSA,
-                    alg: Some(key_pair.typ.clone()),
+                    alg: Some(key_pair.typ),
                     crv: None,
                     kid: Some(key_pair.kid.clone()),
                     n: Some(base64_url_encode(&pubkey.n().to_bytes_be())),
@@ -381,7 +367,7 @@ impl JWKSPublicKey {
                 let x = base64_url_encode(key.public_key().as_slice());
                 Self {
                     kty: JwkKeyPairType::OKP,
-                    alg: Some(key_pair.typ.clone()),
+                    alg: Some(key_pair.typ),
                     crv: Some("Ed25519".to_string()),
                     kid: Some(key_pair.kid.clone()),
                     n: None,
@@ -687,7 +673,7 @@ impl JwkKeyPair {
             DB::pg_query_one(sql, &[&kid]).await?
         };
 
-        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
+        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature)?;
         client.put(Cache::App, idx, &kp, CACHE_TTL_APP).await?;
 
         Ok(kp)
@@ -713,11 +699,11 @@ impl JwkKeyPair {
         .as_str()
         .to_string();
 
-        let sql = r#"
+        let sql = r"
 SELECT * FROM jwks
 WHERE signature = $1
 ORDER BY created_at DESC
-LIMIT 1"#;
+LIMIT 1";
 
         let jwk_latest: Jwk = if is_hiqlite() {
             client.query_as_one(sql, params!(signature)).await?
@@ -855,7 +841,7 @@ impl JwkKeyPair {
                     return Ok(message);
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(ErrorResponse::new(
@@ -882,7 +868,7 @@ impl JwkKeyPairType {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,

@@ -415,11 +415,10 @@ If you don't have a registry available, you can also disable auto-push with for 
 
 ## Updating the Book
 
-You are welcome to update the documentation in the Rauthy book. You will need `mdbook` and
-`mdbook-admonish`. If you don't have them:
+You are welcome to update the documentation in the Rauthy book. You will need `mdbook` 0.5. If you
+don't have it:
 
-- `cargo install mdbook --version 0.4.52`
-- `cargo install mdbook-admonish`
+- `cargo install mdbook --version 0.5.4`
 
 Once installed:
 
@@ -429,9 +428,29 @@ Once installed:
 You can then update the `*.md` files in `book/src`. It should be pretty self-explanatory.
 `just build-docs` will rebuild them and make them available on GitHub after merging.
 
-> NOTE: `mdbook-admonish` was not updated to `modbook-0.5` yet. To be able to build the book, you
-> need to use `mdbook-0.4` for now. There is an open issue about the migration in the
-> `mdbook-admonish` repo.
+> [!NOTE]
+> Callouts are native `mdbook` admonitions, written as a blockquote with the tag on its own first
+> line:
+>
+> ```md
+> > [!NOTE]
+> > General information or additional context.
+>
+> > [!TIP]
+> > A helpful suggestion or best practice.
+>
+> > [!IMPORTANT]
+> > Key information that shouldn't be missed.
+>
+> > [!WARNING]
+> > Critical information that highlights a potential risk.
+>
+> > [!CAUTION]
+> > Information about potential issues that require caution.
+> ```
+>
+> The tag is case-sensitive, and anything appended to it is rendered as body text. There are no
+> custom titles, so a headline for a callout is a bold first line inside the block.
 
 ## Before Submitting a PR
 

@@ -54,9 +54,11 @@ enabled Groups sync to a client. It will then do the following requests to the c
 These steps cover everything that could happen, apart from a group name update. If this happens, Rauthy will do a
 `PATCH {base_url}/Groups{id}` with the `replace` setting to replace the groups name / `externalId`.
 
-```admonish info
-If `scim.sync_delete_groups` / `scim.sync_delete_users` is disabled, Rauthy will not delete the resources on remote, it
-will only remove the `externalId` value to indicate, that this resource is not managed by Rauthy anymore. This is 
-important for instance in some scenarios, where you may have important data linked to a user, that you want to keep, 
-even if the user does not exist anymore.
-```
+> [!NOTE]
+> If `scim.sync_delete_groups` / `scim.sync_delete_users` is disabled, Rauthy will not delete the
+> resources on remote, it
+> will only remove the `externalId` value to indicate, that this resource is not managed by Rauthy
+> anymore. This is 
+> important for instance in some scenarios, where you may have important data linked to a user, that
+> you want to keep, 
+> even if the user does not exist anymore.

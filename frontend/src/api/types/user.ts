@@ -56,7 +56,7 @@ export interface UpdateUserRequest {
     /// Validation: PATTERN_USER_NAME
     family_name?: string;
     language?: Language;
-    /// Validation: Applies password policy - max 256 characters
+    /// Validation: Applies password policy - max 1024 characters
     password?: string;
     /// Validation: PATTERN_ROLE_SCOPE
     roles: string[];
@@ -96,6 +96,12 @@ export interface UserAttrValuesUpdateRequest {
 export interface UserConsentDeleteResponse {
     /// `false` if there was no consent to delete
     consent_deleted: boolean;
+    refresh_tokens_deleted: number;
+}
+
+export interface UserConsentsDeleteResponse {
+    consents_deleted: number;
+    /// From all clients of the deleted consents together
     refresh_tokens_deleted: number;
 }
 

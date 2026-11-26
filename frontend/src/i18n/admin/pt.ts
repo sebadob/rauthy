@@ -40,12 +40,26 @@ export let I18nAdminPt: I18nAdmin = {
         size: 'Tamanho',
     },
     clients: {
+        settings: { general: 'Geral', tokens: 'Tokens', integrations: 'Integrações' },
         allowedResources: 'Recursos permitidos',
         defaultAud: 'Audiences predefinidas',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Resource Indicators (RFC 8707) opcionais que este Client pode pedir. Uma lista vazia rejeita qualquer parâmetro 'resource' com 'invalid_target'.`,
         descDefaultAud: `Audiences que são sempre adicionadas aos tokens deste Client, independentemente de qualquer parâmetro 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Se este Client suportar {{ OIDC_BCL }}, pode indicar aqui o URI.',
         branding: {
+            title: 'Aparência',
+            theme: 'Tema',
+            light: 'Tema claro',
+            dark: 'Tema escuro',
+            preview: 'Pré-visualização',
+            assets: 'Logótipo e favicon',
+            logo: 'Logótipo',
+            advanced: 'CSS avançado',
+            resetTheme: 'Repor tema',
+            resetThemeConfirm: 'Repor as cores e o arredondamento predefinidos?',
+            assetsImmediate: 'As alterações de ficheiros têm efeito imediato.',
             descHsl: `Os valores seguintes têm de ser indicados como valores HSL. Indique apenas as cores base.
             Os canais alfa e outros valores são ajustados dinamicamente pelo tema.`,
             descFullCss: `Os valores seguintes têm de ser valores CSS <code>color</code> totalmente válidos.
@@ -67,6 +81,11 @@ export let I18nAdminPt: I18nAdmin = {
         confidential: 'Confidencial',
         confidentialNoSecret: 'Este é um Client não confidencial e, por isso, não tem secret.',
         config: 'Configuração do Client',
+        consent: {
+            builtIn: 'Integrado',
+            desc: `De onde vem o conteúdo do ecrã de consentimento, quando 'consent.enable' está definido. Integrado mostra os Scopes pedidos. Um URL tem de servir o conteúdo do consentimento como JSON. Uma entrada em '[[consent.sources]]' para o recurso pedido tem precedência.`,
+            source: 'Origem do consentimento',
+        },
         delete1: 'Tem a certeza de que pretende eliminar este Client?',
         descAuthCode: `A validade dos auth codes pode ser ajustada para aumentar a segurança. Os auth codes
             só podem ser usados uma vez e, por predefinição, são válidos durante 60 segundos. Quanto mais curta a
@@ -138,6 +157,20 @@ export let I18nAdminPt: I18nAdmin = {
         },
     },
     common: {
+        about: 'Sobre',
+        date: 'Data',
+        time: 'Hora',
+        preferences: 'Preferências',
+        profile: 'Perfil',
+        contactDetails: 'Dados de contacto',
+        access: 'Acesso',
+        activity: 'Atividade',
+
+        compactNavigation: 'Navegação compacta',
+        administration: 'Administração',
+        selectEntry: 'Selecione uma entrada',
+        selectEntryHint: 'Escolha um item da lista para ver e gerir os seus detalhes.',
+
         account: 'Conta',
         addNew: 'Adicionar',
         back: 'Voltar',
@@ -146,6 +179,7 @@ export let I18nAdminPt: I18nAdmin = {
         copiedToClip: 'O valor foi copiado para a área de transferência',
         details: 'Detalhes',
         edit: 'Editar',
+        discard: 'Descartar',
         enabled: 'Ativo',
         filter: 'Filtro',
         from: 'De',
@@ -159,6 +193,8 @@ export let I18nAdminPt: I18nAdmin = {
         noEntries: 'Sem entradas',
         preview: 'Pré-visualização',
         reset: 'Repor',
+        unsavedChanges: 'Alterações não guardadas',
+        unsavedChangesDesc: 'Tem alterações não guardadas. Quer continuar e descartá-las?',
         searchOptions: 'Opções de pesquisa',
         until: 'Até',
     },
@@ -244,8 +280,10 @@ export let I18nAdminPt: I18nAdmin = {
             máximo partido dele, tem de ser ajustado em cada instalação.`,
         },
         openapi: 'Se pretende integrar uma aplicação externa e usar a API do Rauthy, consulte a',
-        openapiNote: `Na configuração predefinida, a Swagger UI não está ativa através da ligação acima. Pode ser
-            ativada através da configuração 'server.swagger_ui_enable' e, eventualmente, 'server.swagger_ui_public'.`,
+        openapiNote:
+            'Na configuração predefinida, a Swagger UI não está ativa através da ligação acima.',
+        openapiEnable:
+            "Pode ser ativada através da configuração 'server.swagger_ui_enable' e, eventualmente, 'server.swagger_ui_public'.",
         source: 'O código-fonte pode ser consultado aqui',
     },
     editor: {
@@ -285,12 +323,22 @@ export let I18nAdminPt: I18nAdmin = {
             Depois, tem de terminar sessão e voltar a iniciar sessão.`,
     },
     events: {
+        searchContent: 'Conteúdo',
+        timestamp: 'Data e hora',
+        level: 'Nível',
+        type: 'Tipo',
+        allLevels: 'Todos os níveis',
+        sendTest: 'Enviar evento de teste',
         eventLevel: 'Nível do evento',
         eventType: 'Tipo de evento',
     },
     groups: {
         delete1: 'Tem a certeza de que pretende eliminar este grupo?',
         name: 'Nome do grupo',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritmo',
@@ -305,6 +353,7 @@ export let I18nAdminPt: I18nAdmin = {
         rotateKeys: 'Rodar chaves',
     },
     kv: {
+        limit: 'Limite',
         accessTestDesc: `A Access Key tem de ser indicada no cabeçalho <code>Authorization</code> como
             token <code>Bearer</code>. Pode usar o seguinte comando <code>curl</code> para
             testar.`,
@@ -342,6 +391,7 @@ export let I18nAdminPt: I18nAdmin = {
         value: 'Valor JSON',
     },
     nav: {
+        kvStore: 'Armazenamento KV',
         apiKeys: 'API Keys',
         attributes: 'Atributos',
         blacklist: 'Lista de bloqueio',
@@ -417,6 +467,10 @@ export let I18nAdminPt: I18nAdmin = {
             autoLinkDesc2: `ATENÇÃO: Esta opção pode ser muito perigosa e levar ao roubo de contas se o fornecedor
                 não validar completamente os endereços de e-mail dos utilizadores, permitindo assim associar a um
                 utilizador um endereço que não lhe pertence! NUNCA pode ser usada nesse caso!`,
+            hideLogin: 'Ocultar botão de login',
+            hideLoginDesc: `O botão de login deste fornecedor está oculto nas páginas de login e de registro. O login
+                continua possível através do parâmetro de consulta "idp_hint", com o qual é possível adicionar um
+                botão de login dedicado para este fornecedor.`,
             clientName: 'Nome do Client',
             custRootCa: 'Root CA PEM personalizada',
             descAuthMethod: `O método de autenticação a usar no endpoint <code>/token</code>.<br>
@@ -440,7 +494,26 @@ export let I18nAdminPt: I18nAdmin = {
                 p5: '<code>$.roles</code> corresponderia a <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> pode corresponder a um valor dentro de um objeto ou array como<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Um <code>value</code> corresponde exatamente, a menos que comece com <code>^</code> (prefixo), <code>~</code> (regex) ou <code>^^</code> (um <code>^</code> literal)',
+                p8: "Chaves com caracteres fora de <code>a-z A-Z 0-9 _ -</code> precisam de aspas: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Mapeia valores do ID token do provedor upstream para funções e grupos locais existentes. Uma regra adiciona seu destino quando o claim em <code>path</code> corresponde a <code>value</code>, e remove-o quando nenhuma de suas regras corresponde. Apenas os destinos configurados aqui são removidos, e um destino configurado aqui pertence ao provedor: uma função ou grupo atribuído manualmente àquele usuário por um admin também é removido em um login em que nenhuma regra corresponde.',
+            addMapping: 'Adicionar mapeamento',
+            removeMapping: 'Remover mapeamento',
+            mappingTyp: 'Tipo',
+            typRole: 'Função',
+            typGroup: 'Grupo',
+            pathClaim: 'Caminho do claim',
+            valueClaim: 'Valor do claim',
+            targetClaim: 'Função / Grupo',
+            noTargetSelected: '— Nenhuma função / grupo —',
+            targetMissing:
+                'O destino salvo {{ target }} não é mais uma função nem um grupo. Selecione um existente ou remova este mapeamento.',
+            groupAdminTarget: '(administrador do grupo)',
+            maxMappings: 'Um auth provider suporta no máximo 32 mapeamentos de claims.',
+            regexCost:
+                'Um <code>value</code> que começa com <code>~</code> é uma regex e é avaliada contra cada nó do claim em cada login: mantenha-a ancorada e o mais simples possível.',
             lookup: 'Procurar',
             pathAdminClaim: 'Path da claim de administrador',
             pathMfaClaim: 'Path da claim de MFA',
@@ -464,6 +537,10 @@ export let I18nAdminPt: I18nAdmin = {
         adminNoMod: 'A função <code>rauthy_admin</code> não pode ser alterada.',
         delete1: 'Tem a certeza de que pretende eliminar esta função?',
         name: 'Nome da função',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emitir claims na raiz do token',
@@ -517,6 +594,17 @@ export let I18nAdminPt: I18nAdmin = {
             rauthyAdmin: 'a função rauthy_admin não pode ser removida',
         },
         attributes: 'Atributos',
+        consents: {
+            title: 'Consentimentos',
+            desc: 'Consentimentos que este utilizador deu a aplicações. As horas são mostradas no seu fuso horário local; passe o cursor sobre uma hora para a ver em UTC.',
+            none: 'Este utilizador não deu consentimento a nenhuma aplicação.',
+            revokeDesc:
+                'A revogação remove o consentimento e a aplicação deixa de poder renovar o seu acesso para este utilizador. A aplicação terá de pedir novamente o consentimento do utilizador.',
+            revokeAllDesc:
+                'Revoga todos os consentimentos deste utilizador. Cada aplicação terá de pedir novamente o consentimento do utilizador.',
+            sessionsWarning:
+                'Todas as sessões do utilizador são também eliminadas e o utilizador é desligado em todo o lado.',
+        },
         deleteUser: 'Tem a certeza de que pretende eliminar este utilizador?',
         descAttr: `Defina atributos personalizados do utilizador. Todos os pares chave / valor serão tratados como
             String / valor JSON.`,

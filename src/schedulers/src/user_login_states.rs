@@ -9,7 +9,7 @@ use tokio::time;
 use tracing::{debug, error};
 
 pub async fn user_login_states_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 8));
+    let mut interval = tokio::time::interval(Duration::from_hours(8));
 
     loop {
         interval.tick().await;
@@ -28,16 +28,16 @@ pub async fn user_login_states_cleanup() {
         // `timestamp` is stored in millis.
         let threshold = Utc::now()
             .sub(RauthyConfig::get().vars.lifetimes.session_lifetime)
-            .sub(Duration::from_secs(24 * 3600))
+            .sub(Duration::from_hours(24))
             .timestamp_millis();
         let sql = "DELETE FROM user_login_states WHERE timestamp < $1";
 
         if is_hiqlite() {
             if let Err(err) = DB::hql().execute(sql, params!(threshold)).await {
-                error!(?err, "User Login State Cleanup")
+                error!(?err, "User Login State Cleanup");
             }
         } else if let Err(err) = DB::pg_execute(sql, &[&threshold]).await {
-            error!(?err, "User Login State Cleanup")
+            error!(?err, "User Login State Cleanup");
         }
 
         // For some reason, the interval could `.tick()` multiple times,

@@ -43,7 +43,7 @@ pub async fn jwks_auto_rotate() {
 
 /// Cleans up old / expired JWKSs
 pub async fn jwks_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 24));
+    let mut interval = tokio::time::interval(Duration::from_hours(24));
 
     loop {
         interval.tick().await;
@@ -58,7 +58,7 @@ pub async fn jwks_cleanup() {
         // clean up all JWKs older than 90 days
         let cleanup_threshold = Utc::now().sub(chrono::Duration::days(90)).timestamp();
 
-        let sql = "SELECT * FROM jwks ORDER BY created_at ASC";
+        let sql = "SELECT * FROM jwks ORDER BY created_at DESC";
         let res: Result<Vec<Jwk>, String> = if is_hiqlite() {
             DB::hql()
                 .query_as(sql, params!())
@@ -98,6 +98,7 @@ pub async fn jwks_cleanup() {
         // finally, delete all expired JWKs
         let count = to_delete.len();
         let sql = "DELETE FROM jwks WHERE kid = $1";
+        let mut deleted_kids: Vec<String> = Vec::with_capacity(count);
         for kid in to_delete {
             let cache_idx = format!("{IDX_JWK_KID}{kid}");
 
@@ -111,9 +112,14 @@ pub async fn jwks_cleanup() {
                 continue;
             }
 
-            if let Err(err) = DB::hql().delete(Cache::App, cache_idx).await {
-                error!(?err, "deleting JWK from cache");
-            }
+            deleted_kids.push(cache_idx);
+        }
+
+        let cache_entries = deleted_kids
+            .into_iter()
+            .map(|cache_idx| (Cache::App, Some(cache_idx)));
+        if let Err(err) = DB::cache_delete_delayed(cache_entries).await {
+            error!(?err, "deleting JWKs from cache");
         }
         if count > 0 {
             info!("Cleaned up old JWKs: {count}");

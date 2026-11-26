@@ -13,12 +13,12 @@ Just to make clear what I am talking about, a high level comparison of these dif
 efficient and secure ones. They require less work in the backend and exist inside the Rauthy
 database.
 
-```admonish note
-Static client IDs (via the Admin UI, the API, or bootstrapping) are restricted to
-`^[a-zA-Z0-9._\-]{2,256}$`. Only ephemeral clients use a full URI as their ID, since that URI is the
-location their client document is fetched from. A static client therefore never needs a URI-shaped
-ID.
-```
+> [!NOTE]
+> Static client IDs (via the Admin UI, the API, or bootstrapping) are restricted to
+> `^[a-zA-Z0-9._\-]{2,256}$`. Only ephemeral clients use a full URI as their ID, since that URI is
+> the
+> location their client document is fetched from. A static client therefore never needs a URI-shaped
+> ID.
 
 Then there is OIDC **Dynamic Client Registration** (DCR), which is an OIDC extension that Rauthy
 supports as well. If a downstream application has support for this feature, it can self-register a
@@ -34,12 +34,12 @@ brings quite a few problems:
 - As mentioned already, dynamic clients are a bit less efficient than static ones and require at
   least one additional database round trip during each login.
 
-```admonish info
-In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic. 
-For instance, if a dynamic client is registered by bots or spammers and is not used within the first 
-hour after the registration, it will be deleted automatically. Usually, when an app registers via 
-DCR, the client will be used immediately for at least one login.
-```
+> [!NOTE]
+> In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic. 
+> For instance, if a dynamic client is registered by bots or spammers and is not used within the
+> first 
+> hour after the registration, it will be deleted automatically. Usually, when an app registers via 
+> DCR, the client will be used immediately for at least one login.
 
 As the third option, Rauthy gives you the ability to use **Ephemeral Clients**. These are disabled
 by default, because they are not a default OIDC feature yet (There is an open Draft to include them
@@ -62,12 +62,13 @@ For instance, let's say you have a JSON on a GitHub repo at
 "client_id": "https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json"
 ```
 
-```admonish danger
-It is very important that the domain for an ephemeral client JSON is under your control and no one 
-else you don't fully trust has access. Otherwise, someone else could modify this JSON which affects 
-your login flow. For instance, add an additional allowed `redirect_uri` and trick you into a scam 
-website.
-```
+> [!CAUTION]
+> It is very important that the domain for an ephemeral client JSON is under your control and no one
+> 
+> else you don't fully trust has access. Otherwise, someone else could modify this JSON which
+> affects 
+> your login flow. For instance, add an additional allowed `redirect_uri` and trick you into a scam 
+> website.
 
 To keep the whole setup as simple as possible, apart from the `client_id`, there is only one other
 mandatory field in this document, which is `redirect_uris`. This must be an array with at least one
@@ -75,11 +76,11 @@ allowed redirect URI which is allowed during the login flow. Rauthy allows a wil
 of given redirect uri, but be careful with these. Wildcards should only be used during initial setup
 and testing, when you don't know the final URI yet.
 
-```admonish danger
-Technically, it is possible to just use a single <code>*</code> as a <code>redirect_uri</code>. This 
-would allow any redirect URI without further validation. You must never use this apart from maybe 
-some internal DEV or testing setups!
-```
+> [!CAUTION]
+> Technically, it is possible to just use a single <code>*</code> as a <code>redirect_uri</code>.
+> This 
+> would allow any redirect URI without further validation. You must never use this apart from maybe 
+> some internal DEV or testing setups!
 
 The JSON document for the ephemeral clients follows the same rules and works in the same ways any
 other OIDC client.
@@ -174,11 +175,10 @@ change after the initial setup.
 cache_lifetime = '1h'
 ```
 
-```admonish hint
-If you are developing or testing, set the <code>cache_lifetime</code> to a very low value. 
-Otherwise, Rauthy would not see any changes you do to this document as long as the internal cache 
-has not expired.
-```
+> [!TIP]
+> If you are developing or testing, set the <code>cache_lifetime</code> to a very low value. 
+> Otherwise, Rauthy would not see any changes you do to this document as long as the internal cache 
+> has not expired.
 
 ## Minimal Client JSON Document
 
@@ -228,10 +228,9 @@ struct EphemeralClientRequest {
 }
 ```
 
-```admonish into
-The `grant_types` exist for completeness only. They are actually ignored and overridden by the 
-`EPHEMERAL_CLIENTS_ALLOWED_FLOWS` config variable.
-```
+> [!NOTE]
+> The `grant_types` exist for completeness only. They are actually ignored and overridden by the 
+> `EPHEMERAL_CLIENTS_ALLOWED_FLOWS` config variable.
 
 With this information, we can now build a complete example JSON with all the possible values you can
 set:
@@ -258,7 +257,6 @@ set:
 }
 ```
 
-```admonish hint
-Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it 
-possible to host your file on GitHub for instance and receive a valid JSON.
-```
+> [!TIP]
+> Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it 
+> possible to host your file on GitHub for instance and receive a valid JSON.

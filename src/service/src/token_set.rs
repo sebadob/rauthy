@@ -1,12 +1,12 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
-use rauthy_api_types::oidc::{Audience, JktClaim};
+use rauthy_api_types::oidc::{ActClaim, Audience, JktClaim};
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
-use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens::{RefreshToken, RefreshTokenGrant};
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::scopes::Scope;
 use rauthy_data::entity::user_attr::UserAttrValueEntity;
@@ -16,7 +16,7 @@ use rauthy_data::entity::webids::WebId;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
-    ActClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
     validate_no_reserved_collision,
 };
 use rauthy_jwt::token::{JwtHeaderType, JwtToken};
@@ -31,16 +31,17 @@ use utoipa::ToSchema;
 
 pub struct AccessTokenJti(String);
 
+#[derive(Clone, Copy)]
 pub enum AtHashAlg {
     Sha256,
     Sha384,
     Sha512,
 }
 
-impl TryFrom<&str> for AtHashAlg {
-    type Error = ErrorResponse;
+impl FromStr for AtHashAlg {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let slf = match value {
             "RS256" => Self::Sha256,
             "RS384" => Self::Sha384,
@@ -75,7 +76,7 @@ impl AtHash {
     pub fn for_client(access_token: &[u8], client: &Client) -> Result<Self, ErrorResponse> {
         Ok(Self::build(
             access_token,
-            AtHashAlg::try_from(client.id_token_alg.as_str())?,
+            AtHashAlg::from_str(client.id_token_alg.as_str())?,
         ))
     }
 }
@@ -84,6 +85,16 @@ impl AtHash {
 pub enum AuthCodeFlow {
     Yes,
     No,
+}
+
+/// Whether the issued refresh token requires the user's consent grant (with `consent.enable`):
+/// it is only written while the grant exists, and a refresh of it is checked against the grant.
+/// `Exempt` for grants without a consent step (password, device code), carried through rotation
+/// in the refresh token claims.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ConsentCheck {
+    Required,
+    Exempt,
 }
 
 #[derive(Debug, Clone)]
@@ -422,7 +433,7 @@ impl TokenSet {
                 }
 
                 if let Some(zone) = &uv.tz {
-                    claims.zoneinfo = Some(zone)
+                    claims.zoneinfo = Some(zone);
                 }
             }
 
@@ -505,6 +516,7 @@ impl TokenSet {
         sid: Option<SessionId>,
         resource: Option<&str>,
         jti: AccessTokenJti,
+        consent_check: ConsentCheck,
     ) -> Result<String, ErrorResponse> {
         let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
             Some(device_id)
@@ -518,7 +530,7 @@ impl TokenSet {
             now
         } else {
             // allow 60 second early usage
-            now.add(access_token_lifetime).sub(Duration::from_secs(60))
+            now.add(access_token_lifetime).sub(Duration::from_mins(1))
         };
         let exp = if did.is_some() {
             nbf.add(config.vars.device_grant.refresh_token_lifetime)
@@ -554,6 +566,7 @@ impl TokenSet {
                 // Could be changed with v1.0.0 maybe.
                 auth_time: Some(auth_time.get()),
                 resource,
+                consent_exempt: consent_check == ConsentCheck::Exempt,
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
@@ -586,6 +599,11 @@ impl TokenSet {
                 sid.map(|s| s.0),
                 Some(jti.0),
                 client,
+                if config.vars.consent.enable && consent_check == ConsentCheck::Required {
+                    RefreshTokenGrant::Required { resource }
+                } else {
+                    RefreshTokenGrant::Unchecked
+                },
             )
             .await?;
         }
@@ -608,7 +626,7 @@ impl TokenSet {
             None,
             client,
             dpop_fingerprint,
-            client.access_token_lifetime as i64,
+            i64::from(client.access_token_lifetime),
             TokenScopes::new(scope.as_str()),
             None,
             None,
@@ -632,12 +650,14 @@ impl TokenSet {
     /// refresh token: a refresh must come from the client that owns the original token, with a
     /// fresh exchange on top. There is no id token either, because an exchanged token is meant
     /// for a resource server and not for authenticating an end user.
+    #[allow(clippy::too_many_arguments)]
     pub async fn for_token_exchange(
         user: Option<&User>,
         client: &Client,
         lifetime: i64,
         dpop_fingerprint: Option<DpopFingerprint>,
         scope: TokenScopes<'_>,
+        sid: Option<SessionId>,
         resource: Option<&str>,
         act: Option<ActClaim<'_>>,
     ) -> Result<Self, ErrorResponse> {
@@ -690,7 +710,7 @@ impl TokenSet {
             lifetime,
             TokenScopes::new(scope.0.as_ref()),
             customs_access,
-            None,
+            sid,
             resource,
             act,
             DeviceCodeFlow::No,
@@ -720,6 +740,7 @@ impl TokenSet {
         resource: Option<String>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
+        consent_check: ConsentCheck,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
         let scope = match scopes.as_deref() {
@@ -789,10 +810,10 @@ impl TokenSet {
                 ));
             }
 
-            let client_lt = client.access_token_lifetime.unsigned_abs() as i64;
+            let client_lt = i64::from(client.access_token_lifetime.unsigned_abs());
             if client_lt < diff { client_lt } else { diff }
         } else {
-            client.access_token_lifetime.unsigned_abs() as i64
+            i64::from(client.access_token_lifetime.unsigned_abs())
         };
 
         let token_type = if dpop_fingerprint.is_some() {
@@ -844,6 +865,7 @@ impl TokenSet {
                     sid,
                     resource.as_deref(),
                     jti,
+                    consent_check,
                 )
                 .await?,
             )

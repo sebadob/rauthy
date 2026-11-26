@@ -85,19 +85,16 @@ pub async fn reconcile(clients: Vec<Client>) -> Result<(), ErrorResponse> {
     let mut updated = 0;
 
     for client in clients {
-        match existing.get(client.id.as_str()).copied() {
-            Some(e) => {
-                let entity = to_entity(&client, &scopes, Some(e)).await?;
-                if &entity != e {
-                    entity.save().await?;
-                    updated += 1;
-                }
+        if let Some(e) = existing.get(client.id.as_str()).copied() {
+            let entity = to_entity(&client, &scopes, Some(e)).await?;
+            if &entity != e {
+                entity.save().await?;
+                updated += 1;
             }
-            None => {
-                let entity = to_entity(&client, &scopes, None).await?;
-                insert(&entity).await?;
-                created += 1;
-            }
+        } else {
+            let entity = to_entity(&client, &scopes, None).await?;
+            insert(&entity).await?;
+            created += 1;
         }
         upsert_scim(client).await?;
     }
@@ -235,11 +232,12 @@ async fn to_entity(
             ));
         }
     }
-    let redirect_uris = opt_vec_to_csv(&Some(client.redirect_uris.clone())).unwrap();
+    let redirect_uris = opt_vec_to_csv(Some(client.redirect_uris.as_slice())).unwrap();
     // empty values are stored as `NULL`, like `ClientEntity::save()` does
     let post_logout_redirect_uris =
-        opt_vec_to_csv(&client.post_logout_redirect_uris).filter(|v| !v.is_empty());
-    let allowed_origins = opt_vec_to_csv(&client.allowed_origins).filter(|v| !v.is_empty());
+        opt_vec_to_csv(client.post_logout_redirect_uris.as_deref()).filter(|v| !v.is_empty());
+    let allowed_origins =
+        opt_vec_to_csv(client.allowed_origins.as_deref()).filter(|v| !v.is_empty());
 
     let flows_enabled = GrantType::csv(&client.flows_enabled);
     let challenge = if secret.is_none() {
@@ -305,9 +303,11 @@ async fn to_entity(
         claims_at_root: existing.is_some_and(|e| e.claims_at_root),
         allowed_resources: existing.and_then(|e| e.allowed_resources.clone()),
         default_aud: existing.and_then(|e| e.default_aud.clone()),
+        actor_same_client: existing.is_some_and(|e| e.actor_same_client),
         created_micros: existing
             .map(|e| e.created_micros)
             .unwrap_or_else(|| Some(Utc::now().timestamp_micros())),
+        consent: existing.and_then(|e| e.consent.clone()),
     })
 }
 
@@ -341,7 +341,8 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
                     c.restrict_group_prefix.clone(),
                     c.allowed_resources.clone(),
                     c.default_aud.clone(),
-                    c.created_micros
+                    c.created_micros,
+                    c.consent.clone()
                 ),
             )
             .await?;
@@ -374,6 +375,7 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
                 &c.allowed_resources,
                 &c.default_aud,
                 &c.created_micros,
+                &c.consent,
             ],
         )
         .await?;
@@ -384,8 +386,8 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
 }
 
 #[cold]
-fn opt_vec_to_csv(input: &Option<Vec<String>>) -> Option<String> {
-    input.as_ref().map(|v| {
+fn opt_vec_to_csv(input: Option<&[String]>) -> Option<String> {
+    input.map(|v| {
         v.iter()
             .filter_map(|v| {
                 let trimmed = v.trim();
@@ -430,6 +432,7 @@ mod tests {
         existing.secret_kid = Some("kid".to_string());
         existing.claims = Some(b"{}".to_vec());
         existing.default_aud = Some("aud".to_string());
+        existing.consent = Some("https://consent.example.com/app".to_string());
 
         // `generate` must never rotate an existing secret
         let mut c = client("app", "https://localhost/changed");
@@ -442,6 +445,7 @@ mod tests {
         // values outside the bootstrap format are kept, the rest comes from the file
         assert_eq!(e.claims, existing.claims);
         assert_eq!(e.default_aud, existing.default_aud);
+        assert_eq!(e.consent, existing.consent);
         assert_eq!(e.created_micros, existing.created_micros);
         assert_eq!(
             e.redirect_uris,

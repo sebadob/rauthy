@@ -1,9 +1,11 @@
 use crate::{
     database::{Cache, DB},
     entity::auth_providers::{AuthProvider, AuthProviderType},
+    http_client::http_client_builder,
     rauthy_config::RauthyConfig,
 };
 use atrium_api::types::string::Did;
+use atrium_api::xrpc::{self, HttpClient};
 use atrium_common::store::Store;
 use atrium_identity::{
     did::{CommonDidResolver, CommonDidResolverConfig, DEFAULT_PLC_DIRECTORY_URL},
@@ -12,8 +14,8 @@ use atrium_identity::{
     },
 };
 use atrium_oauth::{
-    AtprotoClientMetadata, AuthMethod, DefaultHttpClient, GrantType, KnownScope, OAuthClient,
-    OAuthClientConfig, OAuthResolverConfig, Scope,
+    AtprotoClientMetadata, AuthMethod, GrantType, KnownScope, OAuthClient, OAuthClientConfig,
+    OAuthResolverConfig, Scope,
     store::{
         self,
         session::SessionStore,
@@ -43,8 +45,9 @@ pub struct Client(
         OAuthClient<
             DB,
             DB,
-            CommonDidResolver<DefaultHttpClient>,
-            AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
+            CommonDidResolver<AtprotoHttpClient>,
+            AtprotoHandleResolver<DnsTxtResolver, AtprotoHttpClient>,
+            AtprotoHttpClient,
         >,
     >,
 );
@@ -65,7 +68,8 @@ impl Client {
     fn new() -> Result<Self, atrium_oauth::Error> {
         let config = RauthyConfig::get();
 
-        let http_client = Arc::new(DefaultHttpClient::default());
+        let http_client = AtprotoHttpClient::new();
+        let resolver_http_client = Arc::new(http_client.clone());
 
         let scopes = vec![
             Scope::Unknown("transition:email".to_owned()),
@@ -114,17 +118,18 @@ impl Client {
             resolver: OAuthResolverConfig {
                 did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
                     plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
-                    http_client: http_client.clone(),
+                    http_client: resolver_http_client.clone(),
                 }),
                 handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
                     dns_txt_resolver: DnsTxtResolver::default(),
-                    http_client: http_client.clone(),
+                    http_client: resolver_http_client,
                 }),
                 authorization_server_metadata: Default::default(),
                 protected_resource_metadata: Default::default(),
             },
             state_store: DB,
             session_store: DB,
+            http_client,
         };
 
         OAuthClient::new(config).map(Arc::new).map(Client)
@@ -149,6 +154,7 @@ impl Client {
             client_secret_post: false,
             auto_onboarding: false,
             auto_link: false,
+            hide_login: false,
             client_id: "rauthy".to_owned(),
             client_secret: None,
             scope: String::new(),
@@ -156,6 +162,7 @@ impl Client {
             admin_claim_value: None,
             mfa_claim_path: None,
             mfa_claim_value: None,
+            claim_mappings: None,
         };
 
         match AuthProvider::find_by_iss(payload.issuer.clone()).await {
@@ -166,7 +173,7 @@ impl Client {
                 AuthProvider::create(payload).await?;
             }
             _ => {}
-        };
+        }
 
         Ok(())
     }
@@ -176,12 +183,45 @@ impl Deref for Client {
     type Target = OAuthClient<
         DB,
         DB,
-        CommonDidResolver<DefaultHttpClient>,
-        AtprotoHandleResolver<DnsTxtResolver, DefaultHttpClient>,
+        CommonDidResolver<AtprotoHttpClient>,
+        AtprotoHandleResolver<DnsTxtResolver, AtprotoHttpClient>,
+        AtprotoHttpClient,
     >;
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct AtprotoHttpClient {
+    client: reqwest::Client,
+}
+
+impl AtprotoHttpClient {
+    fn new() -> Self {
+        Self {
+            client: http_client_builder()
+                .build()
+                .expect("Cannot build HTTP client for ATProto"),
+        }
+    }
+}
+
+impl HttpClient for AtprotoHttpClient {
+    async fn send_http(
+        &self,
+        request: xrpc::http::Request<Vec<u8>>,
+    ) -> Result<xrpc::http::Response<Vec<u8>>, Box<dyn std::error::Error + Send + Sync + 'static>>
+    {
+        let response = self.client.execute(request.try_into()?).await?;
+        let mut builder = xrpc::http::Response::builder().status(response.status());
+        for (k, v) in response.headers() {
+            builder = builder.header(k, v);
+        }
+        builder
+            .body(Vec::from(response.bytes().await?))
+            .map_err(Into::into)
     }
 }
 

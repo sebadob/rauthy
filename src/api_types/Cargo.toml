@@ -12,8 +12,6 @@ rauthy-error = { path = "../error" }
 
 actix-web = { workspace = true }
 hiqlite = { workspace = true }
-openssl = { workspace = true }
-openssl-sys = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 time = { workspace = true }
@@ -21,3 +19,6 @@ tokio-postgres = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
+
+[lints]
+workspace = true

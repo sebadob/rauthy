@@ -7,7 +7,7 @@ use tokio::time;
 use tracing::{debug, error};
 
 pub async fn refresh_tokens_cleanup() {
-    let mut interval = tokio::time::interval(Duration::from_secs(3600 * 3));
+    let mut interval = tokio::time::interval(Duration::from_hours(3));
 
     loop {
         interval.tick().await;
@@ -26,10 +26,10 @@ pub async fn refresh_tokens_cleanup() {
 
         if is_hiqlite() {
             if let Err(err) = DB::hql().execute(sql, params!(now)).await {
-                error!(?err, "Refresh Token Cleanup")
+                error!(?err, "Refresh Token Cleanup");
             }
         } else if let Err(err) = DB::pg_execute(sql, &[&now]).await {
-            error!(?err, "Refresh Token Cleanup")
+            error!(?err, "Refresh Token Cleanup");
         }
 
         // For some reason, the interval could `.tick()` multiple times,

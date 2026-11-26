@@ -11,14 +11,14 @@ database, with the private key being encrypted with the configured `encryption.k
 will be valid for 10 years and re-used for signing the server certs in all instances, even you do an
 HA deployment.
 
-```admonish caution
-Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS 
-certificates. To be able to do this during testing, you would need to add the generated CA 
-certificate to your trust store.
-
-In such a case, you will probably see an error like `Invalid Key` during registration. This happens 
-in insecure contexts.
-```
+> [!WARNING]
+> Some browsers like Firefox do not allow the registration of Passkeys when using self-signed TLS 
+> certificates. To be able to do this during testing, you would need to add the generated CA 
+> certificate to your trust store.
+>
+> In such a case, you will probably see an error like `Invalid Key` during registration. This
+> happens 
+> in insecure contexts.
 
 ### Automatic self-signed certificates
 
@@ -76,10 +76,9 @@ tls_auto_certificates = true
 
 ### Manually managed certificates
 
-```admonish note
-We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy 
-creation of a fully functioning and production ready private Root Certificate Authority (CA).
-```
+> [!NOTE]
+> We are using another project of mine called [Nioca](https://github.com/sebadob/nioca) for an easy 
+> creation of a fully functioning and production ready private Root Certificate Authority (CA).
 
 I suggest to use `docker` for this task. Otherwise, you can use the `nioca` binary directly on any
 linux machine. If you want a permanent way of generating certificates for yourself, take a look at
@@ -180,10 +179,9 @@ There is no problem using the same certificates for both networks, but you can o
 separate them if you need to. You could even re-use the Server TLS, if your DNS setup allows for
 this.
 
-```admonish note
-At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the 
-`*_danger_tls_no_verify` to `true`
-```
+> [!NOTE]
+> At the time of writing, it does not accept a custom Root CA yet. In this case you have to set the 
+> `*_danger_tls_no_verify` to `true`
 
 ### Rauthy Server / API
 
@@ -228,11 +226,10 @@ kubectl -n rauthy create secret tls rauthy-tls --key="key.pem" --cert="cert-chai
 kubectl -n rauthy create secret tls hiqlite-tls --key="key.pem" --cert="cert-chain.pem"
 ``` 
 
-```admonish notice
-We create the `hiqlite-tls` here with the exact same values. You could of course either use 
-different certificates, or not create a separate secret at all and just re-use the Rauthy TLS 
-certificates, if you DNS setup allows for proper validation in this case.
-```
+> [!NOTE]
+> We create the `hiqlite-tls` here with the exact same values. You could of course either use 
+> different certificates, or not create a separate secret at all and just re-use the Rauthy TLS 
+> certificates, if you DNS setup allows for proper validation in this case.
 
 #### Config Adjustments - REST API
 

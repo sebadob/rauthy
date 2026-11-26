@@ -134,7 +134,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
                     provider.save().await?;
 
                     modified += 1;
-                };
+                }
             }
             Err(err) => {
                 error!(

@@ -85,6 +85,7 @@
         {#each attrs as a (a.name)}
             <Input
                 bind:value={a.value}
+                formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                 autocomplete="off"
                 label={a.name}
                 placeholder={a.default_value?.toString()
@@ -93,6 +94,10 @@
                 width="100%"
                 onEnter={onSubmit}
             />
+        {:else}
+            <p class="ui-muted-copy">
+                {t.account.noEditableAttributes ?? 'No editable attributes.'}
+            </p>
         {/each}
     </div>
 

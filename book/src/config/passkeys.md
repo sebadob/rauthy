@@ -20,38 +20,40 @@ Passkey-only accounts provide a few benefits:
 - no need to satisfy password policies
 - no need to reset your password after it has been expired
 
-```admonish caution
-Passkey only accounts cannot use the traditional password reset E-Mails.
+> [!WARNING]
+> Passkey only accounts cannot use the traditional password reset E-Mails.
+>
+> This is a drawback and a benefit at the same time:  
+> No way to take over an account if the E-Mail account has been compromised, but at the same time
+> the 
+> user relies on an Admin to reset the MFA devices, if no backup exists or all are lost.
 
-This is a drawback and a benefit at the same time:  
-No way to take over an account if the E-Mail account has been compromised, but at the same time the 
-user relies on an Admin to reset the MFA devices, if no backup exists or all are lost.
-```
+> [!NOTE]
+> Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident
+> 
+> keys feature. This is really cool and the best possible UX at first glance, because the user does 
+> not need to provide even a username / email manually, but has one very big drawback.
+>
+> **The amount of resident keys a passkey can store is always limited.**
+>
+> There are devices, that can get locked up completely if you try to register resident keys beyond 
+> the capacity of the device itself. For this reason, Rauthy strictly discourages the use of
+> resident 
+> keys and will always request the user to provide the email, so you can never end up in such a 
+> situation with Rauthy. Non-discoverable credentials are not limited per device.
+>
+> Rauthy remembers the last email that has been used for a login on each machine. This provides the 
+> same best possible UX in the end that you would get with discoverable credentials but without the 
+> drawbacks of the limited amount.
 
-```admonish note
-Unfortunately, passkeys have one big drawback when you use the discoverable credentials / resident 
-keys feature. This is really cool and the best possible UX at first glance, because the user does 
-not need to provide even a username / email manually, but has one very big drawback.
-
-**The amount of resident keys a passkey can store is always limited.**
-
-There are devices, that can get locked up completely if you try to register resident keys beyond 
-the capacity of the device itself. For this reason, Rauthy strictly discourages the use of resident 
-keys and will always request the user to provide the email, so you can never end up in such a 
-situation with Rauthy. Non-discoverable credentials are not limited per device.
-
-Rauthy remembers the last email that has been used for a login on each machine. This provides the 
-same best possible UX in the end that you would get with discoverable credentials but without the 
-drawbacks of the limited amount.
-```
-
-```admonish note
-On macOS, when your browser tries to create a passkey, it will default to using the built-in 
-Passwords app. If you wish to use a different password manager such as 1Password, Vaultwarden, etc.,
-you'll need to disable the setting "Autofill Passwords and Passkeys".
-
-![the setting Autofill Passwords and Passkeys is under a section called AutoFill and Passwords](img/macos_autofill.png)
-```
+> [!NOTE]
+> On macOS, when your browser tries to create a passkey, it will default to using the built-in 
+> Passwords app. If you wish to use a different password manager such as 1Password, Vaultwarden,
+> etc.,
+> you'll need to disable the setting "Autofill Passwords and Passkeys".
+>
+> ![the setting Autofill Passwords and Passkeys is under a section called AutoFill and
+> Passwords](img/macos_autofill.png)
 
 ## Config
 
@@ -70,19 +72,17 @@ application is available at `auth.example.com`, then this should be:
 rp_id = "auth.example.com"
 ```
 
-```admonish caution
-When the `RP_ID` changes, already registered devices will stop working and users cannot log in 
-anymore! Be very careful, if you want / need to do this in production.
-```
+> [!WARNING]
+> When the `RP_ID` changes, already registered devices will stop working and users cannot log in 
+> anymore! Be very careful, if you want / need to do this in production.
 
 ### `RP_ORIGIN`
 
 The second important variable is the `webauthn.rp_origin`. This needs to be set to the scheme + URL
 containing the effective domain name + port.
 
-```admonish caution
-The `rp_origin` must always include the port number, even if it is just the default 443 for HTTPS.
-```
+> [!WARNING]
+> The `rp_origin` must always include the port number, even if it is just the default 443 for HTTPS.
 
 In this example, assuming Rauthy will be available at port 443, correct would be:
 
