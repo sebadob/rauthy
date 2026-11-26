@@ -13,8 +13,6 @@ rauthy-data = { path = "../data" }
 actix-web = { workspace = true }
 chrono = { workspace = true }
 futures = { workspace = true }
-openssl = { workspace = true }
-openssl-sys = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 

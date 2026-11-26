@@ -312,6 +312,9 @@ fn is_attestation_error(err: &WebauthnError) -> bool {
             | WebauthnError::AttestationFormatMissingAaguid
             | WebauthnError::AttestationChainNotTrusted(_)
             | WebauthnError::AttestationCredentialSubjectKeyMismatch
+            | WebauthnError::CertificatePublicKeyInvalid
+            | WebauthnError::CertificatePublicKeyAlgorthimMismatch
             | WebauthnError::MissingAttestationCaList
+            | WebauthnError::X509DerInvalid
     )
 }

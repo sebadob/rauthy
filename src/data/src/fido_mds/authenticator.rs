@@ -8,9 +8,9 @@ use hiqlite::params;
 use rauthy_common::constants::IDX_WEBAUTHN_MDS_CA_LIST;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 use std::collections::BTreeMap;
-use tracing::error;
+use tracing::{error, warn};
 use uuid::Uuid;
 use webauthn_rs::prelude::{AttestationCaList, AttestationCaListBuilder};
 
@@ -99,6 +99,7 @@ impl MdsAuthenticator {
         }
 
         let mut builder = AttestationCaListBuilder::new();
+        let mut inserted = 0usize;
         for auth in authenticators {
             let Ok(aaguid) = Uuid::from_slice(&auth.entry.aaguid) else {
                 error!("Invalid AAGUID in MDS certs set");
@@ -112,12 +113,18 @@ impl MdsAuthenticator {
                     auth.entry.description.clone(),
                     BTreeMap::new(),
                 ) {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        format!("Failed to insert MDS root certificate: {err:?}"),
-                    ));
+                    warn!(
+                        "Skipping FIDO MDS root certificate for {} ({}): {:?}",
+                        aaguid, auth.entry.description, err
+                    );
+                } else {
+                    inserted += 1;
                 }
             }
+        }
+        if inserted == 0 {
+            error!("No valid FIDO MDS root certificates could be loaded");
+            return Ok(None);
         }
         Ok(Some(builder.build()))
     }
