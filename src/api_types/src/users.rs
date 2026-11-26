@@ -878,6 +878,8 @@ mod tests {
 
     #[test]
     fn attr_config_typ_wire_form_is_lowercase() {
+        use utoipa::PartialSchema;
+
         // The stored column, `as_str`, `FromStr`, and the frontend type all use "email", so the
         // JSON form must be that too, not serde's variant name.
         assert_eq!(
@@ -900,7 +902,6 @@ mod tests {
             "a request with the lowercase typ must deserialize"
         );
 
-        use utoipa::PartialSchema;
         let schema = serde_json::to_value(UserAttrConfigTyp::schema()).unwrap();
         assert_eq!(serde_json::json!(["email"]), schema["enum"], "{schema}");
     }
