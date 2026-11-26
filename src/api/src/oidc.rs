@@ -145,6 +145,7 @@ pub async fn get_authorize(
 
     // check if the user needs to do a MFA login each time
     let mut action = FrontendAction::None;
+    let mut mfa_user_id: Option<String> = None;
     if !force_new_session {
         // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
@@ -152,6 +153,7 @@ pub async fn get_authorize(
             && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
             && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
         {
+            mfa_user_id = Some(user.id);
             action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
@@ -211,12 +213,16 @@ pub async fn get_authorize(
         .map(String::from)
         .collect::<Vec<_>>();
     let scopes = client.sanitize_login_scopes(Some(&scopes));
-    // only a valid session has proven the user, whose grant may then be shown
-    let user_id = principal
-        .session
-        .as_ref()
-        .and_then(|s| s.user_id.as_deref())
-        .filter(|_| is_session_valid);
+    // a valid session, or a valid MFA cookie for the user the form logs in, has proven the user,
+    // whose grant may then be shown
+    let user_id = if is_session_valid {
+        principal
+            .session
+            .as_ref()
+            .and_then(|s| s.user_id.as_deref())
+    } else {
+        mfa_user_id.as_deref()
+    };
     let consent_req = ConsentRequest {
         client: &client,
         resource,

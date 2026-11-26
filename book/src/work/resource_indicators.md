@@ -131,10 +131,12 @@ source is not requested on every lookup.
 
 With `consent.enable`, the login page shows a consent block below the login form whenever the
 user's consent grant for the client and `resource` does not cover the request: for every login
-without a session, for a requested scope that was not accepted before, after any change of the
-consent content of the accepted scopes, and with `prompt=consent`. With a still valid session,
-the page shows only the consent block and signs in without asking for credentials again. A request
-with `prompt=none` that needs consent is answered with `error=consent_required`.
+whose user is not proven yet, for a requested scope that was not accepted before, after any change
+of the consent content of the accepted scopes, and with `prompt=consent`. A valid session, or a
+valid MFA cookie for the user the form signs in, proves that user, so its grant is used and shown.
+With a still valid session, the page shows only the consent block and signs in without asking for
+credentials again. A request with `prompt=none` that needs consent is answered with
+`error=consent_required`.
 
 The client's `default_scopes` are always accepted and shown locked, any other requested scope can
 be declined. The block must be confirmed before the login. The login then writes the grant with

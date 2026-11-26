@@ -16,8 +16,8 @@
 //! code the dev-only reveal endpoint returns is the very code the backend has emailed, which is the
 //! only way a test can ever get one, because emails go nowhere during tests.
 use crate::common::{
-    accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_backend_url,
-    get_solved_pow, send_login, stale_consent,
+    accept_all, consent_required, consent_template, cookie_csrf_headers_from_res_direct,
+    get_backend_url, get_solved_pow, send_login, stale_consent,
 };
 use crate::{expect_status, expect_status_json};
 use rauthy_api_types::generic::Language;
@@ -29,6 +29,7 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, new_store_id};
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{AUTHORIZATION, COOKIE, HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Client, StatusCode};
 use ring::hmac;
@@ -436,13 +437,36 @@ async fn consents(user_id: &str) -> Result<Vec<UserConsentResponse>, Box<dyn Err
     Ok(expect_status_json!(res, 200, Vec<UserConsentResponse>))
 }
 
+/// The `RauthyMfa` cookie a login that stopped at the 2nd factor sets.
+fn mfa_cookie_of(res: &reqwest::Response) -> String {
+    res.headers()
+        .get_all(SET_COOKIE)
+        .iter()
+        .filter_map(|c| c.to_str().ok()?.split_once(';').map(|(c, _)| c.to_string()))
+        .find(|c| c.contains("RauthyMfa="))
+        .expect("the MFA cookie of the MFA step")
+}
+
+/// A fresh `Init` session that carries the given MFA cookie, as a browser with an expired session
+/// sends it.
+async fn session_with_mfa_cookie(mfa_cookie: &str) -> Result<HeaderMap, Box<dyn Error>> {
+    let mut session = init_session().await?;
+    let cookie = session.get(COOKIE).unwrap().to_str()?.to_string();
+    session.insert(
+        COOKIE,
+        HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
+    );
+    Ok(session)
+}
+
 /// `POST /oidc/authorize` with only the email, as a login with a valid MFA cookie sends it, and
 /// the given consent.
 async fn login_mfa_cookie(
+    email: &str,
     session: &HeaderMap,
     consent: Option<LoginConsent>,
 ) -> Result<reqwest::Response, Box<dyn Error>> {
-    let req = login_request(OTP_CONSENT_USER.as_str(), None, consent).await;
+    let req = login_request(email, None, consent).await;
     Ok(Client::new()
         .post(format!("{}/oidc/authorize", get_backend_url()))
         .headers(session.clone())
@@ -451,9 +475,26 @@ async fn login_mfa_cookie(
         .await?)
 }
 
-/// A consent given with the password or with a valid MFA cookie alone is written only after the
-/// OTP ceremony proved the user, and a login that has proven no factor yet sees nothing of the
-/// grant.
+/// `GET /oidc/authorize` of the `rauthy` client with the same PKCE as [`login_request`], and the
+/// HTML of its login page.
+async fn login_page(headers: &HeaderMap) -> Result<String, Box<dyn Error>> {
+    let backend = get_backend_url();
+    let challenge = base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes()));
+    let res = Client::new()
+        .get(format!(
+            "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
+            &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+        ))
+        .headers(headers.clone())
+        .send()
+        .await?;
+
+    Ok(expect_status!(res, 200).text().await?)
+}
+
+/// A consent given with the password, or with a valid MFA cookie for the user's email, is written
+/// only after the OTP ceremony proved the user. The MFA cookie proves the first factor, so once the
+/// grant exists it covers the request, and it is shown when a consent is refused.
 #[tokio::test]
 async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>> {
     if !gated_suite_ready().await? {
@@ -475,28 +516,18 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
     // --- the password and a consent: no grant before the OTP
     let session = init_session().await?;
     let res = login(OTP_CONSENT_USER.as_str(), PASSWORD_ONLY, &session).await;
-    let mfa_cookie = res
-        .headers()
-        .get_all(SET_COOKIE)
-        .iter()
-        .filter_map(|c| c.to_str().ok()?.split_once(';').map(|(c, _)| c.to_string()))
-        .find(|c| c.contains("RauthyMfa="));
+    let mfa_cookie = mfa_cookie_of(&res);
     expect_status_json!(res, 200, [OtpChallenge; 1]);
-    let mfa_cookie = mfa_cookie.expect("the MFA cookie of the OTP step");
     assert!(consents(&user_id).await?.is_empty());
 
     // --- a valid MFA cookie without a password: no grant before the OTP either
-    let mut session = init_session().await?;
-    let cookie = session.get(COOKIE).unwrap().to_str()?.to_string();
-    session.insert(
-        COOKIE,
-        HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
-    );
-    let content = consent_required(login_mfa_cookie(&session, None).await?).await;
+    let session = session_with_mfa_cookie(&mfa_cookie).await?;
+    let content =
+        consent_required(login_mfa_cookie(OTP_CONSENT_USER.as_str(), &session, None).await?).await;
     let consent = accept_all(&content);
     let mut accepted = consent.accepted_scopes.clone();
     accepted.sort_unstable();
-    let res = login_mfa_cookie(&session, Some(consent)).await?;
+    let res = login_mfa_cookie(OTP_CONSENT_USER.as_str(), &session, Some(consent)).await?;
     let [challenge] = expect_status_json!(res, 200, [OtpChallenge; 1]);
     assert!(consents(&user_id).await?.is_empty());
 
@@ -510,23 +541,82 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
     assert_eq!(grants[0].resource, None);
     assert_eq!(grants[0].scopes, accepted);
 
-    // --- without a proven factor, the grant is neither used nor shown
-    let mut session = init_session().await?;
-    let cookie = session.get(COOKIE).unwrap().to_str()?.to_string();
-    session.insert(
-        COOKIE,
-        HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
+    // --- the MFA cookie of the same user proves the first factor: the grant covers the request
+    let session = session_with_mfa_cookie(&mfa_cookie).await?;
+    let [_challenge] = expect_status_json!(
+        login_mfa_cookie(OTP_CONSENT_USER.as_str(), &session, None).await?,
+        200,
+        [OtpChallenge; 1]
     );
-    let content = consent_required(login_mfa_cookie(&session, None).await?).await;
-    assert!(content.granted_scopes.is_empty(), "{content:?}");
-    // nor shown with a refused consent, which writes nothing: a write would change `updated`
+    // and its login page asks for no consent at all, only for the Passkey or OTP ceremony
+    let html = login_page(&session).await?;
+    assert_eq!(
+        consent_template(&html),
+        None,
+        "the MFA cookie proves its user"
+    );
+    assert!(
+        html.contains(&format!(
+            "<template id=\"tpl_login_action\">MfaLogin {}</template>",
+            OTP_CONSENT_USER.as_str()
+        )),
+        "{html}"
+    );
+    // and it is shown with a refused consent, which writes nothing: a write would change `updated`
     tokio::time::sleep(Duration::from_secs(1)).await;
     let stale = stale_consent(&content);
-    let content = consent_required(login_mfa_cookie(&session, Some(stale)).await?).await;
-    assert!(content.granted_scopes.is_empty(), "{content:?}");
+    let content =
+        consent_required(login_mfa_cookie(OTP_CONSENT_USER.as_str(), &session, Some(stale)).await?)
+            .await;
+    assert_eq!(content.granted_scopes, accepted, "{content:?}");
     let after = consents(&user_id).await?;
     assert_eq!(after.len(), 1);
     assert_eq!(after[0].updated, grants[0].updated);
+
+    Ok(())
+}
+
+/// The MFA cookie proves only the user it was issued for. On a shared device, the cookie of one
+/// user never logs in another one without a password, while its own user signs in with the consent
+/// grant the cookie proves.
+#[tokio::test]
+async fn test_otp_consent_mfa_cookie_proves_only_its_own_user() -> Result<(), Box<dyn Error>> {
+    if !gated_suite_ready().await? {
+        return Ok(());
+    }
+    let cookie_user = format!("otp-consent-cookie-{}@localhost", *SUFFIX);
+    let other_user = format!("otp-consent-other-{}@localhost", *SUFFIX);
+    let cookie_user_id = create_test_user(&cookie_user).await?;
+    ensure_otp(&cookie_user_id, &cookie_user).await?;
+    create_test_user(&other_user).await?;
+
+    let session = init_session().await?;
+    let res = login(&cookie_user, PASSWORD_ONLY, &session).await;
+    let mfa_cookie = mfa_cookie_of(&res);
+    expect_status_json!(res, 200, [OtpChallenge; 1]);
+
+    let session = session_with_mfa_cookie(&mfa_cookie).await?;
+    let body = expect_status_json!(
+        login_mfa_cookie(&other_user, &session, None).await?,
+        400,
+        ErrorResponse
+    );
+    assert_eq!(body.error, ErrorResponseType::PasswordRequired, "{body:?}");
+
+    // and its login page belongs to the cookie's own user, whose grant covers the request
+    let html = login_page(&session).await?;
+    assert!(
+        html.contains(&format!(
+            "<template id=\"tpl_login_action\">MfaLogin {}</template>",
+            cookie_user
+        )),
+        "{html}"
+    );
+    assert_eq!(
+        consent_template(&html),
+        None,
+        "the cookie's own user is proven and has a grant"
+    );
 
     Ok(())
 }
