@@ -377,6 +377,7 @@ use utoipa::{OpenApi, openapi};
             SessionState,
             TokenRequest,
             TokenRevocationRequest,
+            TokenType,
             TokenValidationRequest,
             UpdateClientRequest,
             ClientSecretRequest,

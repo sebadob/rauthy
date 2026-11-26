@@ -3,6 +3,7 @@ use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
 use crate::entity::clients::Client;
 use crate::entity::consent_sources::ConsentSource;
+use crate::entity::jwk::JwkKeyPairAlg;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::fido_mds::masks::{AttachmentHintMask, KeyProtectionMask, MdsCertLevel};
@@ -300,6 +301,7 @@ pub struct Vars {
     pub hashing: VarsHashing,
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
+    pub id_jag: VarsIdJag,
     pub lifetimes: VarsLifetimes,
     pub ldap: VarsLdap,
     pub logging: VarsLogging,
@@ -625,6 +627,9 @@ impl Default for Vars {
                     "uk".into(),
                     "zhhans".into(),
                 ],
+            },
+            id_jag: VarsIdJag {
+                audiences: BTreeMap::default(),
             },
             lifetimes: VarsLifetimes {
                 refresh_token_grace_time: Duration::from_secs(5),
@@ -1682,6 +1687,7 @@ impl Vars {
         slf.parse_otp(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
+        slf.parse_id_jag(&mut table);
         slf.parse_lifetimes(&mut table);
         slf.parse_ldap(&mut table);
         slf.parse_logging(&mut table);
@@ -3489,6 +3495,58 @@ impl Vars {
         }
 
         check_table_empty(&table, "i18n");
+    }
+
+    fn parse_id_jag(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "id_jag");
+
+        if let Some(value) = table.remove("audiences") {
+            let Value::Array(arr) = value else {
+                panic!("{}", err_t("audiences", "id_jag", "Array"));
+            };
+            for entry in arr {
+                let Value::Table(mut table) = entry else {
+                    panic!("{}", err_t("<entry>", "id_jag.audiences", "Table"));
+                };
+
+                let audience = t_str(&mut table, "id_jag.audiences", "audience", "")
+                    .expect("`audience` is mandatory for `[[id_jag.audiences]]`");
+                let clients = t_str_vec(&mut table, "id_jag.audiences", "clients", "")
+                    .expect("`clients` is mandatory for `[[id_jag.audiences]]`");
+                let resources =
+                    t_str_vec(&mut table, "id_jag.audiences", "resources", "").unwrap_or_default();
+                let scopes =
+                    t_str_vec(&mut table, "id_jag.audiences", "scopes", "").unwrap_or_default();
+                let alg = t_str(&mut table, "id_jag.audiences", "alg", "")
+                    .map(|alg| {
+                        JwkKeyPairAlg::from_str(&alg).unwrap_or_else(|_| {
+                            panic!("Invalid `[[id_jag.audiences]]`: unknown `alg` '{alg}'")
+                        })
+                    })
+                    .unwrap_or(JwkKeyPairAlg::RS256);
+                check_table_empty(&table, "id_jag.audiences");
+
+                if audience.is_empty() {
+                    panic!("Invalid `[[id_jag.audiences]]`: `audience` must not be empty");
+                }
+                match self.id_jag.audiences.entry(audience) {
+                    btree_map::Entry::Vacant(slot) => {
+                        slot.insert(VarsIdJagAudience {
+                            alg,
+                            clients,
+                            resources,
+                            scopes,
+                        });
+                    }
+                    btree_map::Entry::Occupied(slot) => panic!(
+                        "Invalid `[[id_jag.audiences]]`: duplicate `audience` '{}'",
+                        slot.key()
+                    ),
+                }
+            }
+        }
+
+        check_table_empty(&table, "id_jag");
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
@@ -5397,6 +5455,20 @@ pub struct VarsHttpClient {
 pub struct VarsI18n {
     pub filter_lang_common: Vec<Cow<'static, str>>,
     pub filter_lang_admin: Vec<Cow<'static, str>>,
+}
+
+#[derive(Debug)]
+pub struct VarsIdJag {
+    /// `[[id_jag.audiences]]` registry, keyed by `audience`.
+    pub audiences: BTreeMap<String, VarsIdJagAudience>,
+}
+
+#[derive(Debug)]
+pub struct VarsIdJagAudience {
+    pub alg: JwkKeyPairAlg,
+    pub clients: Vec<String>,
+    pub resources: Vec<String>,
+    pub scopes: Vec<String>,
 }
 
 #[derive(Debug)]

@@ -5,12 +5,14 @@ one. The typical case is a service that receives an access token from a caller a
 second service downstream: instead of forwarding the original token, which was minted for itself, it
 exchanges it for a token whose audience is the downstream service.
 
-Rauthy supports two shapes of this:
+Rauthy supports three shapes of this:
 
 - **Impersonation**: the new token looks like a token for the original subject. A downstream service
   cannot tell that somebody exchanged it.
 - **Delegation**: the new token additionally carries an `act` (actor) claim naming the acting party,
   so a downstream service can distinguish "A acting on behalf of B" from "B".
+- **ID-JAG**: an ID token is exchanged for an Identity Assertion JWT Authorization Grant, which the
+  client redeems at another authorization server. See [ID-JAG](#id-jag) below.
 
 ## The token exchange request
 
@@ -26,21 +28,19 @@ exchange is only allowed for confidential clients.
 | Parameter | | Description |
 | --- | --- | --- |
 | `subject_token` | required | The token representing the identity the new token should act for. |
-| `subject_token_type` | required | Must be `urn:ietf:params:oauth:token-type:access_token`. |
+| `subject_token_type` | required | Must be `urn:ietf:params:oauth:token-type:access_token`, or `urn:ietf:params:oauth:token-type:id_token` for an ID-JAG. |
 | `actor_token` | optional | Presence turns the exchange into a delegation and adds the `act` claim. |
 | `actor_token_type` | required with `actor_token` | Must be `urn:ietf:params:oauth:token-type:access_token`. |
-| `audience` | optional | The target the new token is for. Validated against `allowed_resources`. |
-| `resource` | optional | Same as `audience`. Only one of the two may be given. |
-| `scope` | optional | Narrows the scopes. It can never widen the `subject_token`'s scopes. |
-| `requested_token_type` | optional | Only `urn:ietf:params:oauth:token-type:access_token` is supported, which is also the default. |
+| `audience` | optional | The target the new token is for. Validated against `allowed_resources`. Required for an ID-JAG. |
+| `resource` | optional | Same as `audience`. Only one of the two may be given, except for an ID-JAG. |
+| `scope` | optional | Narrows the scopes. It can never widen the `subject_token`'s scopes. See below for an ID-JAG. |
+| `requested_token_type` | optional | `urn:ietf:params:oauth:token-type:access_token`, which is also the default, or `urn:ietf:params:oauth:token-type:id-jag`. |
 
 > [!NOTE]
-> Rauthy only accepts **access tokens** as `subject_token` / `actor_token`, and the exchanged token
-> is
-> always an access token. The exchanged token never comes with a refresh token: a refresh must come
-> from the client that owns the original token, with a fresh exchange on top. The `may_act` claim is
-> not supported yet.
-
+> Apart from the ID-JAG, Rauthy only accepts **access tokens** as `subject_token` / `actor_token`,
+> and the exchanged token is always an access token. The exchanged token never comes with a refresh
+> token: a refresh must come from the client that owns the original token, with a fresh exchange on
+> top. The `may_act` claim is not supported yet.
 ## Per-client configuration
 
 The exchange is **deny by default** and needs two things configured on the exchanging client, in the
@@ -89,3 +89,53 @@ The `act` claim is part of the token introspection response (`POST /oidc/introsp
 An exchanged token belongs to the same session as its `subject_token`. If the tokens of that session
 are revoked, on a logout with `access.token_revoke_on_logout` or when an admin deletes the session,
 the exchanged token is revoked as well.
+
+## ID-JAG
+
+An [Identity Assertion JWT Authorization Grant][id-jag] lets a client get an access token from
+another authorization server for the logged-in user, without a second login there. The client
+exchanges the user's ID token at Rauthy for an ID-JAG, and then redeems the ID-JAG at the other
+authorization server with the `urn:ietf:params:oauth:grant-type:jwt-bearer` grant. This is used
+by the MCP [Enterprise-Managed Authorization][mcp-ema] and Okta's Cross App Access.
+
+```text
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+requested_token_type=urn:ietf:params:oauth:token-type:id-jag
+subject_token=<id token>
+subject_token_type=urn:ietf:params:oauth:token-type:id_token
+audience=https://as.example.com/
+resource=https://mcp.example.com/mcp
+scope=chat.read
+```
+
+Nothing is issued until the other authorization server is configured as a `[[id_jag.audiences]]`
+entry in the config. Each entry lists the clients that may request an ID-JAG for it, and the
+`resource` and `scope` values they may request. The client's `allowed_resources` are not used here.
+
+- The client needs `token_exchange` in its Authentication Flows, just like for any other exchange.
+- The `subject_token` must be an ID token Rauthy issued to the exchanging client, with a session
+  that is still valid. ID tokens without a session, like the ones from the `password` grant, are
+  rejected, and so is an ID token after a logout.
+- An ID token bound to a DPoP key needs a DPoP proof with the same key.
+- `audience` is required and is the issuer of the other authorization server. An unknown
+  `audience` or `resource`, or a client that is not allowed for the `audience`, is rejected with
+  `invalid_target`, a `scope` that is not allowed with `invalid_scope`.
+- `scope` has the meaning of the other authorization server.
+- An `actor_token` is not supported.
+
+The `client_id` claim is the Rauthy client id, so the client must be registered with the same id at
+the other authorization server.
+
+The ID-JAG has the header `typ: oauth-id-jag+jwt` and is signed with RS256, which every
+authorization server must support for an ID-JAG, or with the `alg` of its `[[id_jag.audiences]]`
+entry. It contains `iss`, `sub`, `aud`, `client_id`, `jti`, `iat`, `exp`, `auth_time`, `amr`, plus
+`resource` and `scope` if requested. `email` is added if the ID token contained it and it is verified. A DPoP proof on the
+request adds a `cnf` claim with the key thumbprint. The ID-JAG never outlives the ID token or its
+session and is never accepted by Rauthy itself. Like an exchanged access token, it is tracked as an
+issued token of the session of the ID token.
+
+The response has `issued_token_type: urn:ietf:params:oauth:token-type:id-jag` and
+`token_type: N_A`, and the ID-JAG is in `access_token`.
+
+[id-jag]: https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/
+[mcp-ema]: https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization

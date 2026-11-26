@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
-use rauthy_api_types::oidc::GrantType;
+use rauthy_api_types::oidc::{GrantType, TokenType};
 use rauthy_common::constants::CACHE_TTL_APP;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
@@ -47,6 +47,11 @@ pub struct WellKnown {
     /// implements this via `ephemeral_from_url`). ChatGPT's custom-connector UI
     /// greys out the CIMD option until the AS discovery doc carries this flag.
     pub client_id_metadata_document_supported: bool,
+    /// draft-ietf-oauth-identity-assertion-authz-grant §7.1
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identity_chaining_requested_token_types_supported: Option<[&'static str; 1]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_jag_signing_alg_values_supported: Option<[&'static str; 5]>,
 }
 
 // Versioned, because the cached document is shared across the cluster and its contents change
@@ -113,6 +118,7 @@ impl WellKnown {
 
         // Filter all available languages
         let langs = &RauthyConfig::get().vars.i18n.filter_lang_common;
+        let id_jag = !RauthyConfig::get().vars.id_jag.audiences.is_empty();
         let ui_locales_supported = Language::all_available()
             .into_iter()
             .filter(|l| langs.iter().any(|f| l.starts_with(&f.as_ref()[..2])))
@@ -178,6 +184,10 @@ impl WellKnown {
                 .vars
                 .ephemeral_clients
                 .enable,
+            identity_chaining_requested_token_types_supported: id_jag
+                .then_some([TokenType::IdJag.as_str()]),
+            id_jag_signing_alg_values_supported: id_jag
+                .then_some(["RS256", "RS384", "RS512", "EdDSA", "Ed25519"]),
         }
     }
 }

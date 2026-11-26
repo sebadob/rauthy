@@ -1,13 +1,21 @@
 use crate::common::{
-    LoginTarget, TestClient, USER_PASSWORD, create_client, create_login_user, decode_claims,
-    delete_client, delete_user, get_auth_headers, get_backend_url, login_session,
+    LoginTarget, TestClient, TestUser, USER_PASSWORD, create_client, create_login_user,
+    decode_claims, delete_client, delete_user, get_auth_headers, get_backend_url, login_session,
     password_token_set_for, put_client, rotate_client_secret,
 };
 use crate::expect_status;
+use chrono::Utc;
+use ed25519_compact::Noise;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, LogoutRequest, TokenRequest, TokenType};
-use rauthy_common::utils::new_store_id;
+use rauthy_common::constants::{HEADER_DPOP_NONCE, TOKEN_DPOP};
+use rauthy_common::utils::{
+    base64_url_encode, base64_url_no_pad_decode, base64_url_no_pad_encode, new_store_id,
+};
+use rauthy_data::entity::dpop_proof::{DPoPClaims, DPoPHeader};
+use rauthy_data::entity::jwk::{JWKSPublicKey, JwkKeyPairType};
+use rauthy_jwt::claims::JwtTokenType;
 use rauthy_service::token_set::TokenSet;
 use reqwest::Response;
 use reqwest::header::HeaderMap;
@@ -20,6 +28,13 @@ const TARGET: &str = "https://rs-downstream.example.com/api";
 const TARGET_FORBIDDEN: &str = "https://rs-forbidden.example.com/api";
 /// The backend's hard limit for the length of a nested `act` delegation chain.
 const ACT_CHAIN_MAX: usize = 32;
+
+/// The clients and audiences of the `[[id_jag.audiences]]` entries in `config-test.toml`.
+const ID_JAG: &str = "exchange_id_jag_test";
+const ID_JAG_OTHER: &str = "exchange_id_jag_other";
+const JAG_AUDIENCE: &str = "https://as.downstream.example.com/";
+const JAG_AUDIENCE_EDDSA: &str = "https://as-eddsa.downstream.example.com/";
+const JAG_RESOURCE: &str = "https://mcp.downstream.example.com/mcp";
 
 /// The base configuration of the exchanging client, with `allowed_resources` set to [`TARGET`].
 fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
@@ -268,6 +283,8 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     // an exchanged token never carries a refresh or id token
     assert!(ts.refresh_token.is_none());
     assert!(ts.id_token.is_none());
+    assert_eq!(ts.issued_token_type, Some(TokenType::AccessToken));
+    assert!(subject_ts.issued_token_type.is_none());
 
     let claims = decode_claims(&ts.access_token);
     let subject_claims = decode_claims(&subject_token);
@@ -723,4 +740,379 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     actor_b.delete().await?;
     subject.delete().await?;
     ex.teardown().await
+}
+
+/// A client of an `[[id_jag.audiences]]` entry, with a fixed id to match `config-test.toml`.
+async fn id_jag_client(admin: &HeaderMap, id: &str) -> Result<TestClient, Box<dyn Error>> {
+    let http = reqwest::Client::new();
+    create_client(
+        &http,
+        admin,
+        &NewClientRequest {
+            id: id.to_string(),
+            secret: None,
+            name: Some("ID-JAG Test".to_string()),
+            confidential: true,
+            redirect_uris: vec![REDIRECT_URI.to_string()],
+            post_logout_redirect_uris: None,
+            consent: None,
+        },
+    )
+    .await?;
+    put_client(&http, admin, id, &id_jag_update(300)).await?;
+    let secret = rotate_client_secret(&http, admin, id).await?;
+    Ok(TestClient {
+        id: id.to_string(),
+        secret,
+    })
+}
+
+fn id_jag_update(access_token_lifetime: i32) -> UpdateClientRequest {
+    UpdateClientRequest {
+        default_scopes: vec!["openid".to_string(), "email".to_string()],
+        access_token_lifetime,
+        allowed_resources: None,
+        ..base_update(vec![
+            GrantType::AuthorizationCode,
+            GrantType::Password,
+            GrantType::TokenExchange,
+        ])
+    }
+}
+
+/// A login with the authorization code flow, so the id token has a session.
+async fn id_jag_login(user: &TestUser, client: &TestClient) -> TokenSet {
+    login_session(&LoginTarget {
+        email: user.user.email.clone(),
+        password: USER_PASSWORD.to_string(),
+        client_id: client.id.clone(),
+        client_secret: Some(client.secret.clone()),
+        redirect_uri: REDIRECT_URI.to_string(),
+    })
+    .await
+    .1
+}
+
+fn decode_header(token: &str) -> serde_json::Value {
+    let header = token.split('.').next().unwrap();
+    serde_json::from_slice(&base64_url_no_pad_decode(header).unwrap()).unwrap()
+}
+
+/// Returns the DPoP proof and the JWK thumbprint of its key.
+fn dpop_proof(kp: &ed25519_compact::KeyPair, nonce: Option<String>) -> (String, String) {
+    let header = DPoPHeader {
+        typ: "dpop+jwt".to_string(),
+        alg: rauthy_data::entity::jwk::JwkKeyPairAlg::EdDSA,
+        jwk: JWKSPublicKey {
+            kty: JwkKeyPairType::OKP,
+            alg: None,
+            crv: Some("Ed25519".to_string()),
+            kid: None,
+            n: None,
+            e: None,
+            x: Some(base64_url_encode(kp.pk.as_slice())),
+        },
+        kid: None,
+    };
+    let claims = DPoPClaims {
+        jti: base64_url_encode(Noise::generate().as_slice()),
+        htm: "POST".to_string(),
+        htu: format!("{}/oidc/token", get_backend_url()),
+        iat: Utc::now().timestamp(),
+        nonce,
+    };
+    let mut proof = format!(
+        "{}.{}",
+        base64_url_no_pad_encode(serde_json::to_string(&header).unwrap().as_bytes()),
+        base64_url_no_pad_encode(serde_json::to_string(&claims).unwrap().as_bytes()),
+    );
+    let sig = kp.sk.sign(&proof, Some(Noise::generate()));
+    proof = format!("{proof}.{}", base64_url_no_pad_encode(sig.as_ref()));
+    (proof, header.jwk.fingerprint().unwrap())
+}
+
+/// An ID-JAG (draft-ietf-oauth-identity-assertion-authz-grant) for an id token, decided by the
+/// `[[id_jag.audiences]]` entries in `config-test.toml`.
+#[tokio::test]
+async fn test_token_exchange_id_jag() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let http = reqwest::Client::new();
+    let url_token = format!("{}/oidc/token", get_backend_url());
+    let client = id_jag_client(&admin, ID_JAG).await?;
+    let client_other = id_jag_client(&admin, ID_JAG_OTHER).await?;
+    let user = TestUser::new("Id Jag", USER_PASSWORD).await?;
+
+    let login = id_jag_login(&user, &client).await;
+    let id_token = login.id_token.clone().unwrap();
+
+    // the ID-JAG must not outlive the id token, even with a longer client lifetime
+    put_client(&http, &admin, ID_JAG, &id_jag_update(600)).await?;
+
+    let id_jag_req = |subject_token: &str| TokenRequest {
+        grant_type: GrantType::TokenExchange,
+        client_id: Some(client.id.clone()),
+        client_secret: Some(client.secret.clone()),
+        subject_token: Some(subject_token.to_string()),
+        subject_token_type: Some(TokenType::IdToken.to_string()),
+        requested_token_type: Some(TokenType::IdJag.to_string()),
+        audience: Some(JAG_AUDIENCE.to_string()),
+        resource: Some(JAG_RESOURCE.to_string()),
+        scope: Some("chat.read chat.history".to_string()),
+        ..Default::default()
+    };
+    let rejected = async |req: TokenRequest, error: &str| {
+        let res = http.post(&url_token).form(&req).send().await.unwrap();
+        let body = expect_status!(res, 400).text().await.unwrap();
+        assert!(body.contains(error), "expected '{error}', got: {body}");
+    };
+
+    let res = http
+        .post(&url_token)
+        .form(&id_jag_req(&id_token))
+        .send()
+        .await?;
+    let body: serde_json::Value = expect_status!(res, 200).json().await?;
+    assert_eq!(
+        body["issued_token_type"],
+        "urn:ietf:params:oauth:token-type:id-jag"
+    );
+    assert_eq!(body["token_type"], "N_A");
+    assert_eq!(body["scope"], "chat.read chat.history");
+    assert!(body.get("refresh_token").is_none());
+    assert!(body.get("id_token").is_none());
+    let ts: TokenSet = serde_json::from_value(body)?;
+    assert_eq!(ts.token_type, JwtTokenType::NA);
+    let id_jag = ts.access_token;
+
+    let header = decode_header(&id_jag);
+    assert_eq!(header["typ"], "oauth-id-jag+jwt");
+    assert_eq!(header["alg"], "RS256");
+    let claims = decode_claims(&id_jag);
+    let id_claims = decode_claims(&id_token);
+    assert_eq!(claims["iss"], id_claims["iss"]);
+    assert_eq!(claims["sub"], id_claims["sub"]);
+    assert_eq!(claims["aud"], JAG_AUDIENCE);
+    assert_eq!(claims["client_id"], ID_JAG);
+    assert_eq!(claims["resource"], JAG_RESOURCE);
+    assert_eq!(claims["scope"], "chat.read chat.history");
+    assert_eq!(claims["auth_time"], id_claims["auth_time"]);
+    assert_eq!(claims["amr"], id_claims["amr"]);
+    assert_eq!(claims["email"], user.user.email.as_str());
+    assert!(claims["jti"].is_string());
+    assert!(claims.get("typ").is_none());
+    assert!(claims.get("cnf").is_none());
+    assert!(claims["exp"].as_i64().unwrap() <= id_claims["exp"].as_i64().unwrap());
+
+    // the `alg` of the `[[id_jag.audiences]]` entry
+    let res = http
+        .post(&url_token)
+        .form(&TokenRequest {
+            audience: Some(JAG_AUDIENCE_EDDSA.to_string()),
+            resource: None,
+            scope: None,
+            ..id_jag_req(&id_token)
+        })
+        .send()
+        .await?;
+    let ts: TokenSet = expect_status!(res, 200).json().await?;
+    assert_eq!(decode_header(&ts.access_token)["alg"], "EdDSA");
+    assert_eq!(decode_claims(&ts.access_token)["aud"], JAG_AUDIENCE_EDDSA);
+
+    // the ID-JAG is never accepted by Rauthy itself
+    rejected(id_jag_req(&id_jag), "invalid_grant").await;
+    let res = http
+        .get(format!("{}/oidc/userinfo", get_backend_url()))
+        .bearer_auth(&id_jag)
+        .send()
+        .await?;
+    expect_status!(res, 400);
+
+    // only a valid id token with a session, issued to this client
+    rejected(id_jag_req(&login.access_token), "invalid_grant").await;
+    rejected(
+        TokenRequest {
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
+            ..id_jag_req(&id_token)
+        },
+        "BadRequest",
+    )
+    .await;
+    let login_other = id_jag_login(&user, &client_other).await;
+    rejected(
+        id_jag_req(login_other.id_token.as_ref().unwrap()),
+        "invalid_grant",
+    )
+    .await;
+    let password_ts = password_token_set_for(&http, &client, &user.user.email, USER_PASSWORD).await;
+    rejected(
+        id_jag_req(password_ts.id_token.as_ref().unwrap()),
+        "no valid session",
+    )
+    .await;
+
+    // `[[id_jag.audiences]]` decides about the audience, client, resource and scope
+    rejected(
+        TokenRequest {
+            audience: None,
+            ..id_jag_req(&id_token)
+        },
+        "BadRequest",
+    )
+    .await;
+    rejected(
+        TokenRequest {
+            audience: Some(TARGET.to_string()),
+            ..id_jag_req(&id_token)
+        },
+        "invalid_target",
+    )
+    .await;
+    rejected(
+        TokenRequest {
+            resource: Some(TARGET.to_string()),
+            ..id_jag_req(&id_token)
+        },
+        "invalid_target",
+    )
+    .await;
+    rejected(
+        TokenRequest {
+            scope: Some("chat.read chat.write".to_string()),
+            ..id_jag_req(&id_token)
+        },
+        "invalid_scope",
+    )
+    .await;
+    rejected(
+        TokenRequest {
+            client_id: Some(client_other.id.clone()),
+            client_secret: Some(client_other.secret.clone()),
+            ..id_jag_req(login_other.id_token.as_ref().unwrap())
+        },
+        "invalid_target",
+    )
+    .await;
+
+    // without `resource` and `scope`, both claims are left out
+    let res = http
+        .post(&url_token)
+        .form(&TokenRequest {
+            resource: None,
+            scope: None,
+            ..id_jag_req(&id_token)
+        })
+        .send()
+        .await?;
+    let ts: TokenSet = expect_status!(res, 200).json().await?;
+    assert!(ts.scope.is_none());
+    let claims = decode_claims(&ts.access_token);
+    assert!(claims.get("resource").is_none());
+    assert!(claims.get("scope").is_none());
+
+    rejected(
+        TokenRequest {
+            actor_token: Some(login.access_token.clone()),
+            actor_token_type: Some(TokenType::AccessToken.to_string()),
+            ..id_jag_req(&id_token)
+        },
+        "BadRequest",
+    )
+    .await;
+    rejected(
+        TokenRequest {
+            requested_token_type: Some(TokenType::RefreshToken.to_string()),
+            ..id_jag_req(&id_token)
+        },
+        "BadRequest",
+    )
+    .await;
+
+    // a DPoP proof binds the ID-JAG to its key
+    let kp = ed25519_compact::KeyPair::generate();
+    let (proof, _) = dpop_proof(&kp, None);
+    let res = http
+        .post(&url_token)
+        .header(TOKEN_DPOP, proof)
+        .form(&id_jag_req(&id_token))
+        .send()
+        .await?;
+    let res = expect_status!(res, 400);
+    let nonce = res.headers().get(HEADER_DPOP_NONCE).unwrap().to_str()?;
+    let nonce = nonce.to_string();
+    let (proof, jkt) = dpop_proof(&kp, Some(nonce.clone()));
+    let res = http
+        .post(&url_token)
+        .header(TOKEN_DPOP, proof)
+        .form(&id_jag_req(&id_token))
+        .send()
+        .await?;
+    let ts: TokenSet = expect_status!(res, 200).json().await?;
+    assert_eq!(ts.token_type, JwtTokenType::NA);
+    assert_eq!(decode_claims(&ts.access_token)["cnf"]["jkt"], jkt);
+
+    // a DPoP-bound id token needs a proof with the same key
+    let (proof, _) = dpop_proof(&kp, Some(nonce.clone()));
+    let res = http
+        .post(&url_token)
+        .header(TOKEN_DPOP, proof)
+        .form(&TokenRequest {
+            grant_type: GrantType::Password,
+            client_id: Some(client.id.clone()),
+            client_secret: Some(client.secret.clone()),
+            username: Some(user.user.email.clone()),
+            password: Some(USER_PASSWORD.to_string()),
+            ..Default::default()
+        })
+        .send()
+        .await?;
+    let bound: TokenSet = expect_status!(res, 200).json().await?;
+    let bound_id_token = bound.id_token.unwrap();
+    assert_eq!(decode_claims(&bound_id_token)["cnf"]["jkt"], jkt);
+    rejected(id_jag_req(&bound_id_token), "DPoP-bound").await;
+    let (proof, _) = dpop_proof(&ed25519_compact::KeyPair::generate(), Some(nonce));
+    let res = http
+        .post(&url_token)
+        .header(TOKEN_DPOP, proof)
+        .form(&id_jag_req(&bound_id_token))
+        .send()
+        .await?;
+    let body = expect_status!(res, 400).text().await?;
+    assert!(body.contains("DPoP-bound"), "unexpected body: {body}");
+
+    // a logout ends the id token's session
+    let session_id_token = id_jag_login(&user, &client).await.id_token.unwrap();
+    let res = http
+        .post(&url_token)
+        .form(&id_jag_req(&session_id_token))
+        .send()
+        .await?;
+    expect_status!(res, 200);
+    let res = http
+        .post(format!("{}/oidc/logout", get_backend_url()))
+        .form(&LogoutRequest {
+            id_token_hint: Some(session_id_token.clone()),
+            post_logout_redirect_uri: None,
+            state: None,
+            logout_token: None,
+        })
+        .send()
+        .await?;
+    expect_status!(res, 200);
+    rejected(id_jag_req(&session_id_token), "no valid session").await;
+
+    // the flow is still required
+    put_client(
+        &http,
+        &admin,
+        ID_JAG,
+        &base_update(vec![GrantType::Password]),
+    )
+    .await?;
+    rejected(id_jag_req(&id_token), "token-exchange").await;
+
+    delete_client(&admin, ID_JAG).await?;
+    delete_client(&admin, ID_JAG_OTHER).await?;
+    user.delete().await?;
+
+    Ok(())
 }

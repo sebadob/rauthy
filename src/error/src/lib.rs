@@ -71,6 +71,10 @@ pub enum ErrorResponseType {
     PasswordRequired,
     /// The credentials submitted through the interactive sign-in form were rejected.
     InvalidCredentials,
+    /// RFC 6749 §5.2: the requested scope is invalid, unknown, malformed, or exceeds the scope
+    /// granted by the resource owner. Serialized as the RFC error code `invalid_scope`.
+    #[serde(rename = "invalid_scope")]
+    InvalidScope,
     /// A bounded outbound fetcher has no free slot, to be retried after the contained unix
     /// timestamp. Unlike `TooManyRequests`, it says nothing about the caller's own requests.
     ServiceUnavailable(i64),
