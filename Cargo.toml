@@ -51,7 +51,7 @@ async-compression = { version = "0.4.41", features = [
 atrium-api = "0.26"
 atrium-common = "0.1.4"
 atrium-identity = "0.2"
-atrium-oauth = "0.2"
+atrium-oauth = { version = "0.2", default-features = false }
 base64 = "0.23"
 bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
 bytes = "1.11.1"

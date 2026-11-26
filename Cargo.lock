@@ -760,7 +760,6 @@ dependencies = [
  "jose-jwk",
  "p256",
  "rand 0.8.8",
- "reqwest 0.12.28",
  "serde",
  "serde_html_form 0.2.8",
  "serde_json",
@@ -1638,7 +1637,7 @@ dependencies = [
  "futures",
  "rand 0.10.3",
  "regex",
- "reqwest 0.13.5",
+ "reqwest",
  "s3-simple",
  "thiserror 2.0.21",
  "tokio",
@@ -2731,7 +2730,7 @@ dependencies = [
  "mime_guess",
  "openraft",
  "rcgen",
- "reqwest 0.13.5",
+ "reqwest",
  "rusqlite",
  "rust-embed",
  "rust_decimal",
@@ -2945,22 +2944,6 @@ dependencies = [
  "rustls",
  "tokio",
  "tokio-rustls",
- "tower-service",
-]
-
-[[package]]
-name = "hyper-tls"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
-dependencies = [
- "bytes",
- "http-body-util",
- "hyper",
- "hyper-util",
- "native-tls",
- "tokio",
- "tokio-native-tls",
  "tower-service",
 ]
 
@@ -3803,23 +3786,6 @@ name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
-
-[[package]]
-name = "native-tls"
-version = "0.2.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "465500e14ea162429d264d44189adc38b199b62b1c21eea9f69e4b73cb03bbf2"
-dependencies = [
- "libc",
- "log",
- "openssl",
- "openssl-probe",
- "openssl-sys",
- "schannel",
- "security-framework",
- "security-framework-sys",
- "tempfile",
-]
 
 [[package]]
 name = "ndk-context"
@@ -4947,7 +4913,7 @@ dependencies = [
  "rauthy-schedulers",
  "rauthy-service",
  "regex",
- "reqwest 0.13.5",
+ "reqwest",
  "ring",
  "rpassword",
  "rustls",
@@ -5009,7 +4975,7 @@ dependencies = [
  "rand_core 0.10.1",
  "rauthy-error",
  "regex",
- "reqwest 0.13.5",
+ "reqwest",
  "ring",
  "serde",
  "serde_json",
@@ -5080,7 +5046,7 @@ dependencies = [
  "rcgen",
  "refinery",
  "regex",
- "reqwest 0.13.5",
+ "reqwest",
  "ring",
  "rsa",
  "rstest",
@@ -5141,7 +5107,7 @@ dependencies = [
  "openssl-sys",
  "oxrdf",
  "oxttl",
- "reqwest 0.13.5",
+ "reqwest",
  "ring",
  "rsa",
  "rusqlite",
@@ -5257,7 +5223,7 @@ dependencies = [
  "openssl-sys",
  "rauthy-common",
  "rauthy-error",
- "reqwest 0.13.5",
+ "reqwest",
  "ruma-client",
  "serde",
  "tokio",
@@ -5279,7 +5245,7 @@ dependencies = [
  "rauthy-error",
  "rauthy-notify",
  "rauthy-service",
- "reqwest 0.13.5",
+ "reqwest",
  "semver",
  "tokio",
  "tracing",
@@ -5305,7 +5271,7 @@ dependencies = [
  "rauthy-data",
  "rauthy-error",
  "rauthy-jwt",
- "reqwest 0.13.5",
+ "reqwest",
  "ring",
  "serde",
  "serde_json",
@@ -5474,42 +5440,6 @@ name = "relative-path"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
-
-[[package]]
-name = "reqwest"
-version = "0.12.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
-dependencies = [
- "base64 0.22.1",
- "bytes",
- "futures-core",
- "http 1.5.0",
- "http-body",
- "http-body-util",
- "hyper",
- "hyper-tls",
- "hyper-util",
- "js-sys",
- "log",
- "native-tls",
- "percent-encoding",
- "pin-project-lite",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sync_wrapper",
- "tokio",
- "tokio-native-tls",
- "tower",
- "tower-http 0.6.11",
- "tower-service",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
 
 [[package]]
 name = "reqwest"
@@ -5695,7 +5625,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "http 1.5.0",
- "reqwest 0.13.5",
+ "reqwest",
  "ruma",
  "tracing",
 ]
@@ -6035,7 +5965,7 @@ dependencies = [
  "md5",
  "percent-encoding",
  "quick-xml",
- "reqwest 0.13.5",
+ "reqwest",
  "rustls-webpki",
  "serde",
  "sha2 0.11.1",
@@ -6866,16 +6796,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
-]
-
-[[package]]
-name = "tokio-native-tls"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
-dependencies = [
- "native-tls",
- "tokio",
 ]
 
 [[package]]
