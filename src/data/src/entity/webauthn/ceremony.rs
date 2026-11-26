@@ -285,7 +285,7 @@ mod tests {
     ) {
         let webauthn = webauthn();
         let user_id = Uuid::new_v4();
-        let excluded = vec![vec![1, 2, 3].into()];
+        let excluded = vec![vec![1, 2, 3]];
         let (ccr, state) = RegistrationState::start(
             &webauthn,
             user_id,
@@ -316,7 +316,7 @@ mod tests {
         assert!(selection.authenticator_attachment.is_none());
         assert!(pk.hints.is_none());
         assert_eq!(pk.exclude_credentials.as_ref().unwrap()[0].id, excluded[0]);
-        assert_eq!(pk.user.id.as_ref(), user_id.as_bytes());
+        assert_eq!(pk.user.id.as_slice(), user_id.as_bytes());
 
         let extensions = pk.extensions.as_ref().unwrap();
         if require_uv {

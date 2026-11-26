@@ -109,8 +109,6 @@ maxminddb = "0.32"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
-openssl = { version = "0.10.79", features = ["vendored"] }
-openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxrdf = "0.3.5"
 oxttl = "0.2.5"
 percent-encoding = "2"
@@ -188,12 +186,12 @@ uuid = { version = "1.24.0", features = ["v4"] }
 validator = { version = "0.21", features = ["derive"] }
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.55"
-webauthn-rs = { version = "0.5", features = [
+webauthn-rs = { version = "0.6", features = [
   "danger-allow-state-serialisation",
   "danger-credential-internals",
   "resident-key-support",
 ] }
-webauthn-rs-proto = "0.5"
+webauthn-rs-proto = "0.6"
 webpki-roots = "1"
 zeroize = "1.8"
 

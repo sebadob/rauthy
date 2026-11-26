@@ -167,7 +167,7 @@ pub async fn auth_finish(
             // set to NULL if the cert is being removed from the MDS dataset.
             let Some(mut pk_entity) = pks
                 .into_iter()
-                .find(|e| e.credential_id.as_slice() == auth_result.cred_id().as_ref())
+                .find(|e| e.credential_id.as_slice() == auth_result.cred_id().as_slice())
             else {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,

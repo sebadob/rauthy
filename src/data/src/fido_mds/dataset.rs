@@ -204,3 +204,62 @@ ON CONFLICT (aaguid, cert_hash) DO NOTHING
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::{BTreeMap, HashMap};
+    use webauthn_rs::prelude::{AttestationCaList, AttestationCaListBuilder};
+
+    #[test]
+    fn embedded_mds_certs_build_ca_list() {
+        if MDS_DATASET.is_empty() {
+            // `assets/fido_mds/dataset.bin` is generated via `just fido-mds-prep`.
+            return;
+        }
+
+        let dataset = MdsDataset::deserialize(MDS_DATASET).unwrap();
+        assert!(!dataset.entries.is_empty());
+        assert!(!dataset.certs.is_empty());
+
+        let certs: HashMap<[u8; 32], &[u8]> = dataset
+            .certs
+            .iter()
+            .map(|c| (c.hash, c.cert_der.as_slice()))
+            .collect();
+
+        let mut builder = AttestationCaListBuilder::new();
+        let mut inserted = 0usize;
+        let mut failed = Vec::new();
+        for entry in &dataset.entries {
+            for hash in &entry.cert_hashes {
+                let cert_der = *certs
+                    .get(hash)
+                    .expect("MDS entry references a missing cert hash");
+                if let Err(err) = builder.insert_device_der(
+                    cert_der,
+                    entry.aaguid,
+                    entry.description.clone(),
+                    BTreeMap::new(),
+                ) {
+                    failed.push(format!("{} ({}): {err:?}", entry.aaguid, entry.description));
+                } else {
+                    inserted += 1;
+                }
+            }
+        }
+
+        assert!(inserted > 0, "no MDS root certs could be inserted");
+        assert!(
+            failed.len() < inserted / 20,
+            "too many MDS root certs failed to parse ({}/{}):\n{}",
+            failed.len(),
+            inserted + failed.len(),
+            failed.join("\n"),
+        );
+
+        let ca_list = builder.build();
+        let json = serde_json::to_string(&ca_list).unwrap();
+        let _roundtrip: AttestationCaList = serde_json::from_str(&json).unwrap();
+    }
+}
