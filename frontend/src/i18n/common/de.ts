@@ -71,8 +71,8 @@ export const I18nDe: I18n = {
         changePassword: 'Passwort wechseln',
         convertAccount: 'Account Umwandeln',
         convertAccountP1: `Dieser Account kann in einen Passkey-Only Account umgewandelt\nwerden. 
-            Diese Umwandling löscht das Passwort und erlaubt den alleinigen Login mit den 
-            registrieren\nPasskeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden 
+            Diese Umwandlung löscht das Passwort und erlaubt den alleinigen Login mit den 
+            registrierten\nPasskeys. Nur Passkeys mit zusätzlicher Benutzerverifizierung werden 
             akzeptiert. Diese sind auf der\n'MFA' Seite durch das zusätzliche Symbol hinter dem 
             Passkey Namen gekennzeichnet.`,
         country: 'Land',
@@ -91,11 +91,11 @@ export const I18nDe: I18n = {
         emailVerified: 'E-Mail verifiziert',
         familyName: 'Nachname',
         federatedConvertPassword1: `Dies ist ein verknüpfter Account. Das bedeutet, dass\nder 
-            Login via externem Provider zur Authenzifizierung geschieht. Der derzeitige Provider 
+            Login via externem Provider zur Authentifizierung geschieht. Der derzeitige Provider 
             ist:`,
         federatedConvertPassword2: `Es kann ein Passwort Reset via E-Mail angefordert\nwerden. Das 
             würde nach Abschluss diesem Account ein lokales Passwort hinzufügen. Danach wäre der\n
-            Login entweder per externem Provider oder lokalem Password möglich. Passwort Reset 
+            Login entweder per externem Provider oder lokalem Passwort möglich. Passwort Reset 
             anfordern?`,
         generateRandom: 'Zufällig generiert',
         givenName: 'Vorname',
@@ -125,7 +125,7 @@ export const I18nDe: I18n = {
             type: 'Passkey Typ',
             types: ['Normal', 'Verknüpft'],
             rkWarning: `ACHTUNG: Ein verknüpfter Passkey (Resident Key) kann zwar zum direkten Login 
-                ohne die Eingabe der E-Mail Addresse genutzt werden, aber es wird auch ein 
+                ohne die Eingabe der E-Mail Adresse genutzt werden, aber es wird auch ein 
                 zusätzlicher Speicherplatz für jede Anwendung gebraucht. Es muss dafür gesorgt 
                 werden, dass genug Speicher vorhanden ist.
                 Um einen bestehenden Passkey zu einem verknüpften zu machen, muss er zuerst
@@ -144,12 +144,12 @@ export const I18nDe: I18n = {
         passwordNewReq: 'Neues Passwort ist notwendig',
         passwordNoMatch: 'Passwörter stimmen nicht überein',
         passwordExpiry: 'Passwort Ablauf',
-        passwordPolicyFollow: 'Befolgen Sie die Passwort Regeln',
+        passwordPolicyFollow: 'Die Passwort Regeln müssen eingehalten werden',
         passwordReset: 'Passwort Reset',
         phone: 'Telefon',
         preferredUsername: {
             desc: `Manche Anwendungen greifen auf diesen Benutzernamen zurück. Welche 
-				Anwendung davon gebraucht macht, kann allerdings nicht kontrolliert werden.`,
+				Anwendung davon Gebrauch macht, kann allerdings nicht kontrolliert werden.`,
             forceOverwrite: 'Überschreiben Erzwingen',
             immutable: 'ACHTUNG: Der Benutzername kann nur einmalig gesetzt werden!',
             immutableInfo: 'Der Benutzername kann nicht geändert werden.',
@@ -159,20 +159,19 @@ export const I18nDe: I18n = {
         privacy: {
             clientId: 'Client ID',
             connectedApps: 'Verbundene Apps',
-            connectedAppsDesc:
-                'Anwendungen, denen Sie den Zugriff auf Ihren Account erlaubt haben.',
+            connectedAppsDesc: 'Anwendungen, denen Zugriff auf den Account gewährt wurde.',
             granted: 'Erteilt',
             logoutWarning:
-                'Dadurch werden Sie außerdem aus allen Sitzungen auf allen Geräten abgemeldet. Sie müssen sich erneut anmelden.',
+                'Dadurch werden außerdem alle Sitzungen auf allen Geräten beendet. Ein erneuter Login ist notwendig.',
             noConnectedApps: 'Bisher wurde keiner Anwendung Zugriff gewährt.',
             privacy: 'Datenschutz',
             resource: 'Ressource',
             revoke: 'Zugriff widerrufen',
             revokeAll: 'Alle Zugriffe widerrufen',
             revokeAllDesc:
-                'Widerruft Ihre Zustimmung für alle hier aufgeführten Anwendungen. Jede Anwendung muss erneut um Ihre Zustimmung bitten.',
+                'Widerruft die Zustimmung für alle hier aufgeführten Anwendungen. Jede Anwendung muss erneut um Zustimmung bitten.',
             revokeDesc:
-                'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff nicht mehr erneuern. Access Tokens, die mit den gelöschten Refresh Tokens ausgestellt wurden, werden bei Userinfo und Introspection widerrufen. Anwendungen, die ihre Tokens selbst validieren, können sie bis zu ihrem Ablauf weiterhin akzeptieren. Die Anwendung muss erneut um Ihre Zustimmung bitten.',
+                'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff nicht mehr erneuern. Access Tokens, die mit den gelöschten Refresh Tokens ausgestellt wurden, werden bei Userinfo und Introspection widerrufen. Anwendungen, die ihre Tokens selbst validieren, können sie bis zu ihrem Ablauf weiterhin akzeptieren. Die Anwendung muss erneut um Zustimmung bitten.',
             scopes: 'Scopes',
             updated: 'Aktualisiert',
             userAgent: 'User Agent',
@@ -197,47 +196,47 @@ export const I18nDe: I18n = {
         residentKeyTooltip: `Dies ist ein Resident Key. Er kann für direkten Login ohne Eingabe der E-Mail verwendet 
             werden.`,
         aaguidTooltip: 'Zertifizierter Passkey',
-        webIdDesc: `Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\n
+        webIdDesc: `Hier können die Felder festgelegt werden, die über die WebID veröffentlicht\n
             werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt 
-            wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie 
-            höchstwahrscheinlich nicht.`,
+            wird.\nIst die WebID nicht bekannt, wird sie höchstwahrscheinlich nicht 
+            benötigt.`,
         webIdDescData:
-            'Sie können eigene Daten zu Ihrer WebID in gültigem FOAF Vokabular\nhinzufügen:',
+            'Eigene Daten können in gültigem FOAF Vokabular zur WebID\nhinzugefügt werden:',
         webIdExpertMode: 'Expertenmodus aktivieren',
         zip: 'PLZ',
     },
     authorize: {
-        busy: 'Der Server ist gerade ausgelastet. Bitte versuchen Sie es gleich noch einmal.',
+        busy: 'Der Server ist gerade ausgelastet. Bitte gleich noch einmal versuchen.',
         clientForceMfa: `Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.\nUm Zugang zu 
-            bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey\n
-            hinzufügen.`,
+            bekommen, ist ein Login in den Account notwendig und mindestens ein Passkey\n
+            muss hinzugefügt werden.`,
         clientGroupPrefixForbidden: 'Fehlende Gruppenzugehörigkeit für diesen Login',
         consent: {
             agree: 'Ich stimme der [Übermittlung meiner Daten] zu',
-            changed: 'Der Inhalt der Zustimmung hat sich geändert, bitte prüfen Sie ihn erneut.',
+            changed: 'Der Inhalt der Zustimmung hat sich geändert, bitte erneut prüfen.',
             continue: 'Weiter',
             details: 'Details',
             intro: '{{ CLIENT }} bittet um Zugriff auf:',
             introResource: '{{ CLIENT }} bittet um Zugriff auf {{ RESOURCE }}:',
             required: 'immer',
             scopes: {
-                address: 'Ihre Postanschrift',
-                email: 'Ihre E-Mail-Adresse',
-                groups: 'Ihre Gruppenzugehörigkeiten',
-                openid: 'Ihre Benutzer-ID und Rollen für die Anmeldung',
-                phone: 'Ihre Telefonnummer',
+                address: 'Postanschrift',
+                email: 'E-Mail-Adresse',
+                groups: 'Gruppenzugehörigkeiten',
+                openid: 'Benutzer-ID und Rollen für die Anmeldung',
+                phone: 'Telefonnummer',
                 profile:
-                    'Ihr Name, Benutzername (kann Ihre E-Mail-Adresse sein), Bild, Sprache, Geburtsdatum und Zeitzone',
-                webid: 'Ihre WebID',
+                    'Name, Benutzername (kann die E-Mail-Adresse sein), Bild, Sprache, Geburtsdatum und Zeitzone',
+                webid: 'WebID',
             },
             terms: 'Bedingungen',
             title: 'Zustimmung',
-            warning: 'Bitte lesen Sie sorgfältig',
+            warning: 'Bitte sorgfältig lesen',
         },
         email: 'E-Mail',
         emailBadFormat: 'Inkorrektes E-Mail Format',
         emailRequired: 'E-Mail ist notwendig',
-        emailSentMsg: 'Sollte Ihre Adresse registriert sein, wurde eine Nachricht versandt',
+        emailSentMsg: 'Sollte die Adresse registriert sein, wurde eine Nachricht versandt',
         expectingPasskey: 'Erwarte Authentifizierung per Passkey',
         expectingOtp: 'Erwarte Authentifizierung per Einmalpasswort',
         http429: 'Zu viele ungültige Versuche. Gesperrt bis:',
@@ -246,10 +245,10 @@ export const I18nDe: I18n = {
         login: 'Login',
         mfaAck: 'Bestätigt',
         mfaOpenApp: 'App öffnen, um fortzufahren',
-        mfaSelectionDesc: 'Wählen Sie Ihre Bestätigungsmethode:',
+        mfaSelectionDesc: 'Bestätigungsmethode wählen:',
         usePasskey: 'Passkey verwenden',
         useEmailCode: 'E-Mail-Code verwenden',
-        emailCodeDesc: 'Erhalten Sie einen einmaligen Code per E-Mail',
+        emailCodeDesc: 'Einen einmaligen Code per E-Mail erhalten',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Es fehlen Informationen zum Account. Diese benötigen ein Update, bevor
             mit dem Login fortgefahren werden kann.`,
@@ -257,14 +256,14 @@ export const I18nDe: I18n = {
         passkey: 'Passkey',
         passkeyNotDiscovered: `Passkeys, die nicht verknüpft (als Resident Key) hinzugefügt wurden,
             können so nicht gefunden werden. Bitte stattdessen die E-Mail Adresse eingeben.`,
-        password: 'Password',
+        password: 'Passwort',
         passwordExpired:
             'Passwort ist abgelaufen. Eine E-Mail mit einem Reset-Link wurde verschickt.',
-        passwordForgotten: 'Password vergessen?',
+        passwordForgotten: 'Passwort vergessen?',
         passwordRequest: 'Anfordern',
-        passwordRequired: 'Password ist notwendig',
-        passwordResetDesc: `Bitte E-Mail Adresse angeben, um einen Password Reset Link anzufordern. 
-            Sollte die Adresse in der Datenbank existieren, wird and diese ein Link verschickt.`,
+        passwordRequired: 'Passwort ist notwendig',
+        passwordResetDesc: `Bitte E-Mail Adresse angeben, um einen Passwort Reset Link anzufordern. 
+            Sollte die Adresse in der Datenbank existieren, wird an diese ein Link verschickt.`,
         passwordResetSuccess: 'Anfrage erhalten. Dieses Fenster kann nun geschlossen werden.',
         requestExpires: 'Anfrage läuft ab',
         requestExpired: 'Anfrage ist abgelaufen',
@@ -287,8 +286,8 @@ export const I18nDe: I18n = {
     },
     emailChange: {
         title: 'E-Mail Wechsel bestätigt',
-        textChanged: 'Ihre E-Mail Adresse wurde erfolgreich geändert von',
-        textLogin: 'Sie können sich jetzt mit der neuen Adresse einloggen.',
+        textChanged: 'Die E-Mail Adresse wurde erfolgreich geändert von',
+        textLogin: 'Ein Login mit der neuen Adresse ist jetzt möglich.',
         to: 'zu',
     },
     error: {
@@ -303,14 +302,14 @@ export const I18nDe: I18n = {
     },
     logout: {
         logout: 'Logout',
-        confirmMsg: 'Sind Sie sicher, dass Sie sich ausloggen und die Session beenden möchten?',
+        confirmMsg: 'Soll der Login beendet und die Session geschlossen werden?',
         cancel: 'Abbrechen',
     },
     mfa: {
         webauthn: {
             title: 'Passkeys',
-            p1: `Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, 
-                sollten Sie die Registrierung mit Android durchführen.`,
+            p1: `Bei paralleler Nutzung mehrerer Systeme, wie z.B. Windows und Android, sollte 
+                die Registrierung mit Android durchgeführt werden.`,
             p2: `Android ist diejenige Plattform, die derzeit die wenigsten Features der passwortlosen 
                 Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf 
                 anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.`,
@@ -345,7 +344,7 @@ export const I18nDe: I18n = {
         registeredOtps: 'Registrierte Einmalpasswörter',
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 Buchstaben, keine Sonderzeichen',
-        passwordInvalid: 'Ungültiges Password',
+        passwordInvalid: 'Ungültiges Passwort',
         test: 'Test',
         testError: 'Fehler beim Starten des Tests',
         testSuccess: 'Test erfolgreich',
@@ -366,8 +365,8 @@ export const I18nDe: I18n = {
         lowercaseMin: 'Kleinbuchstaben min',
         uppercaseMin: 'Großbuchstaben min',
         digitsMin: 'Ziffern min',
-        specialMin: 'Spezielle Buchstaben min',
-        notRecent: 'Keins der letzten Passwörter',
+        specialMin: 'Sonderzeichen min',
+        notRecent: 'Keines der letzten Passwörter',
     },
     passwordReset: {
         accountLogin: 'Account Login',
@@ -375,13 +374,13 @@ export const I18nDe: I18n = {
         continueSignIn: 'Weiter zur Anmeldung',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generieren',
-        newAccDesc1: `Sie haben die Option zwischen zwei Account Typen zu wählen: Passwortlos 
-            oder\ntraditionalles Passwort.`,
+        newAccDesc1: `Es gibt die Option zwischen zwei Account Typen zu wählen: Passwortlos 
+            oder\ntraditionelles Passwort.`,
         newAccDesc2: `Der passwortlose Account Typ ist immer zu bevorzugen. Er bietet einen\nsehr 
             viel höheren Sicherheitsstandard als traditionelle Passwörter und gleichzeitig einen 
             einfacheren\nund schnelleren Login.\nDazu wird mindestens ein Passkey (Yubikey, Apple 
             Touch ID, Windows Hello, ...) benötigt, welcher dem\nFIDO2 Standard gerecht wird. Für 
-            weitere Informationen können Sie diesem Link folgen: `,
+            weitere Informationen kann diesem Link gefolgt werden: `,
         newAccount: 'Neuer Account',
         passwordReset: 'Passwort Zurücksetzen',
         password: 'Passwort',
@@ -391,24 +390,24 @@ export const I18nDe: I18n = {
         required: 'Notwendig',
         save: 'Speichern',
         success1: 'Das Passwort wurde erfolgreich zurückgesetzt.',
-        success2: 'Sie werden in {{ secs }} Sekunden weitergeleitet.',
-        success3: 'Sollte Sie nicht weitergeleitet werden, klicken Sie bitte hier:',
+        success2: 'Weiterleitung in {{ secs }} Sekunden.',
+        success3: 'Sollte keine Weiterleitung erfolgen, bitte hier klicken:',
         successPasskey1: 'Der neue Passkey wurde erfolgreich registriert.',
-        successPasskey2: `Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie 
-            mindestens einen weiteren Backup Passkey. Ein passwortloser Account kann nicht den 
-            Passwort\nReset via E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden 
+        successPasskey2: `Bitte direkt in den Account einloggen und mindestens einen weiteren\nBackup 
+            Passkey registrieren. Ein passwortloser Account kann nicht den Passwort\nReset via 
+            E-Mail nutzen für den Fall, dass der derzeitige Passkey abhanden 
             kommt.`,
     },
     register: {
-        alreadyRegisteredEmail: 'E-Mail is bereits registriert',
-        alreadyRegisteredUsername: 'Benutzername is bereits vergeben',
+        alreadyRegisteredEmail: 'E-Mail ist bereits registriert',
+        alreadyRegisteredUsername: 'Benutzername ist bereits vergeben',
         domainAllowed: 'Erlaubte Domain:',
         domainErr: 'E-Mail Domain ist nicht erlaubt',
         domainRestricted: 'E-Mail Domains sind beschränkt',
         email: 'E-Mail',
         emailBadFormat: 'Ungültiges E-Mail Format',
-        emailCheck: 'Bitte prüfen Sie Ihren E-Mail Posteingang',
-        orRegisterWith: 'order registrieren mit',
+        emailCheck: 'Bitte den E-Mail Posteingang prüfen',
+        orRegisterWith: 'oder registrieren mit',
         regexName: 'Name mit 2 - 32 Buchstaben ohne Sonderzeichen',
         register: 'Registrieren',
         success: 'Registrierung erfolgreich',

@@ -75,8 +75,8 @@ impl I18nEmailChangeInfoOld<'_> {
         Self {
             subject: "E-Mail Wechsel Bestätigung",
             header: "E-Mail Wechsel angefordert für",
-            change_info: "Der Wechsel Ihrer E-Mail Adresse wurde angefordert. Neue Adresse:",
-            click_link: "Sollten Sie diesen Wechsel nicht angefordert haben, klicken Sie bitte unten stehenden Link",
+            change_info: "Der Wechsel der E-Mail Adresse wurde angefordert. Neue Adresse:",
+            click_link: "Wurde dieser Wechsel nicht angefordert, bitte den unten stehenden Link klicken",
             validity: "Dieser Link ist aus Sicherheitsgründen nur für kurze Zeit gültig.",
             expires: "Link gültig bis:",
             button_text: "Adresswechsel Blockieren",

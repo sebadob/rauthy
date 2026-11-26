@@ -46,6 +46,7 @@
         groups,
         providers,
         isGroupAdmin = false,
+        unsaved = $bindable(false),
         onSave,
     }: {
         user: UserResponse;
@@ -56,6 +57,7 @@
         // `true` when the logged-in principal is only a delegated group admin:
         // roles become read-only and groups outside the admin's prefix cannot be toggled.
         isGroupAdmin?: boolean;
+        unsaved?: boolean;
         onSave: () => void;
     } = $props();
 
@@ -174,6 +176,11 @@
             city !== userOrig?.user_values?.city ||
             country !== userOrig?.user_values?.country
         );
+    });
+
+    // the parent owns navigation guards, so it needs to know about the form state
+    $effect(() => {
+        unsaved = isUnsaved;
     });
 
     let isOtpEnabled = $state(false);

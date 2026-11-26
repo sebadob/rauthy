@@ -23,7 +23,7 @@ export let I18nAdminDe: I18nAdmin = {
         makeEditable: 'Editierbar machen',
         makeEditableP1: 'Dieses Attribut kann durch Benutzer editierbar gemacht werden.',
         makeEditableP2: `<b>ACHTUNG:</b> Diese Änderung kann niemals rückgängig gemacht werden! Jegliche Angaben durch
-            einen Benutzer direkt sind immer unvalidiert und dürfen NIEMALS für irgengeine Form von Authentifizierung
+            einen Benutzer direkt sind immer unvalidiert und dürfen NIEMALS für irgendeine Form von Authentifizierung
             oder Authorisierung genutzt werden!`,
         makeEditableP3: `Ein Attribut kann deshalb niemals von editierbar zu nicht-editierbar gewandelt werden, weil
             für eine gewisse Zeit, unabhängig von der Dauer, unvalidierte Eingaben erlaubt waren.`,
@@ -43,7 +43,7 @@ export let I18nAdminDe: I18nAdmin = {
         settings: { general: 'Allgemein', tokens: 'Tokens', integrations: 'Integrationen' },
         allowedResources: 'Erlaubte Ressourcen',
         defaultAud: 'Standard-Audiences',
-        actorSameClient: 'Actor token from this client only',
+        actorSameClient: 'Actor Token nur von diesem Client',
         descAllowedResources: `Optionale RFC 8707 Resource Indicators, die dieser Client anfordern darf. Eine leere Liste lehnt jeden 'resource'-Parameter mit 'invalid_target' ab.`,
         descDefaultAud: `Audiences, die immer zu den Tokens dieses Clients hinzugefügt werden, unabhängig von einem 'resource'-Parameter.`,
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
@@ -108,9 +108,9 @@ export let I18nAdminDe: I18nAdmin = {
         descPKCE: `Wenn der Client Support für PKCE hat, sollte zur zusätzlichen Sicherheit immer S256
             PKCE aktiviert werden. Wenn ein nicht-vertraulicher Client (z.B. eine SPA) genutzt wird, muss
             mindestens eine PKCE Challenge aktiviert sein, um ausreichend Sicherheit bieten zu können.`,
-        descPKCEEnforce: `Wenn PKCE aktiviert ist, erzwingt Rauthy die Nutzung and verweigert Logins,
+        descPKCEEnforce: `Wenn PKCE aktiviert ist, erzwingt Rauthy die Nutzung und verweigert Logins,
             die keine korrekte Challenge bereit stellen.`,
-        descUri: `Es können beliebig viele Redirect URIs angegeben werden. Am Ende einer Jeden wird
+        descUri: `Es können beliebig viele Redirect URIs angegeben werden. Am Ende einer jeden wird
             optional <code>*</code> als Wildcard akzeptiert.`,
         errConfidentialPKCE: `Der Client muss entweder vertraulich sein oder mindestens eine PKCE
             Challenge aktiviert haben.`,
@@ -133,11 +133,11 @@ export let I18nAdminDe: I18nAdmin = {
                 Wenn z.B. Gruppen wie <code>app:admins</code> und <code>app:users</code> existieren, würde das
                 Prefix <code>app:</code> dafür sorgen, dass nur diese Gruppen synchronisiert werden, wie auch nur
                 jene Benutzer, die zu mindestens einer dieser Gruppen gehören.`,
-            reqDesc: 'Es gibt folgende Bedingungen für die Kompaibilität:',
+            reqDesc: 'Es gibt folgende Bedingungen für die Kompatibilität:',
             reqLi1: 'Der client muss <code>externalId</code> korrekt handhaben.',
-            reqLi2: `Mindestens die <code>/Users</code> endpunkte mit <code>filter=externalId eq "*"</code> und
+            reqLi2: `Mindestens die <code>/Users</code> Endpunkte mit <code>filter=externalId eq "*"</code> und
                 <code>filter=userName eq "*"</code> müssen unterstützt sein.`,
-            reqLi3: `Wenn Gruppen sychronisiert werden sollen, so müssen unter <code>/Groups</code> zusätzlich
+            reqLi3: `Wenn Gruppen synchronisiert werden sollen, so müssen unter <code>/Groups</code> zusätzlich
                 <code>filter=displayName eq "*"</code> unterstützt sein.`,
         },
         scopes: {
@@ -152,7 +152,7 @@ export let I18nAdminDe: I18nAdmin = {
             doCache: 'Client Secret cachen',
             cacheDuration: 'Cache Dauer (Stunden)',
             generate: 'Neues Secret Generieren',
-            rotateDesc1: `Um unterbrechungsfreie Updates durchfürhen zu können, ist es möglich, das bestehende Secret
+            rotateDesc1: `Um unterbrechungsfreie Updates durchführen zu können, ist es möglich, das bestehende Secret
                 für eine gewisse Zeit im in-memory Cache zu behalten. Es kann ein Wert zwischen 1 und 24 Stunden
                 angegeben werden.`,
             rotateDesc2:
@@ -190,6 +190,7 @@ export let I18nAdminDe: I18nAdmin = {
         copiedToClip: 'Wert wurde in die Zwischenablage kopiert',
         details: 'Details',
         edit: 'Bearbeiten',
+        discard: 'Verwerfen',
         enabled: 'Aktiviert',
         filter: 'Filter',
         from: 'Von',
@@ -203,11 +204,13 @@ export let I18nAdminDe: I18nAdmin = {
         noEntries: 'Keine Einträge',
         preview: 'Vorschau',
         reset: 'Zurücksetzen',
+        unsavedChanges: 'Ungespeicherte Änderungen',
+        unsavedChangesDesc: 'Es gibt ungespeicherte Änderungen. Fortfahren und diese verwerfen?',
         searchOptions: 'Suchoptionen',
         until: 'Bis',
     },
     docs: {
-        book: 'Für generelle Dokumentation für Rauthy existiert das',
+        book: 'Für die generelle Dokumentation zu Rauthy existiert das',
         encryption: 'Verschlüsselung',
         encKeys: {
             header: 'Encryption Keys',
@@ -237,56 +240,56 @@ export let I18nAdminDe: I18nAdmin = {
 
             loginTimeHead: 'Ein paar Worte zur Login Zeit',
             loginTime1: `Generell möchten User alles so schnell wie möglich. Für eine sichere Login Prozedur jedoch
-            sollte mindestens eine Dauer von 500 - 1000 ms anvisiert werden and kein Problem darstellen. Die Zeit zum
+            sollte mindestens eine Dauer von 500 - 1000 ms anvisiert werden und kein Problem darstellen. Die Zeit zum
             Passwort Hashing darf nicht zu kurz gewählt werden, weil dadurch die Stärke des Hashes reduziert werden
             würde.`,
             loginTime2: `Um standardmäßig genügend Sicherheit zu gewährleisten, erlaubt dieses Tool keine kleineren
             Werte als 500 ms für die Login Zeit.`,
 
-            mCost1: `Die <code>m_cost</code> definiert die Menga an <b>Speicher (in kB)</b> die zum Hashing verwendet
+            mCost1: `Die <code>m_cost</code> definiert die Menge an <b>Speicher (in kB)</b> die zum Hashing verwendet
             wird. Je höher dieser Wert, umso besser (sicherer), aber die notwendigen Ressourcen müssen natürlich
             vorhanden sein.<br>
             Wenn z.B. 4 Passwörter zur selben Zeit gehasht werden, wird selbstverständlich <code>4 x m_cost</code>
             an Speicher benötigt, was zu jeder Zeit zur Verfügung stehen muss.`,
             mCost2: `Den "richtigen" Wert für <code>m_cost</code> zu finden ist glücklicherweise sehr einfach. Definiere
             das Maximum an Speicher, das Rauthy nutzen sollte, dividiere die Menge durch die Anzahl paralleler Logins,
-            die möglich sein sollten (<code>MAX_HASH_THREADS</code>) und ziehe hier von eine gewisse statische Menge ab.
+            die möglich sein sollten (<code>MAX_HASH_THREADS</code>) und ziehe hier eine gewisse statische Menge ab.
             Die Höhe des statisch benötigten Speichers hängt von der gewählten Datenbank und Anzahl Benutzer ab, jedoch
             wird sie in den meisten Fällen im Bereich von 32 - 96 MB sein.`,
 
             pCost1: `<code>p_cost</code> definiert den Parallelismus fürs Hashing.<br>
-            In den meisten Fällen erhöhen Werte jenseits von 8 nichts mehr die benötigte Zeit, weil der Algorithmus
+            In den meisten Fällen erhöhen Werte jenseits von 8 die benötigte Zeit nicht mehr, weil der Algorithmus
             gesättigt sein wird. Dies ist auch der Standardwert für Rauthy.`,
             pCost2: `Die generelle Regel lautet:<br>
-            Setze <code>p_cost</code> auf den zweifachen Wert der verfügbares CPU Kerne.<br>
+            Setze <code>p_cost</code> auf den zweifachen Wert der verfügbaren CPU Kerne.<br>
             Wenn z.B. 4 Kerne zur Verfügung stehen, wäre eine <code>p_cost</code> von 8 ein guter Wert.<br>
             Der Wert muss allerdings die maximale Anzahl parallel erlaubter Logins (<code>MAX_HASH_THREADS</code>)
             berücksichtigen und ggf. entsprechend reduziert werden.`,
 
             tCost1: `<code>t_cost</code> ist ein Multiplikator für die <b>Zeit</b> fürs Hashing. Dies ist der einzige
             Wert, der durch Testen auf der Zielarchitektur gefunden werden muss, weil <code>m_cost</code> und
-            <code>p_cost</code> gewissenermaßen vorgegeben sind.`,
+            <code>p_cost</code> gewissermaßen vorgegeben sind.`,
             tCost2: `Das Finden des Wertes ist einfach: Setze <code>m_cost</code> und <code>p_cost</code> wie oben
             erklärt und erhöhe <code>t_cost</code> so lange, bis die gewünschte Login Zeit erreicht wird.`,
 
             utilityHead: 'Parameter Berechnungs-Werkzeug',
             utility1: `Das folgende Werkzeug kann zum Finden passender Werte für dieses Rauthy deployment genutzt
-            werden. Da die Werte von sehr vielen Faktoren abhängen, sollten dieser auf der finalen Architektur
+            werden. Da die Werte von sehr vielen Faktoren abhängen, sollten diese auf der finalen Architektur
             eingestellt werden, am besten zu Zeiten der am höchsten erwarteten Last, um keine zu hohen Werte
             einzustellen.`,
-            utility2: `<code>m_cost</code> ist Optional und der als minimal sichere Wert von 32768 würde automatisch
+            utility2: `<code>m_cost</code> ist optional und der als minimal sichere Wert von 32768 würde automatisch
             gewählt werden. Sollte <code>p_cost</code> ebenfalls nicht gegeben sein, so wird Rauthy die maximal
-            verfügbare Menge and Kernen nutzen.`,
+            verfügbare Menge an Kernen nutzen.`,
 
             time: 'Zeit',
             targetTime: 'Ziel-Zeit',
-            tune: 'Wichtig: Diese Werten müssen auf der finalen Architektur eingestellt werden!',
-            pDetails: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
+            tune: 'Wichtig: Diese Werte müssen auf der finalen Architektur eingestellt werden!',
+            pDetails: `Für eine detailliertere Einführung in den Argon2ID Algorithmus stehen viele Quellen online zur
             Verfügung. Hier werden nur ganz kurz die Werte erklärt. Die folgenden drei Werte müssen konfiguriert werden:`,
             pTune: `Die Werte können stark variieren in Abhängigkeit vom System und der generellen Systemlast. Je
             stärker das System, desto sicherere Werte können gewählt werden.`,
             pUtility: `Dieses Werkzeug ist eine Hilfe zum Finden der besten Argon2ID Werte für das jeweilige System.
-            Argon2ID is der derzeit sicherste, verfügbare Passwort Hashing Algorithmus. Um das volle Potential
+            Argon2ID ist der derzeit sicherste, verfügbare Passwort Hashing Algorithmus. Um das volle Potential
             ausschöpfen zu können, müssen die Werte allerdings auf das System angepasst werden.`,
             mCost3: 'Der minimal erlaubte Wert für <code>m_cost</code> ist <code>32768</code>.',
         },
@@ -354,7 +357,7 @@ export let I18nAdminDe: I18nAdmin = {
         alg: 'Algorithmus',
         p1: 'Dies sind die Json Web Keys (JWKs) die für das Signieren der Tokens genutzt werden.',
         p2: `JWKs werden standardmäßig automatisch an jedem 1. des Monats rotiert. Für alle neuen Tokens wird
-        immer die aktuellste Version eines Keys für den jeweiligen Algorithmus verwerndet. Alte Keys werden für
+        immer die aktuellste Version eines Keys für den jeweiligen Algorithmus verwendet. Alte Keys werden für
         eine Weile behalten um bestehende Tokens validieren zu können und nach einer gewissen Zeit automatisch gelöscht.`,
         p3: `Die Keys können manuell rotiert werden. Abhängig von der Hardware auf der diese Rauthy Instanz läuft,
         kann dies einige Sekunden in Anspruch nehmen.`,
@@ -387,7 +390,7 @@ export let I18nAdminDe: I18nAdmin = {
             ],
             p1: `Der externe Zugriff auf KV Stores ist bewusst sehr einfach gehalten. Es gibt nur
                 ein paar Operationen:`,
-            p2: `Jede dieser Operationen erfordert einene Access Key als <code>Bearer</code> token
+            p2: `Jede dieser Operationen erfordert einen Access Key als <code>Bearer</code> token
                 (<code>{id}\${secret}</code>) im <code>Authorization</code> header. Ein Access Key gilt immer nur
                 isoliert für den Namespace, in dem er existiert.`,
             p3: `Die oben genannten Operationen sind im folgenden mit <code>curl</code> Beispielen
@@ -427,7 +430,7 @@ export let I18nAdminDe: I18nAdmin = {
         addUser: 'Neuer PAM Benutzer',
         deleteHost: 'Soll dieser Host wirklich gelöscht werden?',
         deleteUser: 'Soll dieser User wirklich gelöscht werden?',
-        groupDescGeneric: `Generic Gruppen sind das Pendant zu Einträgen, die man überlicherweise in /etc/group finden
+        groupDescGeneric: `Generic Gruppen sind das Pendant zu Einträgen, die man üblicherweise in /etc/group finden
             würde. Benutzer können diesen zugewiesen werden und sie werden durch NSS Lookups ans System zurückgeliefert.`,
         groupDescHost: `Host-Gruppen dienen der Gruppierung von Hosts. NSS lookups eines Hosts innerhalb der Gruppe
             liefern als Ergebnis sämtliche anderen Hosts innerhalb dieser zurück. Benutzer können Zugriff auf Hosts
@@ -451,7 +454,7 @@ export let I18nAdminDe: I18nAdmin = {
             machen sollen, aber keine Hardware Passkeys verwenden.`,
         ipAddresses: 'IP Adressen',
         member: 'Mitglied',
-        nameExistsAlready: 'Name is bereits vergeben',
+        nameExistsAlready: 'Name ist bereits vergeben',
         notes: 'Notizen',
         secretShow: 'Secret Anzeigen',
         secretRotate: 'Secret Rotieren',
@@ -488,7 +491,7 @@ export let I18nAdminDe: I18nAdmin = {
             descClientId: 'Client ID, vom Auth Provider vorgegeben.',
             descClientName: 'Client Name der auf der Rauthy Login Form angezeigt werden soll.',
             descClientSecret: `Client Secret, vom Auth Provider vorgegeben.
-                Es muss mindestens ein Secret gegeben, oder PKCE aktiviert sein.`,
+                Es muss mindestens ein Secret gegeben sein, oder PKCE aktiviert sein.`,
             descScope: `Der scope der beim Redirect zum Login genutzt werden soll. Werte müssen durch Leerzeichen
                 getrennt angegeben werden`,
             errNoAuthMethod: 'Ein client secret existiert, jedoch ist keine auth Methode aktiv',
@@ -497,7 +500,7 @@ export let I18nAdminDe: I18nAdmin = {
             jsonPath: {
                 p1: 'Werte aus dem ID Token nach einem erfolgreichen Upstream Login können automatisch gemapped werden.',
                 p2: `Der <code>Pfad</code> muss in korrekter Regex Syntax angegeben werden. Er kann auf einzelne JSON
-                    Werte verweise, oder komplexe Sturkturen wie Arrays oder Objects`,
+                    Werte verweisen, oder komplexe Strukturen wie Arrays oder Objects`,
                 p3: '<code>$.</code> markiert den Beginn eines JSON Objects',
                 p4: '<code>*</code> kann als Wildcard innerhalb des Pfads genutzt werden',
                 p5: '<code>$.roles</code> hätte als Ziel den Wert <code>&#123;"roles": "value"&#125;</code>',
@@ -527,8 +530,8 @@ export let I18nAdminDe: I18nAdmin = {
             pathAdminClaim: 'Admin Claim Pfad',
             pathMfaClaim: 'MFA Claim Pfad',
             rootPemCert: 'Root PEM Zertifikat',
-            mapMfa: `Sollte der Auth Provider in ID Claim bereit stellen, welches anzeigt, ob eine Art 2FA oder MFA
-                beim Login verwandt wurde, so kann Rauthy diesen Werten extrahieren und entsprechend weitergeben.`,
+            mapMfa: `Sollte der Auth Provider einen ID Claim bereit stellen, welcher anzeigt, ob eine Art 2FA oder MFA
+                beim Login verwandt wurde, so kann Rauthy diese Werte extrahieren und entsprechend weitergeben.`,
             mapUser: `Es kann beim Login automatisch ein Nutzer mit der Rauthy Admin Rolle verlinkt werden, in
                 Abhängigkeit von einem existierenden Upstream ID Claim.`,
             valueAdminClaim: 'Admin Claim Wert',
@@ -562,7 +565,7 @@ export let I18nAdminDe: I18nAdmin = {
             werden, sollte es ein Update seitens Rauthy geben.`,
         defaultNoMod: 'Dies ist ein Default OIDC Scope. Diese sind unveränderbar.',
         delete1: 'Soll dieser Scope wirklich gelöscht werden?',
-        deleteDefault: 'OIDC default scopes cannot be deleted',
+        deleteDefault: 'OIDC Default Scopes können nicht gelöscht werden',
         mapping1: 'Benutzer Attribute können auf eigene Scopes gemapped werden.',
         mapping2: `Jedes existierende Attribut hat einen eigenständigen Wert pro User. Diese Attribute können
             auf einen Scope gemapped werden und werden in diesem Fall im Access bzw. ID Token enthalten sein.`,
@@ -574,7 +577,7 @@ export let I18nAdminDe: I18nAdmin = {
     search: {
         orderBy: 'Sortieren nach ...',
         orderChangeToAsc: 'Zu aufsteigender Sortierung wechseln',
-        orderChangeToDesc: 'Zu absteigende Sortierung wechseln',
+        orderChangeToDesc: 'Zu absteigender Sortierung wechseln',
     },
     tabs: {
         config: 'Konfiguration',
@@ -583,14 +586,14 @@ export let I18nAdminDe: I18nAdmin = {
     tos: {
         accepted: 'Akzeptiert',
         addNewToS: 'Neue AGB',
-        addNewToSFromCurrent: 'Neue AGB von Ausgewählter',
+        addNewToSFromCurrent: 'Neue AGB von ausgewählter',
         added: 'Hinzugefügt',
         checkStatus: 'Benutzer Status prüfen',
         immutable: `ACHTUNG: Nach dem Hinzufügen sind AGB unveränderlich und können auch nicht wieder
 			gelöscht werden!`,
         noneExist: 'Es wurden noch keine Allgemeinen Geschäftsbedingungen hinzugefügt.',
         optUntil: {
-            desc: `Während der Übergangsphase ist das Akzeptieren neuer AGB optional und wird erst danch
+            desc: `Während der Übergangsphase ist das Akzeptieren neuer AGB optional und wird erst danach
 				Pflicht.`,
             enable: 'Übergangsphase Aktivieren',
             label: 'Ende Übergangsphase',
@@ -607,7 +610,7 @@ export let I18nAdminDe: I18nAdmin = {
         attributes: 'Attribute',
         consents: {
             title: 'Zustimmungen',
-            desc: 'Zustimmungen, die dieser Benutzer Anwendungen erteilt hat. Zeiten werden in Ihrer lokalen Zeitzone angezeigt; fahren Sie über eine Zeit, um sie in UTC zu sehen.',
+            desc: 'Zustimmungen, die dieser Benutzer Anwendungen erteilt hat. Zeiten werden in der lokalen Zeitzone angezeigt. Bei Hover über einer Zeit werden sie in UTC angezeigt.',
             none: 'Dieser Benutzer hat noch keiner Anwendung eine Zustimmung erteilt.',
             revokeDesc:
                 'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff für diesen Benutzer nicht mehr erneuern. Die Anwendung muss den Benutzer erneut um Zustimmung bitten.',
@@ -619,13 +622,13 @@ export let I18nAdminDe: I18nAdmin = {
         deleteUser: 'Soll dieser Benutzer wirklich gelöscht werden?',
         descAttr: `Setze individuelle Benutzer Attribute. Alle Key / Value Paare
             werden als String / JSON Wert gehandhabt.`,
-        forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und
+        forceLogout: `Sollen sämtliche, für diesen Benutzer existierende Sessions invalidiert und
             Refresh Tokens gelöscht werden?`,
         groupAdmin: {
-            notManagedTitle: 'Nutzer außerhalb Ihrer Gruppen',
-            notManagedDesc: `Dieser Nutzer ist in keiner von Ihnen verwalteten Gruppe, daher bleiben die Details verborgen.
-                Fügen Sie den Nutzer zu einer oder mehreren Ihrer Gruppen hinzu, um ihn zu verwalten.
-                Mitgliedschaften außerhalb Ihrer Gruppen bleiben erhalten.`,
+            notManagedTitle: 'Nutzer außerhalb verwalteter Gruppen',
+            notManagedDesc: `Dieser Nutzer ist in keiner verwalteten Gruppe, daher bleiben die Details verborgen.
+                Um ihn zu verwalten, muss er einer oder mehreren verwalteten Gruppen hinzugefügt
+                werden. Mitgliedschaften außerhalb verwalteter Gruppen bleiben erhalten.`,
             addToGroups: 'Zu meinen Gruppen hinzufügen',
         },
         lastLogin: 'Letzter Login',
@@ -652,9 +655,9 @@ export let I18nAdminDe: I18nAdmin = {
         pkOnly2:
             'Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.',
         pkOnly3: `Sollte dieser Benutzer alle Passkeys verloren haben, kann der Account vollständig resettet und eine
-            Password Reset E-Mail versendet werden. Um dies zu tun, müssen vorher unter dem Reiter 'MFA' sämtliche
+            Passwort Reset E-Mail versendet werden. Um dies zu tun, müssen vorher unter dem Reiter 'MFA' sämtliche
             Passkeys gelöscht werden.`,
-        pwdNoInit: 'Der Benutzer hat noch nicht den initialien Passwort Reset durchgeführt.',
+        pwdNoInit: 'Der Benutzer hat noch nicht den initialen Passwort Reset durchgeführt.',
         pwdSendEmailBtn: 'Reset E-Mail Senden',
         pwdSendEmailDesc:
             'Es kann eine neue Reset E-Mail gesendet werden, sollte der Benutzer keine erhalten haben.',

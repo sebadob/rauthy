@@ -155,6 +155,7 @@ export interface I18nAdmin {
         contact: string;
         copiedToClip: string;
         details: string;
+        discard: string;
         edit: string;
         enabled: string;
         filter: string;
@@ -169,6 +170,8 @@ export interface I18nAdmin {
         noEntries: string;
         preview: string;
         reset: string;
+        unsavedChanges: string;
+        unsavedChangesDesc: string;
         searchOptions: string;
         until: string;
     };

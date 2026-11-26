@@ -42,7 +42,7 @@ impl I18nEmailConfirmChange<'_> {
     fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel bestätigt für",
-            msg: "Ihre E-Mail Adresse wurde erfolgreich geändert zu:",
+            msg: "Die E-Mail Adresse wurde erfolgreich geändert zu:",
             msg_from_admin: "Diese Änderung wurde durch einen Administrator durchgeführt.",
         }
     }

@@ -46,6 +46,10 @@
     let usersPaginated: UserResponseSimple[] = $state([]);
     let uid = useParam('uid');
     let userId: undefined | string = $state();
+    let unsaved = $state(false);
+    // set by the guard inside UserDetails; a `uid` change is applied to the reactive state
+    // before `goto` resolves, so switching users must be asked for here, not in beforeNavigate
+    let guard: (run: () => void) => void = $state(run => run());
 
     let providers: AuthProviderTemplate[] = $state([]);
     let groups: GroupResponse[] = $state([]);
@@ -265,7 +269,7 @@
     async function onAddNew(id: string) {
         closeModal?.();
         await fetchUsers();
-        uid.set(id);
+        guard(() => uid.set(id));
     }
 
     function onSave() {
@@ -277,7 +281,11 @@
 </script>
 
 {#snippet navTile(user: UserResponseSimple)}
-    <NavButtonTile onclick={() => uid.set(user.id)} selected={uid.get() === user.id} pictureLeft>
+    <NavButtonTile
+        onclick={() => guard(() => uid.set(user.id))}
+        selected={uid.get() === user.id}
+        pictureLeft
+    >
         <div class="navBtn">
             <div class="picture">
                 <UserPicture
@@ -300,7 +308,7 @@
 
 <NavSub
     detail={!!userId}
-    onBack={() => uid.set(undefined)}
+    onBack={() => guard(() => uid.set(undefined))}
     error={err}
     buttonTilesAriaControls="users"
 >
@@ -364,7 +372,16 @@
 
     <div id="users">
         {#if userId && userValuesConfig}
-            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave} />
+            <UserDetails
+                {userValuesConfig}
+                {userId}
+                {providers}
+                {roles}
+                {groups}
+                bind:unsaved
+                bind:guard
+                {onSave}
+            />
         {/if}
     </div>
 </ContentAdmin>

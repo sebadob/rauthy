@@ -21,6 +21,8 @@
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import { useSession } from '#state/session.svelte.ts';
     import { useParam } from '#state/param.svelte.ts';
+    import UnsavedGuard from '#lib/admin/UnsavedGuard.svelte';
+    import { page } from '$app/state';
 
     let {
         userValuesConfig,
@@ -28,6 +30,8 @@
         providers,
         roles,
         groups,
+        unsaved = $bindable(false),
+        guard = $bindable((run: () => void) => run()),
         onSave,
     }: {
         userValuesConfig: UserValuesConfig;
@@ -35,6 +39,9 @@
         providers: AuthProviderTemplate[];
         roles: RoleResponse[];
         groups: GroupResponse[];
+        unsaved?: boolean;
+        // set by UnsavedGuard; the list wraps its own `uid` changes with it
+        guard?: (run: () => void) => void;
         onSave: () => void;
     } = $props();
 
@@ -73,7 +80,27 @@
 
     function select(label: string) {
         const section = available.find(section => section.label === label);
-        sectionParam.set(section?.id === 'info' ? undefined : section?.id, 'replace');
+        const target = section?.id === 'info' ? undefined : section?.id;
+        if (target === sectionParam.get()) {
+            return;
+        }
+        // a tab switch unmounts the form, so it is guarded like a navigation
+        guard(() => sectionParam.set(target, 'replace'));
+    }
+
+    // pagination, search, and re-selecting this very user keep the form mounted.
+    // compare against the current URL: a tile click already updates the `uid` param
+    // before `goto` resolves, so the `userId` prop is the target user at that point
+    function isSameTarget(to: URL): boolean {
+        return (
+            to.pathname === page.url.pathname &&
+            to.searchParams.get('uid') === page.url.searchParams.get('uid')
+        );
+    }
+
+    async function discardChanges() {
+        await fetchUser();
+        unsaved = false;
     }
 
     let err = $state('');
@@ -160,6 +187,7 @@
     {#if selected === TAB_INFO}
         <UserInfo
             bind:user
+            bind:unsaved
             config={userValuesConfig}
             {providers}
             {roles}
@@ -181,6 +209,8 @@
         <UserForceLogout {userId} />
     {/if}
 {/if}
+
+<UnsavedGuard dirty={unsaved} bind:guard {isSameTarget} onDiscard={discardChanges} />
 
 <style>
     .notice {

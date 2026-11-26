@@ -46,9 +46,9 @@ impl I18nEmailResetInfo<'_> {
     fn build_de() -> Self {
         Self {
             subject: "Passwort läuft demnächst ab",
-            expires_1: "Ihr Passwort für",
+            expires_1: "Das Passwort für",
             expires_2: " läuft demnächst ab:",
-            update: "Sie können es hier erneuern:",
+            update: "Hier kann es erneuert werden:",
             button_text: "Passwort Erneuern",
         }
     }
