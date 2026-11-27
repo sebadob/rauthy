@@ -33,6 +33,14 @@ The first two aborted the process before, but only later, when the mailer connec
 start. A `root_ca` without any certificate in it was silently ignored, so the connection used no
 custom root at all. Such a config needs to be fixed before the upgrade.
 
+#### `MIGRATE_DB_FROM` Is Validated At Startup
+
+Rauthy now refuses to start if `MIGRATE_DB_FROM` is set and:
+
+- `HQL_NODES` contains more than one node. Before, the migration was skipped with an error log and
+  the node started anyway, without the migrated data.
+- it does not start with `sqlite:` or `postgres`.
+
 ### Security
 
 #### Additional `device_code` checks

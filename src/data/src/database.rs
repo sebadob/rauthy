@@ -295,19 +295,8 @@ impl DB {
         }
 
         if let Ok(from) = env::var("MIGRATE_DB_FROM") {
-            if config.is_ha_cluster {
-                // TODO does this error make sense or might we be able to do it anyway?
-                error!(
-                    r"
-    You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
-    You need to change your config to only have a single node in `HQL_NODES`, before you can then
-    activate 'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
-    After the migration has been done, you remove the 'MIGRATE_DB_FROM' and add more nodes again.
-                "
-                );
-            } else {
-                warn!(
-                    r"
+            warn!(
+                r"
 
     Migrating data from 'MIGRATE_DB_FROM'
     This will overwrite possibly existing data in the current database!
@@ -316,23 +305,20 @@ impl DB {
     Proceeding in 10 seconds...
 
                 "
-                );
+            );
 
-                sleep(Duration::from_secs(10)).await;
+            sleep(Duration::from_secs(10)).await;
 
-                if from.starts_with("sqlite:") {
-                    if let Err(err) = db_migrate::migrate_from_sqlite(&from).await {
-                        panic!("Error during db migration: {err:?}");
-                    }
-                } else if from.starts_with("postgres") {
-                    if let Err(err) = db_migrate::migrate_from_postgres().await {
-                        panic!("Error during db migration: {err:?}");
-                    }
-                } else {
-                    panic!(
-                        "You provided an unknown database type, please check the MIGRATE_DB_FROM"
-                    );
+            if from.starts_with("sqlite:") {
+                if let Err(err) = db_migrate::migrate_from_sqlite(&from).await {
+                    panic!("Error during db migration: {err:?}");
                 }
+            } else if from.starts_with("postgres") {
+                if let Err(err) = db_migrate::migrate_from_postgres().await {
+                    panic!("Error during db migration: {err:?}");
+                }
+            } else {
+                panic!("You provided an unknown database type, please check the MIGRATE_DB_FROM");
             }
         } else if config.vars.dev.dev_mode && config.is_primary_node {
             migrate_dev_data().await.expect("Migrating DEV DATA");

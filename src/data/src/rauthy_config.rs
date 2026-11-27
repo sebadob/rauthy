@@ -83,6 +83,12 @@ impl RauthyConfig {
         if vars.user_pictures.storage_type == "file" && node_config.nodes.len() > 1 {
             panic!("You can only use local file storage for User Pictures for a single instance");
         }
+        if env::var("MIGRATE_DB_FROM").is_ok() && node_config.nodes.len() > 1 {
+            panic!(
+                "`MIGRATE_DB_FROM` only works with a single node in `HQL_NODES`. Remove the other \
+                nodes for the migration and add them again afterwards."
+            );
+        }
 
         let listen_scheme = match vars.server.scheme.as_ref() {
             "http" => {
@@ -4861,6 +4867,12 @@ impl Vars {
             }
         }
 
+        if let Ok(from) = env::var("MIGRATE_DB_FROM")
+            && !from.starts_with("sqlite:")
+            && !from.starts_with("postgres")
+        {
+            panic!("`MIGRATE_DB_FROM` must start with `sqlite:` or `postgres`");
+        }
         if env::var("MIGRATE_DB_FROM").is_ok_and(|from| from.starts_with("postgres")) {
             for (key, value) in [
                 ("migrate_pg_host", &self.database.migrate_pg_host),
