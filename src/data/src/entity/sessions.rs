@@ -948,7 +948,6 @@ mod tests {
     use crate::entity::sessions::{Session, SessionState};
     use actix_web::test::TestRequest;
     use rauthy_common::constants::CSRF_HEADER;
-    use rauthy_error::ErrorResponse;
     use std::net::IpAddr;
     use std::str::FromStr;
     use std::time::Duration;
@@ -972,7 +971,7 @@ mod tests {
     }
 
     #[test]
-    fn test_session_validation() -> Result<(), ErrorResponse> {
+    fn test_session_validation() {
         let mut s = Session::new(Duration::from_hours(1), None);
 
         let path_exep_1 = "/auth/v1/oidc/authorize";
@@ -990,8 +989,6 @@ mod tests {
 
         s.state = SessionState::Auth;
         assert!(s.is_valid(600, Some(ip), "/"));
-
-        Ok(())
     }
 
     #[test]

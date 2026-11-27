@@ -308,11 +308,11 @@ mod tests {
         assert!(validator.validate_with(&config).is_err());
     }
 
-    fn values(street: Option<&str>) -> Option<UserValuesRequest> {
-        Some(UserValuesRequest {
+    fn values(street: Option<&str>) -> UserValuesRequest {
+        UserValuesRequest {
             street: street.map(String::from),
             ..Default::default()
-        })
+        }
     }
 
     fn validator<'a>(
@@ -333,11 +333,11 @@ mod tests {
         config.preferred_username.preferred_username = UserValueConfigValue::Required;
         let uv = values(Some("Main St"));
 
-        let stored = validator(Some("alfred"), uv.as_ref());
-        let updated = validator(Some("alfred"), uv.as_ref());
+        let stored = validator(Some("alfred"), Some(&uv));
+        let updated = validator(Some("alfred"), Some(&uv));
         assert!(updated.validate_update_with(&stored, &config).is_ok());
         assert!(updated.validate_with(&config).is_ok());
-        assert!(validator(None, uv.as_ref()).validate_with(&config).is_err());
+        assert!(validator(None, Some(&uv)).validate_with(&config).is_err());
     }
 
     #[test]
@@ -348,9 +348,9 @@ mod tests {
         let cleared = values(Some(""));
         let deleted = None;
 
-        let stored = validator(None, stored_uv.as_ref());
+        let stored = validator(None, Some(&stored_uv));
         assert!(
-            validator(None, cleared.as_ref())
+            validator(None, Some(&cleared))
                 .validate_update_with(&stored, &config)
                 .is_err()
         );
@@ -367,9 +367,9 @@ mod tests {
         config.street = UserValueConfigValue::Required;
         let missing = values(None);
 
-        let stored = validator(None, missing.as_ref());
+        let stored = validator(None, Some(&missing));
         assert!(
-            validator(None, missing.as_ref())
+            validator(None, Some(&missing))
                 .validate_update_with(&stored, &config)
                 .is_ok()
         );
@@ -391,12 +391,12 @@ mod tests {
         config.street = UserValueConfigValue::Required;
         let missing_street = values(None);
 
-        let stored = validator(None, missing_street.as_ref());
+        let stored = validator(None, Some(&missing_street));
         let cleared_given_name = UserValuesValidator {
             given_name: None,
             family_name: None,
             preferred_username: None,
-            user_values: missing_street.as_ref(),
+            user_values: Some(&missing_street),
         };
         assert!(
             cleared_given_name
@@ -406,7 +406,7 @@ mod tests {
 
         let unrelated_edit = UserValuesValidator {
             family_name: Some("B"),
-            ..validator(None, missing_street.as_ref())
+            ..validator(None, Some(&missing_street))
         };
         assert!(
             unrelated_edit
