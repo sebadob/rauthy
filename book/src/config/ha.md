@@ -144,7 +144,25 @@ Removing nodes from `cluster.nodes` does **not** remove them from the Raft membe
 2 of 3 nodes and restart the remaining one with only itself in `cluster.nodes`, it waits for a
 quorum that will never come back and does not start.
 
-To go back to a single instance, use a backup instead:
+To go back to a single instance without losing any data, reset the Raft state on node 1. This
+keeps the database and starts a new Raft from log ID 1:
+
+1. Do a clean shutdown of all nodes.
+2. Start node 1 with only itself in `cluster.nodes` and `HQL_DANGER_RAFT_STATE_RESET=true`. This
+   deletes the Raft WAL, metadata and snapshots, but keeps the database itself.
+3. Remove `HQL_DANGER_RAFT_STATE_RESET` again once it is up.
+
+Deleting only the WAL directories is not enough, because the old membership is also stored next to
+the database.
+
+> [!CAUTION]
+> After a Raft state reset, do not add nodes to this instance again. The new Raft log does not
+> contain the existing data, so new nodes would only receive what was written after the reset and
+> run with a different database than node 1. To grow again later, first go through a backup as
+> described below.
+
+Alternatively, use a backup. Anything written after the backup was taken is lost, but the result can
+be grown to multiple nodes again:
 
 1. Create a backup, either with the scheduled backup task or with `POST /auth/v1/backup`, and copy
    the backup file somewhere safe.
