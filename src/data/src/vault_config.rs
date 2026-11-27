@@ -39,7 +39,7 @@ impl VaultConfig {
 
     async fn load(path_vault_config: &str) -> Result<Self, Box<dyn Error>> {
         let config = fs::read_to_string(path_vault_config).await?;
-        let vault_config = Self::load_from_string(&config)?;
+        let vault_config = Self::load_from_string(&config);
         Ok(vault_config)
     }
 
@@ -73,7 +73,7 @@ impl VaultConfig {
         existing_config
     }
 
-    fn load_from_string(config: &str) -> Result<Self, Box<dyn Error>> {
+    fn load_from_string(config: &str) -> Self {
         let vault_source = VaultSource::default();
         let mut slf = Self { vault_source };
 
@@ -83,7 +83,7 @@ impl VaultConfig {
 
         slf.parse_toml(&mut table);
 
-        Ok(slf)
+        slf
     }
 
     fn parse_toml(&mut self, table: &mut toml::Table) {
@@ -188,10 +188,10 @@ impl KvVersion {
 }
 
 impl VaultSource {
-    fn build_kv_read_url(&self, path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn build_kv_read_url(&self, path: &str) -> String {
         let api_path = self.kv_version.get_api_path(&self.mount, path);
         let url = format!("{}{}", self.addr, api_path);
-        Ok(url)
+        url
     }
 }
 
@@ -206,7 +206,7 @@ impl VaultSource {
         &self,
         path: &str,
     ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
-        let url = self.build_kv_read_url(path)?;
+        let url = self.build_kv_read_url(path);
         let client = Self::http_client(self)?;
         let response = client
             .get(url)
