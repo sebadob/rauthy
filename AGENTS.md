@@ -43,20 +43,27 @@ The whole suite is **one** test binary:
 pinned by `autotests = false` and two `[[test]]` blocks in
 [src/bin/Cargo.toml](./src/bin/Cargo.toml). Cargo compiles and links the whole dependency graph once
 per test *target*, so a loose test file is not free: each one adds a full link step over ~1400
-units. One target means one of each, and Cargo runs test binaries one after another while the tests
-**inside** a binary run in parallel — which is exactly what this layout is built for.
+units. One target means one of each, which is exactly what this layout is built for; how the tests
+of a target are then spread over processes is the runner's business, below.
 
 The only second target is [src/bin/tests/ip_blacklist.rs](./src/bin/tests/ip_blacklist.rs): it
 blacklists the source address the whole suite connects from, so no other test may overlap its
 window. Its helpers are not duplicated — it includes the very same module the integration binary
 compiles with `#[path = "integration/common.rs"]`.
 
+The suite runs under [cargo nextest](https://nexte.st), which gives every test its own process.
+[.config/nextest.toml](./.config/nextest.toml) holds the two limits the backend imposes on it:
+`test-threads` matched to `hashing.max_hash_threads` of `config-test.toml`, and `ip_blacklist`
+demanding every slot so nothing runs beside it. `just nextest-prep` fetches the binary when it is
+missing; `cargo test` still compiles and runs the suite, but without those limits it saturates the
+backend's hash queue on a many-core machine and the blacklist then fails everything.
+
 ```sh
-cargo test -p rauthy --test integration                       # the whole suite
-cargo test -p rauthy --test integration users::               # one area
-cargo test -p rauthy --test integration users::test_users     # one test
-cargo test -p rauthy --test integration -- --test-threads=8   # wider parallelism
-cargo test -p rauthy --test integration -- --ignored          # the manual measurements
+cargo nextest run -p rauthy --test integration                     # the whole suite
+cargo nextest run -p rauthy --test integration users::             # one area
+cargo nextest run -p rauthy --test integration users::test_users   # one test
+cargo nextest run -p rauthy --test integration -j 8                # wider parallelism
+cargo nextest run -p rauthy --test integration --run-ignored only  # the manual measurements
 ```
 
 How a test is run must not matter: full suite, one area, one test, any order, any number of times,

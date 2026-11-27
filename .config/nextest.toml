@@ -1,0 +1,19 @@
+# `cargo nextest run` gives every test its own process, so a test can neither see nor corrupt
+# another one's globals. What it cannot know is that all tests share one backend on :8081, which
+# has two limits of its own. Both are expressed here.
+
+[profile.default]
+# The backend hashes a password per login with `hashing.max_hash_threads` of `config-test.toml`.
+# Past that, logins queue, and a queued login that waits too long comes back as invalid
+# credentials, which `login_delay` counts as a failed one — at seven of them the backend
+# blacklists the source address and every later test fails, down to `generic::test_get_ping`.
+# Four processes against four hash threads stay clear of that; the default of one per core does
+# not, and dies within half a minute on a 16-core machine.
+test-threads = 4
+
+# `ip_blacklist` blacklists the very address the whole suite connects from, so nothing may run
+# beside it. Demanding every slot makes nextest wait until the rest of the suite is idle, which
+# is what running the test binaries one after another used to give us.
+[[profile.default.overrides]]
+filter = 'binary_id(rauthy::ip_blacklist)'
+threads-required = 'num-test-threads'

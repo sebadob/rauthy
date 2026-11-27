@@ -273,15 +273,27 @@ test-backend-stop:
     # we need to sleep 5 seconds because the lockfiles will take 4.5 seconds to be deleted
     sleep 5
 
+# installs `cargo nextest` unless it is already there - the test recipes need it
+nextest-prep:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if command -v cargo-nextest > /dev/null; then
+      exit 0
+    fi
+    echo '>>> cargo-nextest is missing, fetching the release binary'
+    mkdir -p "${CARGO_HOME:-$HOME/.cargo}/bin"
+    curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C "${CARGO_HOME:-$HOME/.cargo}/bin"
+
 # runs a single test with hiqlite - needs the backend being started manually
-test *test:
+test *test: nextest-prep
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{ test_api_key_secret }} cargo test {{ test }}
+    {{ test_api_key_secret }} cargo nextest run {{ test }}
 
 # runs the full set of tests with sqlite
-test-hiqlite *test: test-backend-stop delete-hiqlite
+test-hiqlite *test: nextest-prep test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     clear
 
@@ -294,7 +306,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if {{ test_api_key_secret }} cargo test {{ test }}; then
+    if {{ test_api_key_secret }} cargo nextest run {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
     else
@@ -304,7 +316,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
     fi
 
 # runs the full set of tests with postgres
-test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
+test-postgres test="": nextest-prep test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
     #!/usr/bin/env bash
     clear
 
@@ -318,7 +330,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if {{ test_api_key_secret }} {{ postgres }} cargo test {{ test }}; then
+    if {{ test_api_key_secret }} {{ postgres }} cargo nextest run {{ test }}; then
       echo "All Postgres tests successful"
       just test-backend-stop
     else

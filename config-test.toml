@@ -78,7 +78,10 @@ allowed_resources = ['https://consent-test.example.com']
 argon2_m_cost = 32768
 argon2_t_cost = 1
 argon2_p_cost = 2
-max_hash_threads = 1
+# One hash thread per test process (`test-threads` in `.config/nextest.toml`), so a login never
+# queues behind another one long enough to come back as invalid credentials. 4 x `argon2_m_cost`
+# is 128 MiB, which a CI runner carries without trouble.
+max_hash_threads = 4
 
 [http_client]
 danger_unencrypted = true
