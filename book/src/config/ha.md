@@ -154,14 +154,7 @@ keeps the database and starts a new Raft from log ID 1:
 3. Remove `HQL_DANGER_RAFT_STATE_RESET` again once it is up. As long as it is set, the Raft state
    is reset on every start.
 
-> [!CAUTION]
-> After a Raft state reset, do not add nodes to this instance again. The new Raft log does not
-> contain the existing data, so new nodes would only receive what was written after the reset and
-> run with a different database than node 1. To grow again later, first go through a backup as
-> described below.
-
-Alternatively, use a backup. Anything written after the backup was taken is lost, but the result can
-be grown to multiple nodes again:
+Alternatively, use a backup. Anything written after the backup was taken is lost:
 
 1. Create a backup, either with the scheduled backup task or with `POST /auth/v1/backup`, and copy
    the backup file somewhere safe.
