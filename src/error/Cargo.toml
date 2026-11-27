@@ -20,7 +20,7 @@ image = { workspace = true }
 oxrdf = { workspace = true }
 oxttl = { workspace = true }
 reqwest = { workspace = true }
-ring = { workspace = true }
+aws-lc-rs = { workspace = true }
 rsa = { workspace = true }
 s3-simple = { workspace = true }
 serde = { workspace = true }

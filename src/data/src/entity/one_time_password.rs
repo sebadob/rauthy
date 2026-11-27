@@ -20,6 +20,9 @@ use actix_web::http::header::{
     self, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue,
 };
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
+use aws_lc_rs::digest;
+use aws_lc_rs::hmac;
+use aws_lc_rs::rand;
 use chrono::Utc;
 use hiqlite::macros::params;
 use image::EncodableLayout;
@@ -32,9 +35,6 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, new_store_id};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use ring::digest;
-use ring::hmac;
-use ring::rand;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;

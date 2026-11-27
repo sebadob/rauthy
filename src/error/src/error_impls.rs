@@ -7,6 +7,7 @@ use actix_web::http::header::{
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError, error};
+use aws_lc_rs::error::{KeyRejected, Unspecified};
 use cryptr::CryptrError;
 use cryptr::utils::secure_random_alnum;
 use css_color::ParseColorError;
@@ -14,7 +15,6 @@ use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
 use oxrdf::IriParseError;
 use oxttl::TurtleSyntaxError;
-use ring::error::{KeyRejected, Unspecified};
 use rsa::pkcs1::Error;
 use s3_simple::S3Error;
 use spow::pow::PowError;
@@ -597,22 +597,22 @@ impl From<ed25519_compact::Error> for ErrorResponse {
     }
 }
 
-impl From<ring::error::KeyRejected> for ErrorResponse {
+impl From<aws_lc_rs::error::KeyRejected> for ErrorResponse {
     fn from(value: KeyRejected) -> Self {
-        debug!("ring::error::KeyRejected: {value:?}");
+        debug!("aws_lc_rs::error::KeyRejected: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("ring::error::KeyRejected: {value:?}"),
+            format!("aws_lc_rs::error::KeyRejected: {value:?}"),
         )
     }
 }
 
-impl From<ring::error::Unspecified> for ErrorResponse {
+impl From<aws_lc_rs::error::Unspecified> for ErrorResponse {
     fn from(value: Unspecified) -> Self {
-        debug!("ring::error::Unspecified: {value:?}");
+        debug!("aws_lc_rs::error::Unspecified: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("ring::error::Unspecified: {value:?}"),
+            format!("aws_lc_rs::error::Unspecified: {value:?}"),
         )
     }
 }

@@ -1,3 +1,4 @@
+use aws_lc_rs::digest;
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use rauthy_api_types::oidc::{ActClaim, Audience, JktClaim, TokenType};
@@ -20,7 +21,6 @@ use rauthy_jwt::claims::{
     validate_no_reserved_collision,
 };
 use rauthy_jwt::token::{JwtHeaderType, JwtToken};
-use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;

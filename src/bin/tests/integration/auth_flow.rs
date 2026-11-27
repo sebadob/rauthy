@@ -6,6 +6,7 @@ use crate::common::{
 };
 use crate::{expect_status, expect_status_json};
 use actix_web::{App, HttpResponse, HttpServer, http, web};
+use aws_lc_rs::{digest, signature};
 use chrono::Utc;
 use ed25519_compact::Noise;
 use pretty_assertions::assert_eq;
@@ -27,7 +28,6 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::JwtTokenType;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::AUTHORIZATION;
-use ring::{digest, signature};
 use std::error::Error;
 use std::fmt::Write;
 use std::net::TcpStream;
