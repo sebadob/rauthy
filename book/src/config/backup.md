@@ -97,6 +97,18 @@ The process is really simple:
 > 
 > re-apply the same backup with each following restart over and over again.
 
+If you run a HA cluster, set `HQL_BACKUP_RESTORE` to the same value on **every** node. Node 1
+applies the backup, and all other nodes delete their own data and join the restored cluster. A node
+started without it keeps its old state, which does not belong to the restored cluster. Afterward,
+remove the value from every node.
+
+A restore also reverts everything that changed after the backup was taken. Sessions that were
+logged out and refresh tokens that were revoked are valid again, and users or clients that were
+deleted or disabled are back as they were.
+Once Rauthy is up again, invalidate all sessions and refresh tokens (Admin UI -> Sessions ->
+`Invalidate All Sessions`, or `DELETE /auth/v1/sessions`) and re-apply any changes made after the
+backup.
+
 You only need to set this single value:
 
 ```toml
