@@ -56,8 +56,8 @@ The suite runs under [cargo nextest](https://nexte.st), which gives every test i
 `test-threads = 'num-cpus'`. The `backend` group limits integration tests to four at a time,
 matching `hashing.max_hash_threads` in `config-test.toml`; the global pool may limit them further
 on smaller machines. `ip_blacklist` demands every global slot so nothing runs beside it, even
-when `-j` overrides the pool size. `just nextest-prep` fetches the binary when it is missing.
-`cargo test` does not apply these concurrency limits.
+when `-j` overrides the pool size. `just setup`, the Nix dev shell and the CI builder image provide
+the binary. `cargo test` does not apply these concurrency limits.
 
 ```sh
 cargo nextest run -p rauthy --test integration                     # the whole suite

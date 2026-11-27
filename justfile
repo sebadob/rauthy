@@ -44,6 +44,9 @@ setup:
     echo "Installing wasm-pack"
     cargo install wasm-pack mdbook
 
+    echo "Installing cargo-nextest for the test recipes"
+    cargo install cargo-nextest --locked
+
     echo "Building WASM modules"
     just build-wasm
 
@@ -273,27 +276,15 @@ test-backend-stop:
     # we need to sleep 5 seconds because the lockfiles will take 4.5 seconds to be deleted
     sleep 5
 
-# installs `cargo nextest` unless it is already there - the test recipes need it
-nextest-prep:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    if command -v cargo-nextest > /dev/null; then
-      exit 0
-    fi
-    echo '>>> cargo-nextest is missing, fetching the release binary'
-    mkdir -p "${CARGO_HOME:-$HOME/.cargo}/bin"
-    curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C "${CARGO_HOME:-$HOME/.cargo}/bin"
-
 # runs a single test with hiqlite - needs the backend being started manually
-test *test: nextest-prep
+test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
     {{ test_api_key_secret }} cargo nextest run {{ test }}
 
 # runs the full set of tests with sqlite
-test-hiqlite *test: nextest-prep test-backend-stop delete-hiqlite
+test-hiqlite *test: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     clear
 
@@ -316,7 +307,7 @@ test-hiqlite *test: nextest-prep test-backend-stop delete-hiqlite
     fi
 
 # runs the full set of tests with postgres
-test-postgres test="": nextest-prep test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
+test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlite postgres-start
     #!/usr/bin/env bash
     clear
 
