@@ -2566,7 +2566,7 @@ pub(crate) mod tests {
     use pretty_assertions::assert_eq;
 
     /// All hiqlite migrations, in order.
-    fn sqlite_full_schema() -> rusqlite::Connection {
+    fn sqlite_full_schema() -> hiqlite::rusqlite::Connection {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/hiqlite");
         let mut files = std::fs::read_dir(dir)
             .unwrap()
@@ -2579,7 +2579,7 @@ pub(crate) mod tests {
             .collect::<Vec<_>>();
         files.sort();
 
-        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        let conn = hiqlite::rusqlite::Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         for (_, path) in files {
             conn.execute_batch(&std::fs::read_to_string(path).unwrap())

@@ -306,10 +306,16 @@ impl From<hiqlite::Error> for ErrorResponse {
 
         let (error, msg) = match value {
             hiqlite::Error::BadRequest(err) => (ErrorResponseType::BadRequest, err),
-            hiqlite::Error::CheckIsLeaderError(err) => {
+            hiqlite::Error::CheckIsLeaderErrorDb(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
-            hiqlite::Error::ClientWriteError(err) => {
+            hiqlite::Error::CheckIsLeaderErrorCache(err) => {
+                (ErrorResponseType::Connection, err.to_string().into())
+            }
+            hiqlite::Error::ClientWriteErrorDb(err) => {
+                (ErrorResponseType::Connection, err.to_string().into())
+            }
+            hiqlite::Error::ClientWriteErrorCache(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
             hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.into()),
@@ -541,8 +547,8 @@ impl From<s3_simple::S3Error> for ErrorResponse {
     }
 }
 
-impl From<rusqlite::Error> for ErrorResponse {
-    fn from(value: rusqlite::Error) -> Self {
+impl From<hiqlite::rusqlite::Error> for ErrorResponse {
+    fn from(value: hiqlite::rusqlite::Error) -> Self {
         debug!("rusqlite::Error: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::Database,

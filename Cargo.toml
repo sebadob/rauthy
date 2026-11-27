@@ -10,9 +10,6 @@ authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 description = "Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2, and PAM"
 
-[profile.dev]
-panic = "abort"
-
 [profile.release]
 codegen-units = 1
 lto = true
@@ -27,9 +24,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", branch = "fix-broken-catchup-logic", package = "hiqlite" }
-#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
-#hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", branch = "main", package = "hiqlite" }
+hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", branch = "main", package = "hiqlite-derive" }
+hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", branch = "main", package = "hiqlite-wal" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -67,7 +64,7 @@ clap = { version = "4.6", features = ["derive", "env"] }
 colored = "3"
 constant_time_eq = "0.6"
 cron = "0.17"
-cryptr = { version = "0.12", features = ["s3", "streaming"] }
+cryptr = { version = "0.13", features = ["s3", "streaming"] }
 dashmap = "6.2.1"
 css-color = "0.2"
 deadpool = { version = "0.13", features = ["rt_tokio_1", "serde"] }
@@ -83,13 +80,14 @@ ldap3_proto = "0.9"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.26.1"
-hiqlite = { version = "0.15.0", features = [
+hiqlite = { version = "0.17.0-20261117", features = [
   "cache",
   "cast_ints",
   "counters",
   "dashboard",
   "listen_notify",
   "macros",
+  "s3",
 ] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
@@ -135,7 +133,6 @@ ruma-client = { version = "0.20", features = [
   "client-api",
   "reqwest-rustls-no-provider",
 ] }
-rusqlite = "0.40.1"
 rust-embed = "8.5.0"
 rustls = { version = "0.23.46", default-features = false, features = [
   "logging",
@@ -148,7 +145,6 @@ semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_cbor_2 = "0.13"
 serde_json = "1"
-serde_rusqlite = "0.43"
 serde_urlencoded = "0.7.1"
 spow = { version = "0.7", features = ["server"] }
 strum = { version = "0.28", features = ["derive"] }

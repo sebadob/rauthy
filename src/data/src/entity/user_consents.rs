@@ -645,7 +645,7 @@ mod tests {
     /// The production SQL against the hiqlite migration.
     #[test]
     fn test_sql_sqlite() {
-        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        let conn = hiqlite::rusqlite::Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         conn.execute_batch("CREATE TABLE users (id TEXT NOT NULL PRIMARY KEY) STRICT;")
             .unwrap();
@@ -658,16 +658,17 @@ mod tests {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
                 let ip = format!("127.0.0.{ts}");
-                let params =
-                    rusqlite::params![user_id, client_id, resource, scopes, hash, ts, ip, ua];
+                let params = hiqlite::rusqlite::params![
+                    user_id, client_id, resource, scopes, hash, ts, ip, ua
+                ];
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
         }
 
-        let query = |sql: &str, params: &[&dyn rusqlite::ToSql]| -> Vec<UserConsent> {
+        let query = |sql: &str, params: &[&dyn hiqlite::rusqlite::ToSql]| -> Vec<UserConsent> {
             let mut stmt = conn.prepare(sql).unwrap();
             let rows = stmt.query(params).unwrap();
-            serde_rusqlite::from_rows::<UserConsent>(rows)
+            hiqlite::serde_rusqlite::from_rows::<UserConsent>(rows)
                 .map(|r| r.unwrap())
                 .collect()
         };
@@ -692,7 +693,7 @@ mod tests {
         assert!(for_resource.iter().all(|c| c.user_id == "u1"));
 
         // idempotent, the resource is part of the key
-        let delete = rusqlite::params!["u1", "c1", ""];
+        let delete = hiqlite::rusqlite::params!["u1", "c1", ""];
         assert_eq!(conn.execute(SQL_DELETE, delete).unwrap(), 1);
         assert_eq!(conn.execute(SQL_DELETE, delete).unwrap(), 0);
         assert_eq!(query(SQL_FIND_FOR_USER, &[&"u1"]).len(), 2);
@@ -707,7 +708,8 @@ mod tests {
 
         // a grant without a content hash, which a login never writes, and without a user agent
         let none = None::<String>;
-        let params = rusqlite::params!["u1", "c3", "", "openid", none, 5, "127.0.0.1", none];
+        let params =
+            hiqlite::rusqlite::params!["u1", "c3", "", "openid", none, 5, "127.0.0.1", none];
         conn.execute(SQL_UPSERT, params).unwrap();
         let local = query(SQL_FIND, &[&"u1", &"c3", &""]).remove(0);
         assert_eq!((local.content_hash, local.user_agent), (None, None));
@@ -719,7 +721,7 @@ mod tests {
     }
 
     /// All hiqlite migrations, in order.
-    fn sqlite_full_schema() -> rusqlite::Connection {
+    fn sqlite_full_schema() -> hiqlite::rusqlite::Connection {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/hiqlite");
         let mut files = std::fs::read_dir(dir)
             .unwrap()
@@ -732,7 +734,7 @@ mod tests {
             .collect::<Vec<_>>();
         files.sort();
 
-        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        let conn = hiqlite::rusqlite::Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         for (_, path) in files {
             conn.execute_batch(&std::fs::read_to_string(path).unwrap())
@@ -807,9 +809,11 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
 ",
         )
         .unwrap();
-        let params = rusqlite::params!["u1", "c1", "", "openid", "hash", 1, "127.0.0.1", "ua"];
+        let params =
+            hiqlite::rusqlite::params!["u1", "c1", "", "openid", "hash", 1, "127.0.0.1", "ua"];
         conn.execute(SQL_UPSERT, params).unwrap();
-        let params = rusqlite::params!["u1", "c2", "", "openid", "hash", 1, "127.0.0.1", "ua"];
+        let params =
+            hiqlite::rusqlite::params!["u1", "c2", "", "openid", "hash", 1, "127.0.0.1", "ua"];
         conn.execute(SQL_UPSERT, params).unwrap();
 
         assert_eq!(
@@ -852,7 +856,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
 
     /// The hiqlite transaction of `UserConsent::revoke` on `conn`, with its result.
     fn hql_revoke_on(
-        conn: &mut rusqlite::Connection,
+        conn: &mut hiqlite::rusqlite::Connection,
         drop_legacy: bool,
         user_id: &str,
         client_id: &str,
@@ -864,9 +868,10 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             .iter()
             .map(|(sql, params)| match params {
                 RevokeParams::Ids => txn.execute(sql, [user_id, client_id]),
-                RevokeParams::Legacy => {
-                    txn.execute(sql, rusqlite::params![user_id, client_id, drop_legacy])
-                }
+                RevokeParams::Legacy => txn.execute(
+                    sql,
+                    hiqlite::rusqlite::params![user_id, client_id, drop_legacy],
+                ),
                 RevokeParams::Resource => txn.execute(sql, [user_id, client_id, resource]),
             })
             .collect::<Result<Vec<_>, _>>()
@@ -900,7 +905,7 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
                 ("u1", "c2", "", 3),
                 ("u2", "c1", "", 4),
             ] {
-                let params = rusqlite::params![
+                let params = hiqlite::rusqlite::params![
                     user_id,
                     client_id,
                     resource,
@@ -913,7 +918,7 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
 
-            let list = |conn: &rusqlite::Connection, resource: Option<&str>| {
+            let list = |conn: &hiqlite::rusqlite::Connection, resource: Option<&str>| {
                 let mut stmt;
                 let rows = if let Some(resource) = resource {
                     stmt = conn.prepare(SQL_FIND_FOR_USER_RESOURCE).unwrap();
@@ -922,7 +927,7 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
                     stmt = conn.prepare(SQL_FIND_FOR_USER).unwrap();
                     stmt.query(["u1"]).unwrap()
                 };
-                serde_rusqlite::from_rows::<UserConsent>(rows)
+                hiqlite::serde_rusqlite::from_rows::<UserConsent>(rows)
                     .map(|r| {
                         let c = r.unwrap();
                         (c.client_id, c.resource)
@@ -937,7 +942,7 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
             assert_eq!(list(&conn, Some(RES)), vec![key("c1", RES)]);
             assert_eq!(list(&conn, Some("")), vec![key("c2", ""), key("c1", "")]);
 
-            let revoke = |conn: &mut rusqlite::Connection, c: &str, r: Option<&str>| {
+            let revoke = |conn: &mut hiqlite::rusqlite::Connection, c: &str, r: Option<&str>| {
                 hql_revoke_on(conn, drop_legacy, "u1", c, r)
             };
             // with the refresh token of c1

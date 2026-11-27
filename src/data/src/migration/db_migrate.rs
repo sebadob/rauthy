@@ -57,13 +57,16 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use tracing::{debug, info};
 
-fn query_sqlite<T>(conn: &rusqlite::Connection, query: &str) -> Result<Vec<T>, ErrorResponse>
+fn query_sqlite<T>(
+    conn: &hiqlite::rusqlite::Connection,
+    query: &str,
+) -> Result<Vec<T>, ErrorResponse>
 where
     T: Debug + for<'a> Deserialize<'a>,
 {
     let mut stmt = conn.prepare(query)?;
     let rows = stmt.query(())?;
-    Ok(serde_rusqlite::from_rows(rows)
+    Ok(hiqlite::serde_rusqlite::from_rows(rows)
         .map(|r| match r {
             Ok(t) => t,
             Err(err) => {
@@ -82,7 +85,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     info!("Starting migration to another DB");
 
     let url = db_from.strip_prefix("sqlite:").unwrap_or(db_from);
-    let conn = rusqlite::Connection::open(url)?;
+    let conn = hiqlite::rusqlite::Connection::open(url)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
     conn.pragma_update(None, "foreign_keys", "ON")?;
 
