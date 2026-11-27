@@ -40,7 +40,7 @@ use std::sync::LazyLock;
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 /// The password of every user these tests create: the seeded password policy has a minimum length,
 /// and this satisfies it with all of its likely `include_*` rules.
-const PASSWORD_ONLY: &str = "MfaAssurance!Regression0123";
+const PASSWORD_ONLY: &str = "MfaAssurance!#$%&Regression0123";
 /// The users of these tests carry this suffix: they are created and updated by email, and two runs
 /// on one backend must not share an account.
 static SUFFIX: LazyLock<String> = LazyLock::new(|| new_store_id().to_lowercase());
