@@ -7,6 +7,7 @@ use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
+use aws_lc_rs::digest;
 use chrono::Utc;
 use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
@@ -21,7 +22,6 @@ use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use ring::digest;
 use std::str::FromStr;
 use tracing::warn;
 

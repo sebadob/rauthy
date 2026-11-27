@@ -21,7 +21,7 @@ const B64_STD: engine::GeneralPurpose = general_purpose::STANDARD;
 #[macro_export]
 macro_rules! sha256 {
     ($input:expr) => {
-        ring::digest::digest(&ring::digest::SHA256, $input).as_ref()
+        aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, $input).as_ref()
     };
 }
 
