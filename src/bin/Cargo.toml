@@ -82,7 +82,7 @@ ed25519-compact = { workspace = true }
 futures = { workspace = true }
 pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
-ring = { workspace = true }
+aws-lc-rs = { workspace = true }
 
 [[test]]
 name = "integration"

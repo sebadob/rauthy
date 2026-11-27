@@ -20,6 +20,7 @@ use crate::common::{
     get_backend_url, get_solved_pow, send_login, stale_consent,
 };
 use crate::{expect_status, expect_status_json};
+use aws_lc_rs::hmac;
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{LoginConsent, LoginRequest};
 use rauthy_api_types::users::{
@@ -32,7 +33,6 @@ use rauthy_common::utils::{base64_url_encode, new_store_id};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{AUTHORIZATION, COOKIE, HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Client, StatusCode};
-use ring::hmac;
 use std::error::Error;
 use std::sync::LazyLock;
 use std::time::Duration;
