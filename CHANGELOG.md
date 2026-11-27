@@ -672,6 +672,11 @@ passwords. The default password policy is untouched.
 
 ### Bugfix
 
+- An RP Initiated Logout rejected an expired `id_token_hint` with `Token has expired`, so the user
+  ended up on a JSON error and was not logged out. Clients like Outline store the `id_token` at
+  login and send it as the hint when the user logs out, which is usually long after the token
+  expired. The hint is now accepted as long as Rauthy issued it, as RP-Initiated Logout 1.0
+  section 2 recommends. The signature, `iss`, `typ`, `iat` and `nbf` are still validated.
 - `prompt=none` together with `prompt=login`, or with a `max_age` that is exceeded or has no
   session to check, now redirects with `error=login_required`, as OIDC Core requires, instead of
   showing the login page.
