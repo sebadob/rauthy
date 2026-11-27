@@ -31,7 +31,7 @@ impl MfaModToken {
             ip,
         };
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::Webauthn,
                 Self::cache_idx(&slf.id),
@@ -44,7 +44,10 @@ impl MfaModToken {
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::Webauthn, Self::cache_idx(id)).await? {
+        if let Some(slf) = DB::cache()
+            .get(Cache::Webauthn, Self::cache_idx(id))
+            .await?
+        {
             Ok(slf)
         } else {
             Err(ErrorResponse::new(

@@ -13,6 +13,8 @@ use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use tracing::error;
 
+type CacheError = hiqlite::Error;
+
 /// A DPoP nonce that only live inside the cache to limit client's DPoP lifetimes
 #[derive(Serialize, Deserialize)]
 pub struct DPoPNonce {
@@ -36,7 +38,7 @@ impl DPoPNonce {
             value: get_rand(32),
         };
 
-        let client = DB::hql();
+        let client = DB::cache();
         client
             .put(
                 Cache::DPoPNonce,
@@ -62,8 +64,8 @@ impl DPoPNonce {
 
     /// Checks the validity of the given DPoP nonce value
     pub async fn is_valid(value: String) -> bool {
-        let lookup: Result<Option<Self>, hiqlite::Error> =
-            DB::hql().get(Cache::DPoPNonce, value.as_str()).await;
+        let lookup: Result<Option<Self>, CacheError> =
+            DB::cache().get(Cache::DPoPNonce, value.as_str()).await;
         Self::accepts(&value, lookup, Utc::now())
     }
 
@@ -75,11 +77,7 @@ impl DPoPNonce {
     /// Only a nonce this cluster issued and that has not expired is valid. A lookup that finds
     /// nothing, or fails, is not. The nonce must also be the entry's own value, because the
     /// same cache holds a copy of the current nonce under the fixed key `latest`.
-    fn accepts(
-        value: &str,
-        lookup: Result<Option<Self>, hiqlite::Error>,
-        now: DateTime<Utc>,
-    ) -> bool {
+    fn accepts(value: &str, lookup: Result<Option<Self>, CacheError>, now: DateTime<Utc>) -> bool {
         match lookup {
             Ok(Some(slf)) => slf.value == value && slf.exp > now,
             Ok(None) => false,
@@ -93,7 +91,7 @@ impl DPoPNonce {
     /// Always returns the value of the latest valid DPoP nonce which is valid for at least
     /// 15 more seconds or longer.
     pub async fn get_latest() -> Result<String, ErrorResponse> {
-        let slf: Option<Self> = DB::hql().get(Cache::DPoPNonce, "latest").await?;
+        let slf: Option<Self> = DB::cache().get(Cache::DPoPNonce, "latest").await?;
         match slf {
             None => Self::new_value().await,
             Some(slf) => {

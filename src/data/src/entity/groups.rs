@@ -116,14 +116,14 @@ impl Group {
 
     // Returns all existing groups
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX_GROUPS).await? {
             return Ok(slf);
         }
 
         let sql = "SELECT * FROM groups";
         let res = if is_hiqlite() {
-            client.query_as(sql, params!()).await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 2).await?
         };
@@ -141,7 +141,6 @@ impl Group {
         new_name: String,
         meta: Option<serde_json::Value>,
     ) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
         let group = Group::find(id).await?;
         let users = User::find_with_group(&group.name).await?;
 
@@ -156,7 +155,7 @@ impl Group {
             // care about anything else.
             let sql = "UPDATE groups SET meta = $1 WHERE id = $2";
             if is_hiqlite() {
-                client
+                DB::hql()
                     .execute(sql, params!(new_group.meta.clone(), new_group.id.clone()))
                     .await?;
             } else {

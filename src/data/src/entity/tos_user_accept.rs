@@ -38,7 +38,7 @@ ON CONFLICT DO NOTHING";
             DB::pg_execute(sql, &[&user_id, &tos_ts, &accept_ts, &location]).await?;
         }
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::ToS,
                 Self::cache_idx(&user_id),
@@ -70,7 +70,10 @@ WHERE user_id = $1";
     }
 
     pub async fn find_latest(user_id: String) -> Result<Option<Self>, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::ToS, Self::cache_idx(&user_id)).await? {
+        if let Some(slf) = DB::cache()
+            .get(Cache::ToS, Self::cache_idx(&user_id))
+            .await?
+        {
             return Ok(slf);
         }
 
@@ -88,7 +91,7 @@ LIMIT 1
             DB::pg_query_opt(sql, &[&user_id]).await?
         };
 
-        DB::hql()
+        DB::cache()
             .put(Cache::ToS, cache_idx, &slf, Some(600))
             .await?;
 

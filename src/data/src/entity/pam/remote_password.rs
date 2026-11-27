@@ -30,7 +30,7 @@ impl PamRemotePassword {
             password: hash,
         };
 
-        DB::hql()
+        DB::cache()
             .put(Cache::PAM, slf.username.clone(), &slf, Some(ttl_secs))
             .await?;
 
@@ -38,7 +38,7 @@ impl PamRemotePassword {
     }
 
     pub async fn get(username: String) -> Result<Self, ErrorResponse> {
-        match DB::hql().get::<_, _, Self>(Cache::PAM, username).await? {
+        match DB::cache().get::<_, _, Self>(Cache::PAM, username).await? {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "No PAM password exists",

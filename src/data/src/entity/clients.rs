@@ -470,7 +470,7 @@ VALUES ($1, $2, $3, $4)";
 
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
+        if let Some(slf) = DB::cache().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         }
 
@@ -481,7 +481,7 @@ VALUES ($1, $2, $3, $4)";
             DB::pg_query_one(sql, &[&id]).await?
         };
 
-        DB::hql()
+        DB::cache()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
@@ -552,13 +552,13 @@ VALUES ($1, $2, $3, $4)";
             return Self::find(id).await;
         }
 
-        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, id.clone()).await? {
+        if let Some(slf) = DB::cache().get(Cache::ClientEphemeral, id.clone()).await? {
             return Ok(slf);
         }
 
         let slf = Self::ephemeral_from_url(&id).await?;
 
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::ClientEphemeral,
                 id,
@@ -905,7 +905,7 @@ WHERE id = $4";
             .dynamic_clients
             .rate_limit_reg
             .as_secs() as i64;
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::ClientDynamic,
                 ClientDyn::get_cache_entry(&client_dyn.id),
@@ -932,20 +932,20 @@ WHERE id = $4";
             // Otherwise, it would authenticate a client recreated with the same id.
             let idx = Self::cached_secrets_idx(&self.id);
             let now = Utc::now().timestamp();
-            let (exp, mut secrets) = DB::hql()
+            let (exp, mut secrets) = DB::cache()
                 .get::<_, _, (i64, Vec<String>)>(Cache::ClientSecret, idx.clone())
                 .await?
                 .unwrap_or_default();
             let exp = exp.max(now + ttl);
             secrets.push(plain.clone());
-            DB::hql()
+            DB::cache()
                 .put(Cache::ClientSecret, idx, &(exp, secrets), Some(exp - now))
                 .await?;
 
             // The original idea was to save secrets hashed. However, since the secrets are used as
             // a key, the HashMap inside the `hiqlite` cache handler will take care of this for us,
             // to they could not be read from memory at runtime.
-            DB::hql()
+            DB::cache()
                 .put_bytes(
                     Cache::ClientSecret,
                     plain,
@@ -960,14 +960,14 @@ WHERE id = $4";
     /// Deletes all secrets cached for this client by `cache_current_secret()`.
     async fn delete_cached_secrets(&self) -> Result<(), ErrorResponse> {
         let idx = Self::cached_secrets_idx(&self.id);
-        if let Some((_, secrets)) = DB::hql()
+        if let Some((_, secrets)) = DB::cache()
             .get::<_, _, (i64, Vec<String>)>(Cache::ClientSecret, idx.clone())
             .await?
         {
             for secret in secrets {
-                DB::hql().delete(Cache::ClientSecret, secret).await?;
+                DB::cache().delete(Cache::ClientSecret, secret).await?;
             }
-            DB::hql().delete(Cache::ClientSecret, idx).await?;
+            DB::cache().delete(Cache::ClientSecret, idx).await?;
         }
         Ok(())
     }
@@ -982,7 +982,7 @@ WHERE id = $4";
         client_id: &str,
         secret: &str,
     ) -> Result<(), ErrorResponse> {
-        match DB::hql().get_bytes(Cache::ClientSecret, secret).await? {
+        match DB::cache().get_bytes(Cache::ClientSecret, secret).await? {
             None => {
                 debug!("No cached secret found for client {client_id}");
                 Err(ErrorResponse::new(

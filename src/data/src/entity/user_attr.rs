@@ -134,7 +134,6 @@ VALUES ($1, $2, $3, $4, $5)"#,
             }
         }
 
-        let client = DB::hql();
         let user_attr_cache_cleanup_keys;
 
         if is_hiqlite() {
@@ -158,7 +157,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 params!(name),
             ));
 
-            client.txn(txn).await?;
+            DB::hql().txn(txn).await?;
         } else {
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
@@ -198,14 +197,14 @@ VALUES ($1, $2, $3, $4, $5)"#,
     }
 
     pub async fn find(name: String) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(&name)).await? {
             return Ok(slf);
         }
 
         let sql = "SELECT * FROM user_attr_config WHERE name = $1";
         let slf: Self = if is_hiqlite() {
-            client.query_as_one(sql, params!(name)).await?
+            DB::hql().query_as_one(sql, params!(name)).await?
         } else {
             DB::pg_query_one(sql, &[&name]).await?
         };
@@ -218,14 +217,14 @@ VALUES ($1, $2, $3, $4, $5)"#,
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX_USER_ATTR_CONFIG).await? {
             return Ok(slf);
         }
 
         let sql = "SELECT * FROM user_attr_config";
         let res = if is_hiqlite() {
-            client.query_as(sql, params!()).await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 0).await?
         };
@@ -516,7 +515,7 @@ impl UserAttrValueEntity {
 
     pub async fn find_for_user(user_id: &str) -> Result<Vec<Self>, ErrorResponse> {
         let idx = Self::cache_idx(user_id);
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::User, &idx).await? {
             return Ok(slf);
@@ -524,7 +523,7 @@ impl UserAttrValueEntity {
 
         let sql = "SELECT * FROM user_attr_values WHERE user_id = $1";
         let res = if is_hiqlite() {
-            client.query_as(sql, params!(user_id)).await?
+            DB::hql().query_as(sql, params!(user_id)).await?
         } else {
             DB::pg_query(sql, &[&user_id], 0).await?
         };
@@ -689,7 +688,9 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3",
         };
 
         let idx = Self::cache_idx(user_id);
-        client.put(Cache::User, idx, &res, CACHE_TTL_USER).await?;
+        DB::cache()
+            .put(Cache::User, idx, &res, CACHE_TTL_USER)
+            .await?;
 
         Ok(res)
     }

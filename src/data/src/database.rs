@@ -113,6 +113,25 @@ impl DB {
             .expect("cache::start_cache() must be called at startup")
     }
 
+    /// Returns `true` if this node is the current leader, which must execute leader-only
+    /// scheduled jobs.
+    ///
+    /// This is the single place that decides leadership for all schedulers. It currently resolves
+    /// to the Hiqlite cache Raft leader, which is always running, independent of the configured
+    /// database or cache backend.
+    #[inline]
+    pub async fn is_leader() -> bool {
+        Self::hql().is_leader_cache().await
+    }
+
+    /// Returns the cache client (Hiqlite or Redis based on configuration)
+    #[inline]
+    pub fn cache() -> &'static hiqlite::Client {
+        HIQLITE_CLIENT
+            .get()
+            .expect("cache::start_cache() must be called at startup")
+    }
+
     /// Deletes cache entries after a database write.
     ///
     /// Sleeps [`CACHE_INVALIDATION_DELAY`] before it deletes: a concurrent fill reads the
@@ -130,7 +149,7 @@ impl DB {
     {
         sleep(CACHE_INVALIDATION_DELAY).await;
 
-        let client = Self::hql();
+        let client = Self::cache();
         for (cache, key) in entries {
             match key {
                 Some(key) => client.delete(cache, key).await?,

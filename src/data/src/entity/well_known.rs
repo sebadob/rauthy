@@ -63,7 +63,7 @@ static IDX: &str = concat!(".well-known-", env!("CARGO_PKG_VERSION"));
 
 impl WellKnown {
     pub async fn json() -> Result<String, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX).await? {
             return Ok(slf);
         }
@@ -92,7 +92,9 @@ impl WellKnown {
         let slf = Self::new(scopes);
         let json = serde_json::to_string(&slf)?;
 
-        DB::hql().put(Cache::App, IDX, &json, CACHE_TTL_APP).await?;
+        DB::cache()
+            .put(Cache::App, IDX, &json, CACHE_TTL_APP)
+            .await?;
 
         Ok(())
     }

@@ -421,7 +421,7 @@ SET content_type = $3, data = $4, updated = $5"
         }
 
         if with_cache {
-            DB::hql()
+            DB::cache()
                 .put(
                     Cache::App,
                     Self::cache_idx(typ, &self.id),
@@ -429,7 +429,7 @@ SET content_type = $3, data = $4, updated = $5"
                     CACHE_TTL_APP,
                 )
                 .await?;
-            DB::hql()
+            DB::cache()
                 .put(
                     Cache::App,
                     Self::cache_idx_updated(typ, &self.id),
@@ -498,7 +498,7 @@ WHERE auth_provider_id = $1 AND res = $2"
 
     /// special fn because we only want to cache the small logos
     pub async fn find_cached(id: &str, typ: &LogoType) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, Self::cache_idx(typ, id)).await? {
             return Ok(slf);
         }
@@ -521,7 +521,7 @@ WHERE auth_provider_id = $1 AND res = $2"
         res: LogoRes,
         typ: &LogoType,
     ) -> Result<Option<i64>, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         let cacheable = matches!(typ, LogoType::Client) && matches!(res, LogoRes::Small);
         if cacheable
             && let Some(updated) = client

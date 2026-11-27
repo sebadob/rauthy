@@ -312,7 +312,7 @@ impl ApiKeyEntity {
             ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key in Cache")
         })?;
 
-        let client = DB::hql();
+        let client = DB::cache();
         let idx = Self::cache_idx(name);
         let api_key = if let Some(key) = client.get(Cache::App, &idx).await? {
             key

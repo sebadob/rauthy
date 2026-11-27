@@ -59,13 +59,13 @@ impl Debug for AuthCode {
 impl AuthCode {
     // Deletes an Authorization Code from the cache
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::AuthCode, self.id.clone()).await?;
+        DB::cache().delete(Cache::AuthCode, self.id.clone()).await?;
         Ok(())
     }
 
     // Claims an Authorization code from the cache
     pub async fn find_remove(id: String) -> Result<Option<Self>, ErrorResponse> {
-        let Some(slf) = DB::hql().get_remove(Cache::AuthCode, id).await? else {
+        let Some(slf) = DB::cache().get_remove(Cache::AuthCode, id).await? else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "`auth_code` not found",
@@ -76,7 +76,7 @@ impl AuthCode {
 
     // Saves an Authorization Code
     pub async fn save(&self, ttl: i64) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .put(Cache::AuthCode, self.id.clone(), self, Some(ttl))
             .await?;
         Ok(())
@@ -236,13 +236,13 @@ pub struct AuthCodeToSAwait {
 // CRUD
 impl AuthCodeToSAwait {
     pub async fn find_remove(code: &str) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::hql()
+        Ok(DB::cache()
             .get_remove(Cache::AuthCode, Self::cache_idx(code))
             .await?)
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
+        DB::cache()
             .put(
                 Cache::AuthCode,
                 Self::cache_idx(&self.await_code),

@@ -32,7 +32,7 @@ pub struct SmtpOauthToken {
 
 impl SmtpOauthToken {
     pub async fn get() -> Result<Self, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::App, IDX_SMTP_OAUTH_TOKEN).await? {
+        if let Some(slf) = DB::cache().get(Cache::App, IDX_SMTP_OAUTH_TOKEN).await? {
             return Ok(slf);
         }
 
@@ -42,7 +42,7 @@ impl SmtpOauthToken {
         };
 
         if token.expires_in > 30 {
-            DB::hql()
+            DB::cache()
                 .put(
                     Cache::App,
                     IDX_SMTP_OAUTH_TOKEN,

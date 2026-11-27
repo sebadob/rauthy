@@ -117,7 +117,7 @@ pub struct JWKS {
 // CRUD
 impl JWKS {
     pub async fn find_pk() -> Result<JWKS, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::App, IDX_JWKS).await? {
             return Ok(slf);
@@ -125,7 +125,7 @@ impl JWKS {
 
         let sql = "SELECT * FROM jwks";
         let res: Vec<Jwk> = if is_hiqlite() {
-            client.query_as(sql, params!()).await?
+            DB::hql().query_as(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 8).await?
         };
@@ -386,7 +386,7 @@ impl JWKSPublicKey {
     /// cache fetch / deserialization errors as well without making endless requests to invalid URLs.
     /// A JWK will be cached for 1 hour.
     pub async fn fetch_remote(jwks_uri: &str, kid: String) -> Result<Self, ErrorResponse> {
-        if let Some(res) = DB::hql()
+        if let Some(res) = DB::cache()
             .get::<_, _, Result<Self, ErrorResponse>>(Cache::JwksRemote, kid.clone())
             .await?
         {
@@ -444,7 +444,7 @@ impl JWKSPublicKey {
             }
         };
 
-        DB::hql()
+        DB::cache()
             .put(Cache::JwksRemote, kid, &res, Some(3600))
             .await?;
 
@@ -660,7 +660,7 @@ impl JwkKeyPair {
     // Returns a JWK by a given Key Identifier (kid)
     pub async fn find(kid: String) -> Result<Self, ErrorResponse> {
         let idx = format!("{IDX_JWK_KID}{kid}");
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::App, &idx).await? {
             return Ok(slf);
@@ -668,7 +668,7 @@ impl JwkKeyPair {
 
         let sql = "SELECT * FROM jwks WHERE kid = $1";
         let jwk: Jwk = if is_hiqlite() {
-            client.query_as_one(sql, params!(kid)).await?
+            DB::hql().query_as_one(sql, params!(kid)).await?
         } else {
             DB::pg_query_one(sql, &[&kid]).await?
         };
@@ -684,7 +684,7 @@ impl JwkKeyPair {
     // by a given algorithm.
     pub async fn find_latest(key_pair_alg: JwkKeyPairAlg) -> Result<Self, ErrorResponse> {
         let idx = format!("{}{}", IDX_JWK_LATEST, key_pair_alg.as_str());
-        let client = DB::hql();
+        let client = DB::cache();
 
         if let Some(slf) = client.get(Cache::App, &idx).await? {
             return Ok(slf);
@@ -706,7 +706,7 @@ ORDER BY created_at DESC
 LIMIT 1";
 
         let jwk_latest: Jwk = if is_hiqlite() {
-            client.query_as_one(sql, params!(signature)).await?
+            DB::hql().query_as_one(sql, params!(signature)).await?
         } else {
             DB::pg_query_one(sql, &[&signature]).await?
         };

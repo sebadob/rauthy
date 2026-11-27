@@ -14,7 +14,7 @@ pub async fn user_login_states_cleanup() {
     loop {
         interval.tick().await;
 
-        if !DB::hql().is_leader_cache().await {
+        if !DB::is_leader().await {
             debug!(
                 "Running HA mode without being the leader - skipping user_login_states_cleanup scheduler"
             );

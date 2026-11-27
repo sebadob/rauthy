@@ -68,8 +68,8 @@ impl EventListener {
 
         // notify raft members
         let mut fails = 0;
-        while let Err(err) = DB::hql().notify(&event).await {
-            error!(?err, "Hiqlite::notify()");
+        while let Err(err) = DB::cache().notify(&event).await {
+            error!(?err, "notify()");
 
             if fails > 10 {
                 break;
@@ -89,7 +89,7 @@ impl EventListener {
     async fn raft_events_listener(tx: flume::Sender<EventRouterMsg>) {
         debug!("EventListener::router_ha has been started");
 
-        while let Ok(event) = DB::hql().listen::<Event>().await {
+        while let Ok(event) = DB::cache().listen::<Event>().await {
             debug!(?event);
 
             // forward to event router -> payload is already an Event in JSON format

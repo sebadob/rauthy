@@ -123,7 +123,7 @@ pub struct PasswordPolicy {
 // CRUD
 impl PasswordPolicy {
     pub async fn find() -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
+        let client = DB::cache();
         if let Some(slf) = client.get(Cache::App, IDX_PASSWORD_RULES).await? {
             return Ok(slf);
         }
@@ -153,7 +153,7 @@ impl PasswordPolicy {
             DB::pg_execute(sql, &[&data]).await?;
         }
 
-        DB::hql()
+        DB::cache()
             .put(Cache::App, IDX_PASSWORD_RULES, self, CACHE_TTL_APP)
             .await?;
 

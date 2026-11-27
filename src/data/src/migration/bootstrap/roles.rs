@@ -55,7 +55,7 @@ pub async fn reconcile(roles: Vec<Role>) -> Result<(), ErrorResponse> {
 
     if created > 0 {
         // `insert()` bypasses the entity and therefore its cache
-        DB::hql().delete(Cache::App, IDX_ROLES).await?;
+        DB::cache().delete(Cache::App, IDX_ROLES).await?;
     }
     info!("Reconciled roles: {created} created, {updated} updated.");
 

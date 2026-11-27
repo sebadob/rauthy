@@ -272,7 +272,7 @@ impl Store<String, InternalStateData> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &String) -> Result<Option<InternalStateData>, Self::Error> {
-        let Some(value) = Self::hql().get_bytes(Cache::Atproto, key).await? else {
+        let Some(value) = DB::cache().get_bytes(Cache::Atproto, key).await? else {
             return Ok(None);
         };
 
@@ -284,17 +284,17 @@ impl Store<String, InternalStateData> for DB {
     async fn set(&self, key: String, value: InternalStateData) -> Result<(), Self::Error> {
         let value = serde_json::to_vec(&value)?;
 
-        Self::hql()
+        DB::cache()
             .put_bytes(Cache::Atproto, key, value, CACHE_TTL_AUTH_PROVIDER_CALLBACK)
             .await
     }
 
     async fn del(&self, key: &String) -> Result<(), Self::Error> {
-        Self::hql().delete(Cache::Atproto, key.to_owned()).await
+        DB::cache().delete(Cache::Atproto, key.to_owned()).await
     }
 
     async fn clear(&self) -> Result<(), Self::Error> {
-        Self::hql().clear_cache(Cache::Atproto).await
+        DB::cache().clear_cache(Cache::Atproto).await
     }
 }
 
@@ -304,7 +304,7 @@ impl Store<Did, store::session::Session> for DB {
     type Error = hiqlite::Error;
 
     async fn get(&self, key: &Did) -> Result<Option<store::session::Session>, Self::Error> {
-        let Some(value) = Self::hql().get_bytes(Cache::Atproto, key.as_str()).await? else {
+        let Some(value) = DB::cache().get_bytes(Cache::Atproto, key.as_str()).await? else {
             return Ok(None);
         };
 
@@ -316,17 +316,17 @@ impl Store<Did, store::session::Session> for DB {
     async fn set(&self, key: Did, value: store::session::Session) -> Result<(), Self::Error> {
         let value = serde_json::to_vec(&value)?;
 
-        Self::hql()
+        DB::cache()
             .put_bytes(Cache::Atproto, key.to_string(), value, CACHE_TTL_SESSION)
             .await
     }
 
     async fn del(&self, key: &Did) -> Result<(), Self::Error> {
-        Self::hql().delete(Cache::Atproto, key.to_string()).await
+        DB::cache().delete(Cache::Atproto, key.to_string()).await
     }
 
     async fn clear(&self) -> Result<(), Self::Error> {
-        Self::hql().clear_cache(Cache::Atproto).await
+        DB::cache().clear_cache(Cache::Atproto).await
     }
 }
 

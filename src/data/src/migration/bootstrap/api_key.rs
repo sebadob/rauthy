@@ -168,7 +168,7 @@ async fn set_api_key_secret(name: &str, secret_plain: &str) -> Result<(), ErrorR
         DB::pg_execute(sql, &[&secret_enc, &name]).await?;
     }
 
-    DB::hql()
+    DB::cache()
         .delete(Cache::App, ApiKeyEntity::cache_idx(name))
         .await?;
 

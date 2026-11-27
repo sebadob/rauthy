@@ -153,7 +153,7 @@ impl ThemeCssFull {
     /// Returns the CSS variables for the light theme to be inserted directly into
     /// an E-Mail `body { }` CSS.
     pub async fn find_theme_variables_email() -> Result<String, ErrorResponse> {
-        if let Some(bytes) = DB::hql()
+        if let Some(bytes) = DB::cache()
             .get_bytes(Cache::Html, CACHE_KEY_EMAIL_CSS)
             .await?
         {
@@ -166,7 +166,7 @@ impl ThemeCssFull {
         full.light.append_css(&mut vars)?;
         write!(vars, "--border-radius:{};", full.border_radius)?;
 
-        DB::hql()
+        DB::cache()
             .put_bytes(
                 Cache::Html,
                 CACHE_KEY_EMAIL_CSS,
@@ -202,8 +202,8 @@ impl ThemeCssFull {
             DB::pg_execute(sql, &[&id]).await?;
         }
 
-        DB::hql().clear_cache(Cache::ThemeTs).await?;
-        DB::hql().clear_cache(Cache::Html).await?;
+        DB::cache().clear_cache(Cache::ThemeTs).await?;
+        DB::cache().clear_cache(Cache::Html).await?;
 
         Ok(())
     }
@@ -248,8 +248,8 @@ SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
             .await?;
         }
 
-        DB::hql().clear_cache(Cache::ThemeTs).await?;
-        DB::hql().clear_cache(Cache::Html).await?;
+        DB::cache().clear_cache(Cache::ThemeTs).await?;
+        DB::cache().clear_cache(Cache::Html).await?;
 
         Ok(())
     }
@@ -273,7 +273,7 @@ impl ThemeCssFull {
     }
 
     pub async fn br(client_id: &str) -> Result<Vec<u8>, ErrorResponse> {
-        if let Some(bytes) = DB::hql()
+        if let Some(bytes) = DB::cache()
             .get_bytes(Cache::Html, Self::cache_key_br(client_id))
             .await?
         {
@@ -282,7 +282,7 @@ impl ThemeCssFull {
 
         let plain = Self::plain(client_id.to_string()).await?;
         let compressed = compress_br(plain.as_bytes()).await?;
-        DB::hql()
+        DB::cache()
             .put_bytes(
                 Cache::Html,
                 Self::cache_key_br(client_id),
@@ -295,7 +295,7 @@ impl ThemeCssFull {
     }
 
     pub async fn gzip(client_id: &str) -> Result<Vec<u8>, ErrorResponse> {
-        if let Some(bytes) = DB::hql()
+        if let Some(bytes) = DB::cache()
             .get_bytes(Cache::Html, Self::cache_key_gzip(client_id))
             .await?
         {
@@ -304,7 +304,7 @@ impl ThemeCssFull {
 
         let plain = Self::plain(client_id.to_string()).await?;
         let compressed = compress_gzip(plain.as_bytes()).await?;
-        DB::hql()
+        DB::cache()
             .put_bytes(
                 Cache::Html,
                 Self::cache_key_gzip(client_id),

@@ -24,12 +24,14 @@ pub struct WebauthnData {
 // CURD
 impl WebauthnData {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::Webauthn, self.code.clone()).await?;
+        DB::cache()
+            .delete(Cache::Webauthn, self.code.clone())
+            .await?;
         Ok(())
     }
 
     pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
-        let res: Option<Self> = DB::hql().get_remove(Cache::Webauthn, code).await?;
+        let res: Option<Self> = DB::cache().get_remove(Cache::Webauthn, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -41,7 +43,7 @@ impl WebauthnData {
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let ttl = Some(RauthyConfig::get().vars.webauthn.data_exp.as_secs() as i64);
-        DB::hql()
+        DB::cache()
             .put(Cache::Webauthn, self.code.clone(), &self, ttl)
             .await?;
         Ok(())

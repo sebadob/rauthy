@@ -76,7 +76,7 @@ pub async fn reg_start(
                 // the reg_state cannot be serialized with bincode -> missing deserialize from Any
                 reg_state: serde_json::to_string(&reg_state)?,
             };
-            DB::hql()
+            DB::cache()
                 .put(
                     Cache::Webauthn,
                     cache_idx,
@@ -106,7 +106,7 @@ pub async fn reg_finish(
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
-    let Some(reg_data) = DB::hql()
+    let Some(reg_data) = DB::cache()
         .get_remove::<_, _, WebauthnReg>(Cache::Webauthn, idx)
         .await?
     else {
