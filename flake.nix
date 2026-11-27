@@ -54,6 +54,7 @@
             name = "rauthy-dev";
             packages = [
               rust-dev
+              pkgs.cargo-nextest
               pkgs.just
               # openssl-src, the vendored OpenSSL, configures its build with it.
               pkgs.perl

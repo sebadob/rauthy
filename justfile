@@ -44,6 +44,9 @@ setup:
     echo "Installing wasm-pack"
     cargo install wasm-pack mdbook
 
+    echo "Installing cargo-nextest for the test recipes"
+    cargo install cargo-nextest --locked
+
     echo "Building WASM modules"
     just build-wasm
 
@@ -278,7 +281,7 @@ test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{ test_api_key_secret }} cargo test {{ test }}
+    {{ test_api_key_secret }} cargo nextest run {{ test }}
 
 # runs the full set of tests with sqlite
 test-hiqlite *test: test-backend-stop delete-hiqlite
@@ -294,7 +297,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if {{ test_api_key_secret }} cargo test {{ test }}; then
+    if {{ test_api_key_secret }} cargo nextest run {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
     else
@@ -318,7 +321,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if {{ test_api_key_secret }} {{ postgres }} cargo test {{ test }}; then
+    if {{ test_api_key_secret }} {{ postgres }} cargo nextest run {{ test }}; then
       echo "All Postgres tests successful"
       just test-backend-stop
     else

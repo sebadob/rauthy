@@ -1,0 +1,17 @@
+[profile.default]
+test-threads = 'num-cpus'
+
+# Integration tests share one backend on :8081. Match its `hashing.max_hash_threads` in
+# `config-test.toml` without limiting unrelated tests to the same concurrency.
+[test-groups]
+backend = { max-threads = 4 }
+
+[[profile.default.overrides]]
+filter = 'binary_id(rauthy::integration)'
+test-group = 'backend'
+
+# `ip_blacklist` blacklists the very address the whole suite connects from, so nothing may run
+# beside it. Reserve the entire global pool, including when overridden with `-j`.
+[[profile.default.overrides]]
+filter = 'binary_id(rauthy::ip_blacklist)'
+threads-required = 'num-test-threads'

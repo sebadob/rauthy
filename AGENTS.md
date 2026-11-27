@@ -43,20 +43,28 @@ The whole suite is **one** test binary:
 pinned by `autotests = false` and two `[[test]]` blocks in
 [src/bin/Cargo.toml](./src/bin/Cargo.toml). Cargo compiles and links the whole dependency graph once
 per test *target*, so a loose test file is not free: each one adds a full link step over ~1400
-units. One target means one of each, and Cargo runs test binaries one after another while the tests
-**inside** a binary run in parallel — which is exactly what this layout is built for.
+units. One target means one of each, which is exactly what this layout is built for; how the tests
+of a target are then spread over processes is the runner's business, below.
 
 The only second target is [src/bin/tests/ip_blacklist.rs](./src/bin/tests/ip_blacklist.rs): it
 blacklists the source address the whole suite connects from, so no other test may overlap its
 window. Its helpers are not duplicated — it includes the very same module the integration binary
 compiles with `#[path = "integration/common.rs"]`.
 
+The suite runs under [cargo nextest](https://nexte.st), which gives every test its own process.
+[.config/nextest.toml](./.config/nextest.toml) sizes the global pool automatically with
+`test-threads = 'num-cpus'`. The `backend` group limits integration tests to four at a time,
+matching `hashing.max_hash_threads` in `config-test.toml`; the global pool may limit them further
+on smaller machines. `ip_blacklist` demands every global slot so nothing runs beside it, even
+when `-j` overrides the pool size. `just setup`, the Nix dev shell and the CI builder image provide
+the binary. `cargo test` does not apply these concurrency limits.
+
 ```sh
-cargo test -p rauthy --test integration                       # the whole suite
-cargo test -p rauthy --test integration users::               # one area
-cargo test -p rauthy --test integration users::test_users     # one test
-cargo test -p rauthy --test integration -- --test-threads=8   # wider parallelism
-cargo test -p rauthy --test integration -- --ignored          # the manual measurements
+cargo nextest run -p rauthy --test integration                     # the whole suite
+cargo nextest run -p rauthy --test integration users::             # one area
+cargo nextest run -p rauthy --test integration users::test_users   # one test
+cargo nextest run -j 8                                          # global pool; backend stays capped
+cargo nextest run -p rauthy --test integration --run-ignored only  # the manual measurements
 ```
 
 How a test is run must not matter: full suite, one area, one test, any order, any number of times,

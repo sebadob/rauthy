@@ -17,7 +17,7 @@ jobs:
         name: Check Code Style + Test
         runs-on: ubuntu-latest
         container:
-            image: ghcr.io/sebadob/rauthy-builder:20261123
+            image: ghcr.io/sebadob/rauthy-builder:20261127
         steps:
             - uses: actions/checkout@v4
             - name: Setup && build UI

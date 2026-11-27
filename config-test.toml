@@ -78,7 +78,9 @@ allowed_resources = ['https://consent-test.example.com']
 argon2_m_cost = 32768
 argon2_t_cost = 1
 argon2_p_cost = 2
-max_hash_threads = 1
+# Match the `backend` test-group limit in `.config/nextest.toml`.
+# Four concurrent hash jobs use 128 MiB of Argon2 working memory at the memory cost above.
+max_hash_threads = 4
 
 [http_client]
 danger_unencrypted = true
