@@ -3171,7 +3171,7 @@ mod tests {
     /// `EmailJob::task_execute` and `ClientScim::sync_users_exec` advance their cursors.
     #[test]
     fn test_batch_cursors_reach_every_user() {
-        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        let conn = hiqlite::rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(
             r"
 CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, email_verified INT,
@@ -3193,7 +3193,7 @@ INSERT INTO users (id, email, created_at) VALUES
             let rows: Vec<(i64, String)> = conn
                 .prepare(SQL_FIND_BATCH)
                 .unwrap()
-                .query_map(rusqlite::params![cursor.0, cursor.1, 2], |r| {
+                .query_map(hiqlite::rusqlite::params![cursor.0, cursor.1, 2], |r| {
                     Ok((r.get("created_at")?, r.get("email")?))
                 })
                 .unwrap()
@@ -3219,7 +3219,7 @@ INSERT INTO users (id, email, created_at) VALUES
             let rows: Vec<(i64, String)> = conn
                 .prepare(SQL_FIND_FOR_SCIM_SYNC)
                 .unwrap()
-                .query_map(rusqlite::params![cursor.0, cursor.1, 2], |r| {
+                .query_map(hiqlite::rusqlite::params![cursor.0, cursor.1, 2], |r| {
                     Ok((r.get("created_at")?, r.get("user_id")?))
                 })
                 .unwrap()

@@ -772,7 +772,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
 ";
 
     /// An in-memory database with all hiqlite migrations and [`DISCARD_ROWS`].
-    fn sqlite_db() -> rusqlite::Connection {
+    fn sqlite_db() -> hiqlite::rusqlite::Connection {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/hiqlite");
         let mut files = std::fs::read_dir(dir)
             .unwrap()
@@ -784,7 +784,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
             })
             .collect::<Vec<_>>();
         files.sort();
-        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        let conn = hiqlite::rusqlite::Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         for (_, path) in files {
             conn.execute_batch(&std::fs::read_to_string(path).unwrap())
@@ -794,7 +794,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         conn
     }
 
-    fn sqlite_ids(conn: &rusqlite::Connection, sql: &str) -> Vec<String> {
+    fn sqlite_ids(conn: &hiqlite::rusqlite::Connection, sql: &str) -> Vec<String> {
         let mut stmt = conn.prepare(sql).unwrap();
         stmt.query_map([], |r| r.get(0))
             .unwrap()
