@@ -148,12 +148,11 @@ To go back to a single instance without losing any data, reset the Raft state on
 keeps the database and starts a new Raft from log ID 1:
 
 1. Do a clean shutdown of all nodes.
-2. Start node 1 with only itself in `cluster.nodes` and `HQL_DANGER_RAFT_STATE_RESET=true`. This
-   deletes the Raft WAL, metadata and snapshots, but keeps the database itself.
-3. Remove `HQL_DANGER_RAFT_STATE_RESET` again once it is up.
-
-Deleting only the WAL directories is not enough, because the old membership is also stored next to
-the database.
+2. Start node 1 with only itself in `cluster.nodes` and `HQL_DANGER_RAFT_STATE_RESET=true`. On
+   startup, it deletes the Raft WAL, the stored membership and the snapshots by itself and keeps
+   the database, so you do not need to delete or mount anything manually.
+3. Remove `HQL_DANGER_RAFT_STATE_RESET` again once it is up. As long as it is set, the Raft state
+   is reset on every start.
 
 > [!CAUTION]
 > After a Raft state reset, do not add nodes to this instance again. The new Raft log does not
