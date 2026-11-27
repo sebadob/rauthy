@@ -52,17 +52,18 @@ window. Its helpers are not duplicated — it includes the very same module the 
 compiles with `#[path = "integration/common.rs"]`.
 
 The suite runs under [cargo nextest](https://nexte.st), which gives every test its own process.
-[.config/nextest.toml](./.config/nextest.toml) holds the two limits the backend imposes on it:
-`test-threads` matched to `hashing.max_hash_threads` of `config-test.toml`, and `ip_blacklist`
-demanding every slot so nothing runs beside it. `just nextest-prep` fetches the binary when it is
-missing; `cargo test` still compiles and runs the suite, but without those limits it saturates the
-backend's hash queue on a many-core machine and the blacklist then fails everything.
+[.config/nextest.toml](./.config/nextest.toml) sizes the global pool automatically with
+`test-threads = 'num-cpus'`. The `backend` group limits integration tests to four at a time,
+matching `hashing.max_hash_threads` in `config-test.toml`; the global pool may limit them further
+on smaller machines. `ip_blacklist` demands every global slot so nothing runs beside it, even
+when `-j` overrides the pool size. `just nextest-prep` fetches the binary when it is missing.
+`cargo test` does not apply these concurrency limits.
 
 ```sh
 cargo nextest run -p rauthy --test integration                     # the whole suite
 cargo nextest run -p rauthy --test integration users::             # one area
 cargo nextest run -p rauthy --test integration users::test_users   # one test
-cargo nextest run -p rauthy --test integration -j 8                # wider parallelism
+cargo nextest run -j 8                                          # global pool; backend stays capped
 cargo nextest run -p rauthy --test integration --run-ignored only  # the manual measurements
 ```
 
