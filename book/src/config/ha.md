@@ -126,3 +126,40 @@ connections between all pods by default, you can use the HA cache with just plai
 
 However, if you do not have encryption between pods by default, I would highly recommend, that you
 use [TLS](tls.md).
+
+## Changing the number of nodes
+
+### Adding nodes
+
+To go from a single instance to 3 nodes, add the new nodes to `cluster.nodes` on every node,
+including the existing one, and restart it with the new config. Then start the new nodes with an
+empty data directory. They join the cluster and receive the existing data.
+
+`user_pictures.storage_type = "file"` only works with a single node, so you need to change it
+before you add nodes.
+
+### Removing nodes
+
+Removing nodes from `cluster.nodes` does **not** remove them from the Raft membership. If you stop
+2 of 3 nodes and restart the remaining one with only itself in `cluster.nodes`, it waits for a
+quorum that will never come back and does not start.
+
+To go back to a single instance, use a backup instead:
+
+1. Create a backup, either with the scheduled backup task or with `POST /auth/v1/backup`, and copy
+   the backup file somewhere safe.
+2. Stop all nodes.
+3. Start node 1 with only itself in `cluster.nodes`, an **empty** data directory, and
+   `HQL_BACKUP_RESTORE` pointing to the backup, as described in
+   [Disaster Recovery](backup.md#disaster-recovery).
+4. Remove `HQL_BACKUP_RESTORE` again once it is up.
+
+### Lost data volume
+
+A node that lost its data volume can be started again with an empty data directory and joins the
+cluster as long as the other nodes are reachable.
+
+> [!CAUTION]
+> Never start node 1 with an empty data directory while the other nodes are down. It does not find
+> an existing cluster, initializes a new one, and bootstraps a second, independent instance with
+> its own keys and admin account. Start the other nodes first.
