@@ -91,7 +91,6 @@ hiqlite = { version = "0.17.0-20261117", features = [
   "s3",
 ] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
-hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
   "jpeg",
   "png",
@@ -133,7 +132,6 @@ reqwest = { version = "0.13.3", default-features = false, features = [
   "rustls-no-provider",
 ] }
 rpassword = "7.5"
-rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.20", features = [
   "client-api",
   "reqwest-rustls-no-provider",

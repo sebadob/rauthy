@@ -2,6 +2,13 @@ use crate::database::{Cache, DB};
 use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::web;
+use aws_lc_rs::encoding::AsDer;
+use aws_lc_rs::rand::SystemRandom;
+use aws_lc_rs::rsa::{KeySize, PublicKeyComponents, RsaParameters};
+use aws_lc_rs::signature::{
+    self, KeyPair, RSA_PKCS1_SHA256, RSA_PKCS1_SHA384, RSA_PKCS1_SHA512, RsaKeyPair,
+    RsaSignatureEncoding, UnparsedPublicKey,
+};
 use cryptr::{EncKeys, EncValue};
 use ed25519_compact::Noise;
 use hiqlite::macros::params;
@@ -17,9 +24,6 @@ use rauthy_common::{http_client, is_hiqlite};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::CONTENT_TYPE;
-use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
-use rsa::traits::PublicKeyParts;
-use rsa::{BigUint, sha2};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::default::Default;
@@ -164,17 +168,8 @@ impl JWKS {
         let enc_key_active = &EncKeys::get_static().enc_key_active;
 
         // RS256
-        let jwk_plain = web::block(|| {
-            let mut rng = rand_08::thread_rng();
-            rsa::RsaPrivateKey::new(&mut rng, 2048)
-                .unwrap()
-                .to_pkcs8_der()
-                .unwrap()
-        })
-        .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
-            .into_bytes()
-            .to_vec();
+        let jwk_plain = web::block(|| generate_rsa_pkcs8(KeySize::Rsa2048)).await??;
+        let jwk = EncValue::encrypt(&jwk_plain)?.into_bytes().to_vec();
         let entity = Jwk {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -185,17 +180,8 @@ impl JWKS {
         entity.save().await?;
 
         // RS384
-        let jwk_plain = web::block(|| {
-            let mut rng = rand_08::thread_rng();
-            rsa::RsaPrivateKey::new(&mut rng, 3072)
-                .unwrap()
-                .to_pkcs8_der()
-                .unwrap()
-        })
-        .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
-            .into_bytes()
-            .to_vec();
+        let jwk_plain = web::block(|| generate_rsa_pkcs8(KeySize::Rsa3072)).await??;
+        let jwk = EncValue::encrypt(&jwk_plain)?.into_bytes().to_vec();
         let entity = Jwk {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -206,17 +192,8 @@ impl JWKS {
         entity.save().await?;
 
         // RSA512
-        let jwk_plain = web::block(|| {
-            let mut rng = rand_08::thread_rng();
-            rsa::RsaPrivateKey::new(&mut rng, 4096)
-                .unwrap()
-                .to_pkcs8_der()
-                .unwrap()
-        })
-        .await?;
-        let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
-            .into_bytes()
-            .to_vec();
+        let jwk_plain = web::block(|| generate_rsa_pkcs8(KeySize::Rsa4096)).await??;
+        let jwk = EncValue::encrypt(&jwk_plain)?.into_bytes().to_vec();
         let entity = Jwk {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -309,10 +286,11 @@ impl JWKSPublicKey {
     }
 
     #[inline]
-    pub fn n(&self) -> Result<BigUint, ErrorResponse> {
+    pub fn n(&self) -> Result<Vec<u8>, ErrorResponse> {
         if let Some(n) = &self.n {
-            let decoded = base64_url_no_pad_decode(n)?;
-            Ok(BigUint::from_bytes_be(&decoded))
+            let mut decoded = base64_url_no_pad_decode(n)?;
+            strip_leading_zeros(&mut decoded);
+            Ok(decoded)
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
@@ -322,10 +300,11 @@ impl JWKSPublicKey {
     }
 
     #[inline]
-    pub fn e(&self) -> Result<BigUint, ErrorResponse> {
+    pub fn e(&self) -> Result<Vec<u8>, ErrorResponse> {
         if let Some(e) = &self.e {
-            let decoded = base64_url_no_pad_decode(e)?;
-            Ok(BigUint::from_bytes_be(&decoded))
+            let mut decoded = base64_url_no_pad_decode(e)?;
+            strip_leading_zeros(&mut decoded);
+            Ok(decoded)
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
@@ -350,15 +329,15 @@ impl JWKSPublicKey {
     pub fn from_key_pair(key_pair: &JwkKeyPair) -> Result<Self, ErrorResponse> {
         let slf = match key_pair.typ {
             JwkKeyPairAlg::RS256 | JwkKeyPairAlg::RS384 | JwkKeyPairAlg::RS512 => {
-                let key = rsa::RsaPrivateKey::from_pkcs8_der(&key_pair.bytes)?;
-                let pubkey = key.to_public_key();
+                let key = RsaKeyPair::from_pkcs8(&key_pair.bytes)?;
+                let pubkey = PublicKeyComponents::<Vec<u8>>::from(key.public_key());
                 Self {
                     kty: JwkKeyPairType::RSA,
                     alg: Some(key_pair.typ),
                     crv: None,
                     kid: Some(key_pair.kid.clone()),
-                    n: Some(base64_url_encode(&pubkey.n().to_bytes_be())),
-                    e: Some(base64_url_encode(&pubkey.e().to_bytes_be())),
+                    n: Some(base64_url_encode(&pubkey.n)),
+                    e: Some(base64_url_encode(&pubkey.e)),
                     x: None,
                 }
             }
@@ -719,41 +698,11 @@ LIMIT 1";
 }
 
 impl JwkKeyPair {
-    // RSA arms pass an RNG so `rsa` applies blinding (RUSTSEC-2023-0071 / Marvin mitigation).
     pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
         match self.typ {
-            JwkKeyPairAlg::RS256 => {
-                let hash = hmac_sha256::Hash::hash(input);
-                let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign_with_rng(
-                    &mut rand_08::thread_rng(),
-                    rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
-                    hash.as_slice(),
-                )?;
-                Ok(sig)
-            }
-
-            JwkKeyPairAlg::RS384 => {
-                let hash = hmac_sha512::sha384::Hash::hash(input);
-                let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign_with_rng(
-                    &mut rand_08::thread_rng(),
-                    rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
-                    hash.as_slice(),
-                )?;
-                Ok(sig)
-            }
-
-            JwkKeyPairAlg::RS512 => {
-                let hash = hmac_sha512::Hash::hash(input);
-                let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign_with_rng(
-                    &mut rand_08::thread_rng(),
-                    rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
-                    hash.as_slice(),
-                )?;
-                Ok(sig)
-            }
+            JwkKeyPairAlg::RS256 => rsa_sign(&self.bytes, &RSA_PKCS1_SHA256, input),
+            JwkKeyPairAlg::RS384 => rsa_sign(&self.bytes, &RSA_PKCS1_SHA384, input),
+            JwkKeyPairAlg::RS512 => rsa_sign(&self.bytes, &RSA_PKCS1_SHA512, input),
 
             JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
                 let key = ed25519_compact::SecretKey::from_der(&self.bytes)?;
@@ -786,48 +735,11 @@ impl JwkKeyPair {
         base64_url_no_pad_decode_buf(sig, buf)?;
 
         match self.typ {
-            JwkKeyPairAlg::RS256 => {
-                let hash = hmac_sha256::Hash::hash(message.as_bytes());
-                let pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                if pk
-                    .as_ref()
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
-                {
-                    return Ok(message);
-                }
-            }
-
-            JwkKeyPairAlg::RS384 => {
-                let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
-                let pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                if pk
-                    .as_ref()
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
-                {
-                    return Ok(message);
-                }
-            }
-
-            JwkKeyPairAlg::RS512 => {
-                let hash = hmac_sha512::Hash::hash(message.as_bytes());
-                let pk = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                if pk
-                    .as_ref()
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
-                        hash.as_slice(),
-                        buf,
-                    )
+            JwkKeyPairAlg::RS256 | JwkKeyPairAlg::RS384 | JwkKeyPairAlg::RS512 => {
+                let key = RsaKeyPair::from_pkcs8(&self.bytes)?;
+                let params = rsa_verify_params(self.typ);
+                if UnparsedPublicKey::new(params, key.public_key().as_ref())
+                    .verify(message.as_bytes(), buf)
                     .is_ok()
                 {
                     return Ok(message);
@@ -980,16 +892,48 @@ impl From<JwkKeyPairAlg> for rauthy_api_types::oidc::JwkKeyPairAlg {
     }
 }
 
+/// Generates a new RSA private key, PKCS#8 DER encoded.
+pub(crate) fn generate_rsa_pkcs8(size: KeySize) -> Result<Vec<u8>, ErrorResponse> {
+    let key = RsaKeyPair::generate(size)?;
+    Ok(key.as_der()?.as_ref().to_vec())
+}
+
+fn rsa_sign(
+    pkcs8: &[u8],
+    encoding: &'static RsaSignatureEncoding,
+    input: &[u8],
+) -> Result<Vec<u8>, ErrorResponse> {
+    let key = RsaKeyPair::from_pkcs8(pkcs8)?;
+    let mut sig = vec![0; key.public_modulus_len()];
+    key.sign(encoding, &SystemRandom::new(), input, &mut sig)?;
+    Ok(sig)
+}
+
+/// PKCS#1 v1.5 verification parameters for the given RSA algorithm.
+pub(crate) fn rsa_verify_params(alg: JwkKeyPairAlg) -> &'static RsaParameters {
+    match alg {
+        JwkKeyPairAlg::RS384 => &signature::RSA_PKCS1_2048_8192_SHA384,
+        JwkKeyPairAlg::RS512 => &signature::RSA_PKCS1_2048_8192_SHA512,
+        _ => &signature::RSA_PKCS1_2048_8192_SHA256,
+    }
+}
+
+/// `aws-lc-rs` rejects RSA public components with leading zero bytes, which some JWKS
+/// endpoints emit.
+fn strip_leading_zeros(bytes: &mut Vec<u8>) {
+    let zeros = bytes.iter().take_while(|b| **b == 0).count();
+    bytes.drain(..zeros);
+}
+
 #[cfg(test)]
 mod tests {
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg, JwkKeyPairType};
+    use aws_lc_rs::rsa::KeySize;
     use rauthy_common::utils::base64_url_encode;
-    use rsa::pkcs8::EncodePrivateKey;
 
     #[test]
     fn test_rsa_sign_verify_roundtrip() {
-        let key = rsa::RsaPrivateKey::new(&mut rand_08::thread_rng(), 2048).unwrap();
-        let bytes = key.to_pkcs8_der().unwrap().to_bytes().to_vec();
+        let bytes = super::generate_rsa_pkcs8(KeySize::Rsa2048).unwrap();
         for typ in [
             JwkKeyPairAlg::RS256,
             JwkKeyPairAlg::RS384,
@@ -1006,6 +950,27 @@ mod tests {
             let mut buf = Vec::new();
             assert_eq!(kp.verify_token(&token, &mut buf).unwrap(), message);
         }
+    }
+
+    #[test]
+    fn test_rsa_jwks_leading_zero_components() {
+        let bytes = super::generate_rsa_pkcs8(KeySize::Rsa2048).unwrap();
+        let kp = JwkKeyPair {
+            kid: "test".to_string(),
+            typ: JwkKeyPairAlg::RS256,
+            bytes,
+        };
+        let message = "header.claims";
+        let sig = kp.sign(message.as_bytes()).unwrap();
+        let token = format!("{message}.{}", base64_url_encode(&sig));
+
+        // Some JWKS endpoints emit `n` with a leading zero byte, which must still validate.
+        let mut pk = JWKSPublicKey::from_key_pair(&kp).unwrap();
+        let mut n = vec![0];
+        n.extend(pk.n().unwrap());
+        pk.n = Some(base64_url_encode(&n));
+        pk.validate_token_signature(&token, &mut Vec::new())
+            .unwrap();
     }
 
     #[test]

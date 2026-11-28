@@ -15,7 +15,6 @@ use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
 use oxrdf::IriParseError;
 use oxttl::TurtleSyntaxError;
-use rsa::pkcs1::Error;
 use s3_simple::S3Error;
 use spow::pow::PowError;
 use std::borrow::Cow;
@@ -553,36 +552,6 @@ impl From<hiqlite::rusqlite::Error> for ErrorResponse {
         ErrorResponse::new(
             ErrorResponseType::Database,
             format!("rusqlite error: {value:?}"),
-        )
-    }
-}
-
-impl From<rsa::Error> for ErrorResponse {
-    fn from(value: rsa::Error) -> Self {
-        debug!("rsa::Error: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("rsa error: {value:?}"),
-        )
-    }
-}
-
-impl From<rsa::pkcs1::Error> for ErrorResponse {
-    fn from(value: Error) -> Self {
-        debug!("rsa::pkcs1::Error: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("rsa::pkcs1::Error: {value:?}"),
-        )
-    }
-}
-
-impl From<rsa::pkcs8::Error> for ErrorResponse {
-    fn from(value: rsa::pkcs8::Error) -> Self {
-        debug!("rsa::pkcs8::Error: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("rsa::pkcs8::Error: {value:?}"),
         )
     }
 }

@@ -43,6 +43,18 @@ Rauthy now refuses to start if `MIGRATE_DB_FROM` is set and:
 
 ### Security
 
+#### RSA signing moved to `aws-lc-rs`
+
+RSA key generation, token signing (`RS256` / `RS384` / `RS512`), and RSA signature validation now
+use `aws-lc-rs` instead of the `rsa` crate, which is affected by the Marvin timing side channel
+([RUSTSEC-2023-0071](https://rustsec.org/advisories/RUSTSEC-2023-0071),
+[#197](https://github.com/sebadob/rauthy/issues/197)). Existing keys keep working without any
+migration. Generating the RSA JWKs is also much faster now, especially in debug builds.
+
+RSA public keys Rauthy validates against (DPoP proofs, upstream backchannel logout tokens) must
+now be between 2048 and 8192 bit. Before, anything up to 4096 bit was accepted, including keys
+below 2048 bit.
+
 #### Additional `device_code` checks
 
 The `device_code` grant does additional validations for users (another round-trip of enabled and

@@ -1,9 +1,9 @@
-use crate::entity::jwk::{Jwk, JwkKeyPairAlg};
+use crate::entity::jwk::{Jwk, JwkKeyPairAlg, generate_rsa_pkcs8};
 use actix_web::web;
+use aws_lc_rs::rsa::KeySize;
 use cryptr::{EncKeys, EncValue};
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
-use rsa::pkcs8::EncodePrivateKey;
 use time::OffsetDateTime;
 use tracing::info;
 
@@ -14,17 +14,8 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let mut entities = Vec::with_capacity(4);
 
     // RSA256
-    let jwk_plain = web::block(|| {
-        let mut rng = rand_08::thread_rng();
-        rsa::RsaPrivateKey::new(&mut rng, 2048)
-            .unwrap()
-            .to_pkcs8_der()
-            .unwrap()
-    })
-    .await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
-        .into_bytes()
-        .to_vec();
+    let jwk_plain = web::block(|| generate_rsa_pkcs8(KeySize::Rsa2048)).await??;
+    let jwk = EncValue::encrypt(&jwk_plain)?.into_bytes().to_vec();
     entities.push(Jwk {
         kid: get_rand(24),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -34,17 +25,8 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     });
 
     // RS384
-    let jwk_plain = web::block(|| {
-        let mut rng = rand_08::thread_rng();
-        rsa::RsaPrivateKey::new(&mut rng, 3072)
-            .unwrap()
-            .to_pkcs8_der()
-            .unwrap()
-    })
-    .await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
-        .into_bytes()
-        .to_vec();
+    let jwk_plain = web::block(|| generate_rsa_pkcs8(KeySize::Rsa3072)).await??;
+    let jwk = EncValue::encrypt(&jwk_plain)?.into_bytes().to_vec();
     entities.push(Jwk {
         kid: get_rand(24),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),
@@ -54,17 +36,8 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     });
 
     // RSA512
-    let jwk_plain = web::block(|| {
-        let mut rng = rand_08::thread_rng();
-        rsa::RsaPrivateKey::new(&mut rng, 4096)
-            .unwrap()
-            .to_pkcs8_der()
-            .unwrap()
-    })
-    .await?;
-    let jwk = EncValue::encrypt(jwk_plain.to_bytes().as_slice())?
-        .into_bytes()
-        .to_vec();
+    let jwk_plain = web::block(|| generate_rsa_pkcs8(KeySize::Rsa4096)).await??;
+    let jwk = EncValue::encrypt(&jwk_plain)?.into_bytes().to_vec();
     entities.push(Jwk {
         kid: get_rand(24),
         created_at: OffsetDateTime::now_utc().unix_timestamp(),

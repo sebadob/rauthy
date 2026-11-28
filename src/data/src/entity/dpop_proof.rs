@@ -378,12 +378,13 @@ mod tests {
     use crate::entity::dpop_proof::{DPoPClaims, DPoPHeader, DPoPProof};
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
     use actix_web::http;
+    use aws_lc_rs::rand::SystemRandom;
+    use aws_lc_rs::rsa::{KeySize, PublicKeyComponents};
+    use aws_lc_rs::signature::{KeyPair, RSA_PKCS1_SHA256, RsaKeyPair};
     use chrono::Utc;
     use ed25519_compact::Noise;
     use rauthy_common::constants::DPOP_TOKEN_ENDPOINT;
     use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode};
-    use rsa::sha2::Sha256;
-    use rsa::traits::PublicKeyParts;
     use std::fmt::Write;
 
     #[test]
@@ -440,11 +441,9 @@ mod tests {
     #[test]
     fn test_dpop_validation_rsa() {
         // manually build up a dpop token
-        let mut rng = rand_08::thread_rng();
-        let rsa_sk = rsa::RsaPrivateKey::new(&mut rng, 2048).unwrap();
-        let rsa_pk = rsa_sk.to_public_key();
-        let n = rsa_pk.n().to_bytes_be();
-        let e = rsa_pk.e().to_bytes_be();
+        let rsa_sk = RsaKeyPair::generate(KeySize::Rsa2048).unwrap();
+        let PublicKeyComponents { n, e } =
+            PublicKeyComponents::<Vec<u8>>::from(rsa_sk.public_key());
 
         let header = DPoPHeader {
             typ: "dpop+jwt".to_string(),
@@ -481,9 +480,14 @@ mod tests {
         let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
         let mut token_raw = format!("{}.{}", header_b64, claims_b64);
 
-        let hash = hmac_sha256::Hash::hash(token_raw.as_bytes());
-        let signature = rsa_sk
-            .sign(rsa::Pkcs1v15Sign::new::<Sha256>(), hash.as_slice())
+        let mut signature = vec![0; rsa_sk.public_modulus_len()];
+        rsa_sk
+            .sign(
+                &RSA_PKCS1_SHA256,
+                &SystemRandom::new(),
+                token_raw.as_bytes(),
+                &mut signature,
+            )
             .unwrap();
         let sig_b64 = base64_url_no_pad_encode(&signature);
         write!(token_raw, ".{}", sig_b64).unwrap();
