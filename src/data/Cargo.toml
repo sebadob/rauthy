@@ -47,7 +47,6 @@ hex = { workspace = true }
 hickory-resolver = { workspace = true }
 hiqlite = { workspace = true }
 hmac-sha256 = { workspace = true }
-hmac-sha512 = { workspace = true }
 image = { workspace = true }
 itertools = { workspace = true }
 lettre = { workspace = true }
@@ -56,15 +55,12 @@ mime = { workspace = true }
 num_cpus = { workspace = true }
 oxrdf = { workspace = true }
 oxttl = { workspace = true }
-# 0.8 is necessary to provide a proper `thread_rng` for `rsa`
-rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }
 rcgen = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 aws-lc-rs = { workspace = true }
 rustls = { workspace = true }
-rsa = { workspace = true }
 s3-simple = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }

@@ -1,7 +1,7 @@
-use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg};
+use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, rsa_verify_params};
+use aws_lc_rs::rsa::PublicKeyComponents;
 use rauthy_common::utils::base64_url_no_pad_decode_buf;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rsa::sha2;
 use tracing::warn;
 
 impl JWKSPublicKey {
@@ -18,45 +18,13 @@ impl JWKSPublicKey {
         base64_url_no_pad_decode_buf(sig, buf)?;
 
         match self.alg()? {
-            JwkKeyPairAlg::RS256 => {
-                let hash = hmac_sha256::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
-                if rsa_pk
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
-                {
-                    return Ok(());
-                }
-            }
-
-            JwkKeyPairAlg::RS384 => {
-                let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
-                if rsa_pk
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
-                        hash.as_slice(),
-                        buf,
-                    )
-                    .is_ok()
-                {
-                    return Ok(());
-                }
-            }
-
-            JwkKeyPairAlg::RS512 => {
-                let hash = hmac_sha512::Hash::hash(message.as_bytes());
-                let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
-                if rsa_pk
-                    .verify(
-                        rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
-                        hash.as_slice(),
-                        buf,
-                    )
+            alg @ (JwkKeyPairAlg::RS256 | JwkKeyPairAlg::RS384 | JwkKeyPairAlg::RS512) => {
+                let pk = PublicKeyComponents {
+                    n: self.n()?,
+                    e: self.e()?,
+                };
+                if pk
+                    .verify(rsa_verify_params(*alg), message.as_bytes(), buf)
                     .is_ok()
                 {
                     return Ok(());

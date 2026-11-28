@@ -21,7 +21,6 @@ oxrdf = { workspace = true }
 oxttl = { workspace = true }
 reqwest = { workspace = true }
 aws-lc-rs = { workspace = true }
-rsa = { workspace = true }
 s3-simple = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
